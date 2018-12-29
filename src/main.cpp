@@ -1,8 +1,11 @@
 #include <cstdio>
 #include <iostream>
 #include <vector>
+#include <map>
 #include "parsetree.hpp"
 #include "hddl.hpp"
+#include "domain.hpp"
+#include "sortexpansion.hpp"
 
 using namespace std;
 
@@ -13,6 +16,8 @@ void run_parser_on_file(FILE* f);
 vector<sort_definition> sort_definitions;
 vector<predicate_definition> predicate_definitions;
 
+
+map<string,set<string> > sorts;
 
 int main(int argc, char** argv) {
 	if (argc < 2){
@@ -34,21 +39,19 @@ int main(int argc, char** argv) {
 	run_parser_on_file(domain_file);
 	run_parser_on_file(problem_file);
 
-	cout << "number of sort defs: " << sort_definitions.size() << endl;
+	expand_sorts(); // add constants to all sorts
 
-	for (auto def : sort_definitions){
-		for (string subsort : def.declared_sorts) cout << subsort << " ";
-		if (def.has_parent_sort){
-			cout << "- " << def.parent_sort << endl;
-		} else {
-			cout << " -- no parent sort" << endl;
-		}
-	}
-
-	for (auto def : predicate_definitions){
-		cout << "Predicate: " << def.name;
-		for (string arg : def.argument_sorts) cout << " " << arg;
+	cout << "number of sorts: " << sorts.size() << endl;
+	for(auto s : sorts){
+		cout << s.first << ":";
+		for (string e : s.second) cout << " " << e;
 		cout << endl;
 	}
+
+	//for (auto def : predicate_definitions){
+	//	cout << "Predicate: " << def.name;
+	//	for (string arg : def.argument_sorts) cout << " " << arg;
+	//	cout << endl;
+	//}
 
 }

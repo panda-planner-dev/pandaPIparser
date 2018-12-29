@@ -4,7 +4,7 @@ LINKERFLAG=-lm
 
 .PHONY = parser clean
 
-parser: src/hddl-token.o src/hddl.o src/main.o
+parser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o
 	${CC} ${LINKERFLAG} $^ -o parser
 
 %.o: %.cpp

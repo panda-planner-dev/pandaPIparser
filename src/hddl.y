@@ -3,6 +3,7 @@
 	#include <iostream>
 	#include <vector>
 	#include "parsetree.hpp"
+	#include "domain.hpp"
 	
 	using namespace std;
 	
@@ -70,7 +71,7 @@ problem_defs: problem_defs require_def |
               problem_defs p_goal | 
               problem_defs p_constraint |
 
-p_object_declaration : '(' KEY_OBJECTS typed_obj_list')';
+p_object_declaration : '(' KEY_OBJECTS constant_declaration_list')';
 p_init : '(' KEY_INIT init_el ')';
 init_el : init_el literal |
 p_goal : '(' KEY_GOAL gd ')'
@@ -108,7 +109,16 @@ type_def_list : NAME-list {	sort_definition s; s.has_parent_sort = false; s.decl
 			  				sort_definitions.push_back(s);}
 
 
-const_def : '(' KEY_CONSTANTS typed_obj_list ')'
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Constant Definition
+const_def : '(' KEY_CONSTANTS constant_declaration_list ')'
+constant_declaration_list : constant_declaration_list constant_declarations |
+constant_declarations : NAME-list-non-empty '-' NAME {
+						string type($3);
+						for(unsigned int i = 0; i < $1->size(); i++)
+							sorts[type].insert((*($1))[i]);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Predicate Definition
@@ -247,8 +257,6 @@ var_or_const-list : var_or_const-list var_or_const |
 var_or_const : NAME | VAR_NAME 
 atomic_formula : '('NAME var_or_const-list')'
 
-typed_obj_list : typed_obj_list typed_objs |
-typed_objs : NAME-list-non-empty '-' NAME
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

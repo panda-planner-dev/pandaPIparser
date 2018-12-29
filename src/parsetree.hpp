@@ -1,4 +1,5 @@
 #include<vector>
+#include<map>
 #include<string>
 
 using namespace std;
@@ -24,7 +25,6 @@ struct predicate_definition{
 // global places to put data structures
 extern vector<sort_definition> sort_definitions;
 extern vector<predicate_definition> predicate_definitions;
-
 
 
 
