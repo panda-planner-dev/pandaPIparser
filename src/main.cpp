@@ -15,6 +15,8 @@ void run_parser_on_file(FILE* f);
 // parsed domain data structures
 vector<sort_definition> sort_definitions;
 vector<predicate_definition> predicate_definitions;
+vector<parsed_task> parsed_primitive;
+vector<parsed_task> parsed_abstract;
 
 
 map<string,set<string> > sorts;
@@ -48,6 +50,22 @@ int main(int argc, char** argv) {
 		cout << endl;
 	}
 
+	cout << endl << "number of primitive: " << parsed_primitive.size() << endl;
+	for(parsed_task a : parsed_primitive){
+		cout << a.name << endl;
+		vector<pair<vector<literal>, additional_variables> > ex = a.prec->expand();
+		cout << "\tnumber of expansions: " << ex.size() << endl;
+		for(auto e : ex){
+			cout << "\texpansion: " << endl;
+			for (literal l : e.first){
+				cout << "\t\t" << (l.positive ? "+" : "-") << " " << l.predicate;
+				for(string v : l.arguments) cout << " " << v;
+				cout << endl;
+			}
+		}
+	}
+	
+		
 	//for (auto def : predicate_definitions){
 	//	cout << "Predicate: " << def.name;
 	//	for (string arg : def.argument_sorts) cout << " " << arg;

@@ -25,6 +25,9 @@
 	std::vector<std::string>* vstring;
 	var_declaration* vardecl;
 	predicate_definition* preddecl;
+	general_formula* formula;
+	std::vector<general_formula*>* formulae;
+	var_and_const* varandconst;
 }
 
 %token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES 
@@ -32,16 +35,30 @@
 %token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN
 %token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF
 %token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS 
-%token <sval> NAME REQUIRE_NAME VAR_NAME
+%token <sval> NAME REQUIRE_NAME VAR_NAME 
 %token <fval> FLOAT
 %token <ival> INT
 
-
+%type <sval> var_or_const
 %type <bval> task_or_action
-%type <vstring> NAME-list NAME-list-non-empty
+%type <vstring> NAME-list NAME-list-non-empty 
 %type <vstring> VAR_NAME-list VAR_NAME-list-non-empty
 %type <vardecl> typed_var_list typed_var typed_vars
 %type <preddecl> atomic_predicate_def 
+%type <varandconst> var_or_const-list
+
+%type <formulae> gd-list
+%type <formula> atomic_formula
+%type <formula> gd
+%type <formula> gd_empty 
+%type <formula> gd_conjuction 
+%type <formula> gd_disjuction 
+%type <formula> gd_negation 
+%type <formula> gd_implication 
+%type <formula> gd_existential 
+%type <formula> gd_universal 
+%type <formula> gd_equality_constraint 
+%type <formula> precondition_option
 
 
 
@@ -77,7 +94,7 @@ init_el : init_el literal |
 p_goal : '(' KEY_GOAL gd ')'
 
 htn_type: KEY_HTN | KEY_TIHTN
-parameters-option: KEY_PARAMETERS '(' typed_var_list ')'
+parameters-option: KEY_PARAMETERS '(' typed_var_list ')' |
 p_htn : '(' htn_type
         parameters-option
         tasknetwork_def
@@ -144,9 +161,17 @@ task_or_action: KEY_TASK {$$=true;} | KEY_ACTION {$$=false;}
 task_def : '(' task_or_action NAME
 			KEY_PARAMETERS '(' typed_var_list ')'
 			precondition_option
-			effect_option ')'
+			effect_option ')'{
+				// found a new task, add it to list
+				parsed_task t;
+				t.name = $3;
+				t.arguments = $6;
+				t.prec = $8; 
 
-precondition_option: KEY_PRECONDITION gd |
+				if ($2) parsed_abstract.push_back(t); else parsed_primitive.push_back(t);
+}
+
+precondition_option: KEY_PRECONDITION gd {$$ = $2;} | {$$ = new general_formula(); $$->type = EMPTY;}
 effect_option: KEY_EFFECT effect |
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,22 +265,42 @@ causallink_def : '(' NAME literal NAME ')'
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Goal Description
 // @LABEL gd means "goal description". It is used to define goals and preconditions. The PDDL 2.1 definition has been extended by the LTL defintions given by Gerevini andLon "Plan Constraints and Preferences in PDDL3"
-gd : gd_empty | atomic_formula | gd_negation | gd_implication | gd_conjuction | gd_disjuction | gd_existential | gd_universal | gd_equality_constraint
+gd :  gd_empty {$$ = $1;}
+	| atomic_formula {$$ = $1;}
+	| gd_negation {$$ = $1;}
+	| gd_implication {$$ = $1;}
+	| gd_conjuction {$$ = $1;}
+	| gd_disjuction {$$ = $1;}
+	| gd_existential {$$ = $1;}
+	| gd_universal {$$ = $1;}
+	| gd_equality_constraint {$$ = $1;}
 
-gd-list : gd-list gd |
+gd-list : gd-list gd {$$ = $1; $$->push_back($2);} 
+		| {$$ = new vector<general_formula*>();}
 
-gd_empty : '(' ')'
-gd_conjuction : '(' KEY_AND gd-list ')'
-gd_disjuction : '(' KEY_OR gd-list ')'
-gd_negation : '(' KEY_NOT gd ')'
-gd_implication : '(' KEY_IMPLY gd gd ')'
-gd_existential : '(' KEY_EXISTS '(' typed_var_list ')' gd ')'
-gd_universal : '(' KEY_FORALL '(' typed_var_list ')' gd ')'
-gd_equality_constraint : '(' '=' var_or_const var_or_const ')'
+gd_empty : '(' ')' {$$ = new general_formula(); $$->type=EMPTY;}
+gd_conjuction : '(' KEY_AND gd-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);}
+gd_disjuction : '(' KEY_OR gd-list ')' {$$ = new general_formula(); $$->type=OR; $$->subformulae = *($3);}
+gd_negation : '(' KEY_NOT gd ')' {$$ = $3; $$->negate();}
+gd_implication : '(' KEY_IMPLY gd gd ')' {$$ = new general_formula(); $$->type=OR; $3->negate(); $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
+gd_existential : '(' KEY_EXISTS '(' typed_var_list ')' gd ')' {$$ = new general_formula(); $$->type = EXISTS; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
+gd_universal : '(' KEY_FORALL '(' typed_var_list ')' gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
+gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = EQUAL; $$->arg1 = $3; $$->arg2 = $4;}
 
-var_or_const-list : var_or_const-list var_or_const |
-var_or_const : NAME | VAR_NAME 
-atomic_formula : '('NAME var_or_const-list')'
+var_or_const-list :   var_or_const-list NAME {
+						$$ = $1;
+						string c($2); string s = "sort_for_" + c; string v = "var_for_" + c;
+						sorts[s].insert(c);
+						$$->vars.push_back(v);
+						$$->newVar.insert(make_pair(v,s));
+					}
+					| var_or_const-list VAR_NAME {$$ = $1; string s($2); $$->vars.push_back(s);}
+					| {$$ = new var_and_const();}
+
+var_or_const : NAME {$$=$1;}| VAR_NAME {$$=$1;}
+atomic_formula : '('NAME var_or_const-list')' {$$ = new general_formula(); $$->type=ATOM;
+			   								   $$->predicate = $2; $$->arguments = *($3);
+											  }
 
 
 

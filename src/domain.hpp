@@ -1,3 +1,6 @@
+#ifndef __DOMAIN
+#define __DOMAIN
+
 #include<vector>
 #include<map>
 #include<set>
@@ -5,5 +8,13 @@
 
 using namespace std;
 
+// sort name and set of elements
 extern map<string,set<string> > sorts;
 
+struct literal{
+	bool positive;
+	string predicate;
+	vector<string> arguments;
+};
+
+#endif
