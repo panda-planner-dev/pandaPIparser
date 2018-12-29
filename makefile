@@ -1,5 +1,5 @@
 CC=g++
-COMPILEFLAGS=-O2 -Wall
+COMPILEFLAGS=-O2 -Wall -std=c++11
 LINKERFLAG=-lm
 
 .PHONY = parser clean

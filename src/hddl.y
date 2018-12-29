@@ -110,7 +110,7 @@ domain_symbol : NAME
 // Requirement Statement
 // @PDDL
 require_def : '(' KEY_REQUIREMENTS require_defs ')'
-require_defs : REQUIRE_NAME require_defs | 
+require_defs : require_defs REQUIRE_NAME {string r($2); if (r == ":typeof-predicate") has_typeof_predicate = true; } | 
 
 
 

@@ -55,6 +55,7 @@ struct parsed_task{
 
 
 // global places to put data structures
+extern bool has_typeof_predicate;
 extern vector<sort_definition> sort_definitions;
 extern vector<predicate_definition> predicate_definitions;
 extern vector<parsed_task> parsed_primitive;

@@ -13,6 +13,7 @@ using namespace std;
 void run_parser_on_file(FILE* f);
 
 // parsed domain data structures
+bool has_typeof_predicate = false;
 vector<sort_definition> sort_definitions;
 vector<predicate_definition> predicate_definitions;
 vector<parsed_task> parsed_primitive;
@@ -42,13 +43,22 @@ int main(int argc, char** argv) {
 	run_parser_on_file(problem_file);
 
 	expand_sorts(); // add constants to all sorts
+	// handle typeof-predicate
+	cout << "DOMAIN has typeof preciate " << has_typeof_predicate << endl;
+	if (has_typeof_predicate){
+		set<string> allSorts;
+		for(auto s : sorts) allSorts.insert(s.first);
+		sorts["Type"] = allSorts;
+		// TODO predicate
+	}
+
 
 	cout << "number of sorts: " << sorts.size() << endl;
-	for(auto s : sorts){
+	/*for(auto s : sorts){
 		cout << s.first << ":";
 		for (string e : s.second) cout << " " << e;
 		cout << endl;
-	}
+	}*/
 
 	cout << endl << "number of primitive: " << parsed_primitive.size() << endl;
 	for(parsed_task a : parsed_primitive){
@@ -62,6 +72,8 @@ int main(int argc, char** argv) {
 				for(string v : l.arguments) cout << " " << v;
 				cout << endl;
 			}
+			for(pair<string,string> nv : e.second)
+				cout << "\t\t" << nv.first << " - " << nv.second << endl;
 		}
 	}
 	
