@@ -15,6 +15,8 @@
 \<				{return '<'; }
 define			{return KEY_DEFINE;}
 domain			{return KEY_DOMAIN;}
+:domain			{return KEY_DOMAIN;}
+problem			{return KEY_PROBLEM;}
 :requirements	{return KEY_REQUIREMENTS;}
 :types			{return KEY_TYPES;}
 :constants		{return KEY_CONSTANTS;}
@@ -25,6 +27,12 @@ domain			{return KEY_DOMAIN;}
 :precondition	{return KEY_PRECONDITION;}
 :effect			{return KEY_EFFECT;}
 :method			{return KEY_METHOD;}
+:init			{return KEY_INIT;}
+:goal			{return KEY_GOAL;}
+:htn			{return KEY_HTN;}
+:tihtn			{return KEY_TIHTN;}
+:htnti			{return KEY_TIHTN;}
+:objects		{return KEY_OBJECTS;}
       
 :subtasks			{return KEY_TASKS;}
 :tasks				{return KEY_TASKS;}

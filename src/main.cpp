@@ -21,12 +21,18 @@ int main(int argc, char** argv) {
 	}
 	// open c-style file handle 
 	FILE *domain_file = fopen(argv[1], "r");
+	FILE *problem_file = fopen(argv[2], "r");
 	if (!domain_file) {
 		cout << "I can't open " << argv[1] << "!" << endl;
 		return 2;
 	}
+	if (!problem_file) {
+		cout << "I can't open " << argv[2] << "!" << endl;
+		return 2;
+	}
 	// parse the domain file
 	run_parser_on_file(domain_file);
+	run_parser_on_file(problem_file);
 
 	cout << "number of sort defs: " << sort_definitions.size() << endl;
 
