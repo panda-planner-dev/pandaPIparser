@@ -11,6 +11,8 @@ void run_parser_on_file(FILE* f);
 
 // parsed domain data structures
 vector<sort_definition> sort_definitions;
+vector<predicate_definition> predicate_definitions;
+
 
 int main(int argc, char** argv) {
 	if (argc < 2){
@@ -35,6 +37,12 @@ int main(int argc, char** argv) {
 		} else {
 			cout << " -- no parent sort" << endl;
 		}
+	}
+
+	for (auto def : predicate_definitions){
+		cout << "Predicate: " << def.name;
+		for (string arg : def.argument_sorts) cout << " " << arg;
+		cout << endl;
 	}
 
 }
