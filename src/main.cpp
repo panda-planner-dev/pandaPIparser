@@ -6,6 +6,7 @@
 #include "hddl.hpp"
 #include "domain.hpp"
 #include "sortexpansion.hpp"
+#include "util.hpp"
 
 using namespace std;
 
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
 		for(auto e : ex){
 			cout << "\texpansion: " << endl;
 			for (literal l : e.first){
-				cout << "\t\t" << (l.positive ? "+" : "-") << " " << l.predicate;
+				cout << "\t\t" << (l.positive ? "+" : "-") << " " << color(COLOR_BLUE,l.predicate);
 				for(string v : l.arguments) cout << " " << v;
 				cout << endl;
 			}
@@ -83,5 +84,4 @@ int main(int argc, char** argv) {
 	//	for (string arg : def.argument_sorts) cout << " " << arg;
 	//	cout << endl;
 	//}
-
 }
