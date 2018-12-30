@@ -132,7 +132,7 @@ init_el : init_el literal {
 		for(string v : $2->arguments.vars) l.args.push_back(access[v]);
 		init.push_back(l);
 	} |
-p_goal : '(' KEY_GOAL gd ')'
+p_goal : '(' KEY_GOAL gd ')' {goal_formula = $3;}
 
 htn_type: KEY_HTN | KEY_TIHTN {assert(false); /*we don't support ti-htn yet*/}
 parameters-option: KEY_PARAMETERS '(' typed_var_list ')' {$$ = $3;} | {$$ = new var_declaration(); }

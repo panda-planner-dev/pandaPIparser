@@ -4,6 +4,29 @@
 #include <iostream>
 
 vector<ground_literal> init;
+vector<ground_literal> goal;
+general_formula* goal_formula;
+
+
+void flatten_goal(){
+	vector<pair<vector<literal>, additional_variables> > ex = goal_formula->expand();
+	assert(ex.size() == 1);
+	map<string,string> access;
+	for (auto x : ex[0].second){
+		string sort = x.second;
+		assert(sorts[sort].size() == 1); // must be an actual constant
+		access[x.first] = *sorts[sort].begin();
+	}
+
+	for (literal l : ex[0].first){
+		ground_literal gl;
+		gl.predicate = l.predicate;
+		gl.positive = l.positive;
+		for (string v : l.arguments) gl.args.push_back(access[v]);
+		goal.push_back(gl);
+	}
+}
+
 
 vector<ground_literal> compute_cwa(){
 	// find predicates occuring negatively in preconditions and their types

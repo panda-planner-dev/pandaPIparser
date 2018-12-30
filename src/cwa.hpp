@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "parsetree.hpp"
 
 using namespace std;
 
@@ -12,9 +13,11 @@ struct ground_literal{
 	vector<string> args;
 };
 
-
+void flatten_goal();
 vector<ground_literal> compute_cwa();
 
 extern vector<ground_literal> init;
+extern vector<ground_literal> goal;
+extern general_formula* goal_formula;
 
 #endif

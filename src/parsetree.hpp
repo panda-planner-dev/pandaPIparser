@@ -1,3 +1,6 @@
+#ifndef __PARSETREE
+#define __PARSETREE
+
 #include<vector>
 #include<map>
 #include<set>
@@ -88,3 +91,4 @@ extern vector<parsed_task> parsed_abstract;
 extern map<string,vector<parsed_method> > parsed_methods;
 
 
+#endif

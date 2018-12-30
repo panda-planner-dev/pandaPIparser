@@ -61,20 +61,22 @@ int main(int argc, char** argv) {
 	if (has_typeof_predicate) create_typeof();
 	// flatten all primitive tasks
 	flatten_tasks();
+	// .. and the goal
+	flatten_goal();
 	// create appropriate methods and expand method preconditions
 	parsed_method_to_data_structures();
 	// split methods with independent parameters to reduce size of grounding
 	split_independent_parameters();
 
 	vector<ground_literal> init = compute_cwa();
-	cout << init.size() << endl;
+	//cout << init.size() << endl;
 
-	for(ground_literal l : init){
+	for(ground_literal l : goal){
 		cout << "\t" << (l.positive?"+":"-")<< color(COLOR_BLUE,l.predicate);
 		for(string c : l.args) cout << " " << c;
 		cout << endl;
 	}
 
 	// write to output
-	//verbose_output(6);
+	verbose_output(0);
 }
