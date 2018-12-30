@@ -96,9 +96,17 @@ void parsed_method_to_data_structures(){
 				plan_step ps;
 				ps.id = st->id;
 				ps.task = st->task;
-				ps.args = st->arguments->vars;
-				for (auto av : st->arguments->newVar)
-					m.vars.push_back(make_pair(av.first + "_" + to_string(i++),av.second));
+				map<string,string> arg_replace;
+				for (auto av : st->arguments->newVar){
+					arg_replace[av.first] = av.first + "_" + to_string(i++);
+					m.vars.push_back(make_pair(arg_replace[av.first],av.second));
+				}
+				for (string v : st->arguments->vars)
+					if (arg_replace.count(v))
+						ps.args.push_back(arg_replace[v]);
+					else
+						ps.args.push_back(v);
+
 				// we might have added more parameters to these tasks to account for constants in them. We have to add them here
 				task psTask = task_name_map[ps.task];
 				assert(psTask.name == ps.task); // ensure that we have found one
@@ -227,6 +235,11 @@ void method::check_integrity(){
 	for (plan_step ps : this->ps){
 		task t = task_name_map[ps.task];
 		assert(ps.args.size() == t.vars.size());
-	}
 
+		for (string v : ps.args) {
+			bool found = false;
+			for (auto vd : this->vars) found |= vd.first == v;
+			assert(found);
+		}
+	}
 }
