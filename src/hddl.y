@@ -2,6 +2,7 @@
 	#include <cstdio>
 	#include <iostream>
 	#include <vector>
+	#include <cassert>
 	#include "parsetree.hpp"
 	#include "domain.hpp"
 	
@@ -28,6 +29,12 @@
 	general_formula* formula;
 	std::vector<general_formula*>* formulae;
 	var_and_const* varandconst;
+	sub_task* subtask;
+	std::vector<sub_task*>* subtasks;
+	std::pair<bool,std::vector<sub_task*>*>* osubtasks;
+	parsed_task_network* tasknetwork;
+	std::pair<string,string>* spair;
+	std::vector<std::pair<string,string>*>* spairlist;
 }
 
 %token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES 
@@ -43,7 +50,7 @@
 %type <bval> task_or_action
 %type <vstring> NAME-list NAME-list-non-empty 
 %type <vstring> VAR_NAME-list VAR_NAME-list-non-empty
-%type <vardecl> typed_var_list typed_var typed_vars
+%type <vardecl> parameters-option typed_var_list typed_var typed_vars
 %type <preddecl> atomic_predicate_def 
 %type <varandconst> var_or_const-list
 
@@ -59,6 +66,31 @@
 %type <formula> gd_universal 
 %type <formula> gd_equality_constraint 
 %type <formula> precondition_option
+%type <formula> effect_option
+%type <formulae> effect-list
+%type <formula> effect
+%type <formula> eff_empty
+%type <formula> eff_conjunction
+%type <formula> eff_universal
+%type <formula> eff_conditional
+%type <formula> literal
+%type <formula> p_effect
+%type <formula> neg_atomic_formula 
+
+%type <formula> constraint_def 
+%type <formulae> constraint_def-list
+%type <formula> constraints_option
+
+%type <osubtasks> subtasks_option
+%type <subtasks> subtask_defs
+%type <subtasks> subtask_def-list
+%type <subtask> subtask_def
+%type <tasknetwork> tasknetwork_def
+
+%type <spairlist> ordering_def-list 
+%type <spairlist> ordering_defs 
+%type <spairlist> ordering_option 
+%type <spair> ordering_def 
 
 
 
@@ -86,19 +118,29 @@ problem_defs: problem_defs require_def |
               problem_defs p_htn | 
               problem_defs p_init | 
               problem_defs p_goal | 
-              problem_defs p_constraint |
+              problem_defs p_constraint | // I think this is only for global LTL constraints
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list')';
 p_init : '(' KEY_INIT init_el ')';
 init_el : init_el literal |
 p_goal : '(' KEY_GOAL gd ')'
 
-htn_type: KEY_HTN | KEY_TIHTN
-parameters-option: KEY_PARAMETERS '(' typed_var_list ')' |
+htn_type: KEY_HTN | KEY_TIHTN {assert(false); /*we don't support ti-htn yet*/}
+parameters-option: KEY_PARAMETERS '(' typed_var_list ')' {$$ = $3;} | {$$ = new var_declaration(); }
 p_htn : '(' htn_type
         parameters-option
         tasknetwork_def
-		')'
+		')' {
+		parsed_method m;
+		m.name = "__top_method";		
+		string atName("__top"); // later for insertion into map
+		m.vars = $3;
+		m.prec = new general_formula(); m.prec->type = EMPTY;
+		m.eff = new general_formula(); m.eff->type = EMPTY;
+		m.tn = $4;
+
+		parsed_methods[atName].push_back(m);
+}
 
 p_constraint : '(' KEY_CONSTRAINTS gd ')'
 
@@ -130,6 +172,7 @@ type_def_list : NAME-list {	sort_definition s; s.has_parent_sort = false; s.decl
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constant Definition
 const_def : '(' KEY_CONSTANTS constant_declaration_list ')'
+// this is used in both the domain and the initial state
 constant_declaration_list : constant_declaration_list constant_declarations |
 constant_declarations : NAME-list-non-empty '-' NAME {
 						string type($3);
@@ -167,12 +210,13 @@ task_def : '(' task_or_action NAME
 				t.name = $3;
 				t.arguments = $6;
 				t.prec = $8; 
+				t.eff = $9;
 
 				if ($2) parsed_abstract.push_back(t); else parsed_primitive.push_back(t);
 }
 
 precondition_option: KEY_PRECONDITION gd {$$ = $2;} | {$$ = new general_formula(); $$->type = EMPTY;}
-effect_option: KEY_EFFECT effect |
+effect_option: KEY_EFFECT effect {$$ = $2;} | {$$ = new general_formula(); $$->type = EMPTY;}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Method Definition
@@ -188,7 +232,18 @@ method_def :
       precondition_option
 	  effect_option
       tasknetwork_def
-	')'
+	')'{
+		parsed_method m;
+		m.name = $3;		
+		string atName($10); // later for insertion into map
+		m.atArguments = $11->vars; // TODO do something with $11->newVar
+		m.vars = $6;
+		m.prec = $13;
+		m.eff = $14;
+		m.tn = $15;
+
+		parsed_methods[atName].push_back(m);
+	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Task Definition
@@ -205,14 +260,31 @@ tasknetwork_def :
 	subtasks_option
 	ordering_option
 	constraints_option	
-	causal_links_option  
+	causal_links_option {
+	$$ = new parsed_task_network();
+	$$->tasks = *($1->second);
+	$$->ordering = *($2);
+	if ($1->first){
+		if ($$->ordering.size()) assert(false); // given ordering but said that this is a total order
+		for(unsigned int i = 1; i < $$->tasks.size(); i++){
+			pair<string,string>* o = new pair<string,string>();
+			o->first = $$->tasks[i-1]->id;
+			o->first = $$->tasks[i]->id;
+			$$->ordering.push_back(o);
+		}
+	}
+	$$->constraint = $3;
 
-subtasks_option: 	  KEY_TASKS subtask_defs
-			   		| KEY_ORDER_TASKS subtask_defs
-					|
+	// TODO causal links?????
+} 
 
-ordering_option: KEY_ORDER ordering_defs |
-constraints_option: KEY_CONSTRAINTS constraint_def | 
+subtasks_option: 	  KEY_TASKS subtask_defs {$$ = new pair<bool,vector<sub_task*>*>(); $$->first = false; $$->second = $2; }
+			   		| KEY_ORDER_TASKS subtask_defs {$$ = new pair<bool,vector<sub_task*>*>(); $$->first = true; $$->second = $2; }
+					| {$$ = new pair<bool,vector<sub_task*>*>();
+					   $$->first = true; $$->second = new vector<sub_task*>();}
+
+ordering_option: KEY_ORDER ordering_defs {$$ = $2;}| {$$ = new vector<pair<string,string>*>();}
+constraints_option: KEY_CONSTRAINTS constraint_def {$$ = $2;} | {$$ = new general_formula(); $$->type = EMPTY;}
 causal_links_option: KEY_CAUSAL_LINKS causallink_defs |   
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -223,10 +295,13 @@ causal_links_option: KEY_CAUSAL_LINKS causallink_defs |
 //         parameters, in case of the initial task network, they have to be defined as constants in s0 or in a dedicated
 //         parameter list (see definition of the initial task network). The tasks may start with an id that can
 //         be used to define ordering constraints and causal links.
-subtask_defs : '(' ')' | subtask_def | '(' KEY_AND subtask_def-list ')'
-subtask_def-list : subtask_def-list subtask_def | 
-subtask_def :	'(' NAME var_or_const-list ')' |
-				'(' NAME '(' NAME var_or_const-list ')' ')'
+subtask_defs : '(' ')' {$$ = new vector<sub_task*>();}
+			  | subtask_def {$$ = new vector<sub_task*>(); $$->push_back($1);}
+			  | '(' KEY_AND subtask_def-list ')' {$$ = $3;}
+subtask_def-list : subtask_def-list subtask_def {$$ = $1; $$->push_back($2);}
+				 | {$$ = new vector<sub_task*>();}
+subtask_def :	'(' NAME var_or_const-list ')' {$$ = new sub_task(); $$->id = "__t_id_" + to_string(task_id_counter); task_id_counter++; $$->task = $2; $$->arguments = $3; }
+			  | '(' NAME '(' NAME var_or_const-list ')' ')' {$$ = new sub_task(); $$->id = $2; $$->task = $4; $$->arguments = $5; }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -234,9 +309,12 @@ subtask_def :	'(' NAME var_or_const-list ')' |
 //
 // @HDDL
 // @LABEL The ordering constraints are defined via the task ids. They have to induce a partial order.
-ordering_defs : '(' ')' | ordering_def | '(' KEY_AND ordering_def-list ')'
-ordering_def-list: ordering_def-list ordering_def | 
-ordering_def : '(' NAME '<' NAME ')'
+ordering_defs : '(' ')'{$$ = new vector<pair<string,string>*>();}
+			   | ordering_def {$$ = new vector<pair<string,string>*>(); $$->push_back($1);}
+			   | '(' KEY_AND ordering_def-list ')' {$$ = $3;}
+ordering_def-list: ordering_def-list ordering_def {$$ = $1; $$->push_back($2);}
+				 | {$$ = new vector<pair<string,string>*>();}
+ordering_def : '(' NAME '<' NAME ')' {$$ = new pair<string,string>(); $$->first = $2; $$->second = $4;}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Variable Constraits
@@ -244,13 +322,14 @@ ordering_def : '(' NAME '<' NAME ')'
 // @LABEL The variable constraints enable to codesignate or non-codesignate variables, or to enforce (or forbid) a
 //         variable to have a certain type.
 // @EXAMPLE (= ?v1 ?v2)), (not (= ?v3 ?v4)), (sort ?v - type), (not (sort ?v - type))
-constraint_def-list: constraint_def-list constraint_def |
-constraint_def : '(' ')'
-				| '(' KEY_AND constraint_def-list ')'
-				| '(' '=' var_or_const var_or_const ')'
-				| '(' KEY_NOT '(' '=' var_or_const var_or_const ')' ')'
-                | '(' KEY_TYPEOF typed_var ')'
-                | '(' KEY_NOT '(' KEY_TYPEOF typed_var ')' ')' 
+constraint_def-list: constraint_def-list constraint_def {$$ = $1; $$->push_back($2);}
+				    | {$$ = new vector<general_formula*>();}
+constraint_def : '(' ')' {$$ = new general_formula(); $$->type = EMPTY;}
+				| '(' KEY_AND constraint_def-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);}
+				| '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = EQUAL; $$->arg1 = $3; $$->arg2 = $4;}
+				| '(' KEY_NOT '(' '=' var_or_const var_or_const ')' ')' {$$ = new general_formula(); $$->type = NOTEQUAL; $$->arg1 = $5; $$->arg2 = $6;}
+                | '(' KEY_TYPEOF typed_var ')' {$$ = new general_formula(); $$->type = OFSORT; $$->arg1 = $3->vars[0].first; $$->arg2 = $3->vars[0].second; }
+                | '(' KEY_NOT '(' KEY_TYPEOF typed_var ')' ')'  {$$ = new general_formula(); $$->type = NOTOFSORT; $$->arg1 = $5->vars[0].first; $$->arg2 = $5->vars[0].second; }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Causal Links
@@ -309,20 +388,28 @@ atomic_formula : '('NAME var_or_const-list')' {$$ = new general_formula(); $$->t
 // @LABEL In contrast to earlier versions of this grammar, nested conditional effects are now permitted.
 //         This is not allowed in PDDL 2.1
 
-effect-list: effect-list effect | 
-effect : eff_empty | eff_conjunction | eff_universal | eff_conditional | literal | p_effect
+effect-list: effect-list effect {$$ = $1; $$->push_back($2);} 
+		| {$$ = new vector<general_formula*>();}
 
-eff_empty : '(' ')'
-eff_conjunction : '(' KEY_AND effect-list ')'
-eff_universal : '(' KEY_FORALL '(' typed_var_list ')' effect ')'
-eff_conditional : '(' KEY_WHEN gd effect ')'
+effect : eff_empty {$$ = $1;}
+	   | eff_conjunction {$$ = $1;}
+	   | eff_universal {$$ = $1;}
+	   | eff_conditional {$$ = $1;}
+	   | literal {$$ = $1;}
+	   | p_effect {$$ = $1;}
 
-literal : neg_atomic_formula | atomic_formula;
-neg_atomic_formula : '(' KEY_NOT atomic_formula ')'
+eff_empty : '(' ')' {$$ = new general_formula(); $$->type=EMPTY;}
+eff_conjunction : '(' KEY_AND effect-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);}
+eff_universal : '(' KEY_FORALL '(' typed_var_list ')' effect ')'{$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);}
+eff_conditional : '(' KEY_WHEN gd effect ')' {$$ = new general_formula(); $$->type=WHEN; $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
+
+
+literal : neg_atomic_formula {$$ = $1;} | atomic_formula {$$ = $1;}
+neg_atomic_formula : '(' KEY_NOT atomic_formula ')' {$$ = $3; $$->negate();}
 
 
 // these rules are just here to be able to parse action consts in the future
-p_effect : '(' assign_op f_head f_exp ')'
+p_effect : '(' assign_op f_head f_exp ')' {$$ = new general_formula(); $$->type=EMPTY;} // TODO actions costs
 assign_op : KEY_INCREASE
 f_head : NAME 
 f_exp : INT 

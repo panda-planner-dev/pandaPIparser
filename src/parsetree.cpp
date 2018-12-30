@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cassert>
 
+int task_id_counter = 0;
+
 void general_formula::negate(){
 	if (this->type == EMPTY) return;
 	else if (this->type == AND) this->type = OR;
@@ -12,6 +14,7 @@ void general_formula::negate(){
 	else if (this->type == NOTEQUAL) this->type = EQUAL;
 	else if (this->type == ATOM) this->type = NOTATOM;
 	else if (this->type == NOTATOM) this->type = ATOM;
+	else if (this->type == WHEN) assert(false); // conditional effect cannot be negated 
 
 	for(auto sub : this->subformulae) sub->negate();
 }
@@ -114,11 +117,14 @@ vector<pair<vector<literal>, additional_variables> > general_formula::expand(){
 		ret.push_back(make_pair(ls,vars));	
 	}
 	// add dummy literal for equal and not equal constraints
-	if (this->type == EQUAL || this->type == NOTEQUAL){
+	if (this->type == EQUAL || this->type == NOTEQUAL || this->type == OFSORT || this->type == NOTOFSORT){
 		vector<literal> ls;
 		literal l;
-		l.positive = this->type == EQUAL;
-		l.predicate = dummy_equal_literal;
+		l.positive = this->type == EQUAL || this->type == OFSORT;
+		if (this->type == EQUAL || this->type == NOTEQUAL)
+			l.predicate = dummy_equal_literal;
+		else
+			l.predicate = dummy_ofsort_literal; 
 		l.arguments.push_back(this->arg1);
 		l.arguments.push_back(this->arg2);
 		ls.push_back(l);

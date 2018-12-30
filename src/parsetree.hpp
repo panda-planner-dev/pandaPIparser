@@ -5,6 +5,7 @@
 #include "domain.hpp"
 using namespace std;
 
+extern int task_id_counter;
 
 struct sort_definition{
 	vector<string> declared_sorts;
@@ -28,7 +29,8 @@ struct var_and_const{
 };
 
 enum formula_type {EMPTY, AND, OR, FORALL, EXISTS, ATOM, NOTATOM,  // formulae
-				   EQUAL, NOTEQUAL  
+				   EQUAL, NOTEQUAL, OFSORT, NOTOFSORT,
+				   WHEN   // conditional effect
 				  };
 
 class general_formula{
@@ -51,6 +53,29 @@ struct parsed_task{
 	string name;
 	var_declaration* arguments;
 	general_formula* prec;
+	general_formula* eff;
+};
+
+
+struct sub_task{
+	string id;
+	string task;
+	var_and_const* arguments;
+};
+
+struct parsed_task_network{
+	vector<sub_task*> tasks;
+	vector<pair<string,string>*> ordering;
+	general_formula* constraint;
+};
+
+struct parsed_method{
+	string name;
+	vector<string> atArguments;
+	var_declaration* vars; 	
+	general_formula* prec;
+	general_formula* eff;
+	parsed_task_network* tn;
 };
 
 
@@ -60,5 +85,6 @@ extern vector<sort_definition> sort_definitions;
 extern vector<predicate_definition> predicate_definitions;
 extern vector<parsed_task> parsed_primitive;
 extern vector<parsed_task> parsed_abstract;
+extern map<string,vector<parsed_method> > parsed_methods;
 
 
