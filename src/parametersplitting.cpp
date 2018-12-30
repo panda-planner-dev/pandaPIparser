@@ -78,7 +78,6 @@ void split_independent_parameters(){
 		}
 
 		base.check_integrity();
-		cout << "HOOOO " << base.name << endl;
 		methods.push_back(base);
 	}
 }

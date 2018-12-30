@@ -8,6 +8,8 @@
 #include "domain.hpp"
 #include "sortexpansion.hpp"
 #include "parametersplitting.hpp"
+#include "cwa.hpp"
+#include "typeof.hpp"
 #include "util.hpp"
 #include "output.hpp"
 
@@ -56,21 +58,7 @@ int main(int argc, char** argv) {
 	expand_sorts(); // add constants to all sorts
 	
 	// handle typeof-predicate
-	if (has_typeof_predicate){
-		// create a sort containing all objects
-		for (auto s : sorts) for (string e : s.second) sorts["__object"].insert(e);
-		
-		set<string> allSorts;
-		for(auto s : sorts) allSorts.insert(s.first);
-		sorts["Type"] = allSorts;
-
-		predicate_definition typePred;
-		typePred.name = "typeOf";
-		typePred.argument_sorts.push_back("__object");
-		typePred.argument_sorts.push_back("Type");
-		predicate_definitions.push_back(typePred);
-	}
-	
+	if (has_typeof_predicate) create_typeof();
 	// flatten all primitive tasks
 	flatten_tasks();
 	// create appropriate methods and expand method preconditions
@@ -78,7 +66,15 @@ int main(int argc, char** argv) {
 	// split methods with independent parameters to reduce size of grounding
 	split_independent_parameters();
 
-	// write to output
-	verbose_output(6);
+	vector<ground_literal> init = compute_cwa();
+	cout << init.size() << endl;
 
+	for(ground_literal l : init){
+		cout << "\t" << (l.positive?"+":"-")<< color(COLOR_BLUE,l.predicate);
+		for(string c : l.args) cout << " " << c;
+		cout << endl;
+	}
+
+	// write to output
+	//verbose_output(6);
 }

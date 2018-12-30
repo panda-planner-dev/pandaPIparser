@@ -5,6 +5,7 @@
 	#include <cassert>
 	#include "parsetree.hpp"
 	#include "domain.hpp"
+	#include "cwa.hpp"
 	
 	using namespace std;
 	
@@ -122,7 +123,15 @@ problem_defs: problem_defs require_def |
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list')';
 p_init : '(' KEY_INIT init_el ')';
-init_el : init_el literal |
+init_el : init_el literal {
+		assert($2->type == ATOM);
+		map<string,string> access;
+		for(auto x : $2->arguments.newVar) access[x.first] = *sorts[x.second].begin(); 
+		ground_literal l;
+		l.predicate = $2->predicate;
+		for(string v : $2->arguments.vars) l.args.push_back(access[v]);
+		init.push_back(l);
+	} |
 p_goal : '(' KEY_GOAL gd ')'
 
 htn_type: KEY_HTN | KEY_TIHTN {assert(false); /*we don't support ti-htn yet*/}
