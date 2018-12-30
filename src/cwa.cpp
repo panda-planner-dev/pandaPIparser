@@ -5,10 +5,11 @@
 
 vector<ground_literal> init;
 vector<ground_literal> goal;
-general_formula* goal_formula;
+general_formula* goal_formula = NULL;
 
 
 void flatten_goal(){
+	if (goal_formula == NULL) return;
 	vector<pair<vector<literal>, additional_variables> > ex = goal_formula->expand();
 	assert(ex.size() == 1);
 	map<string,string> access;
