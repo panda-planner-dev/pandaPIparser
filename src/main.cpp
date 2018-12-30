@@ -8,6 +8,7 @@
 #include "domain.hpp"
 #include "sortexpansion.hpp"
 #include "util.hpp"
+#include "output.hpp"
 
 using namespace std;
 
@@ -27,6 +28,9 @@ map<string,set<string> > sorts;
 vector<method> methods;
 vector<task> primitive_tasks;
 vector<task> abstract_tasks;
+
+map<string, task> task_name_map;
+
 
 int main(int argc, char** argv) {
 	if (argc < 2){
@@ -51,7 +55,6 @@ int main(int argc, char** argv) {
 	expand_sorts(); // add constants to all sorts
 	
 	// handle typeof-predicate
-	cout << "DOMAIN has typeof preciate " << has_typeof_predicate << endl;
 	if (has_typeof_predicate){
 		// create a sort containing all objects
 		for (auto s : sorts) for (string e : s.second) sorts["__object"].insert(e);
@@ -72,77 +75,6 @@ int main(int argc, char** argv) {
 	// create appropriate
 	parsed_method_to_data_structures();
 
-	cout << "number of sorts: " << sorts.size() << endl;
-	/*for(auto s : sorts){
-		cout << s.first << ":";
-		for (string e : s.second) cout << " " << e;
-		cout << endl;
-	}*/
+	verbose_output(6);
 
-	/*cout << endl << "number of primitive: " << parsed_primitive.size() << endl;
-	for(parsed_task a : parsed_primitive){
-		cout << a.name << endl;
-		vector<pair<vector<literal>, additional_variables> > ex = a.prec->expand();
-		cout << "\tnumber of precondition expansions: " << ex.size() << endl;
-		for(auto e : ex){
-			cout << "\texpansion: " << endl;
-			for (literal l : e.first){
-				cout << "\t\t" << (l.positive ? "+" : "-") << " " << color(COLOR_BLUE,l.predicate);
-				for(string v : l.arguments) cout << " " << v;
-				cout << endl;
-			}
-			for(pair<string,string> nv : e.second)
-				cout << "\t\t" << nv.first << " - " << nv.second << endl;
-		}
-		vector<pair<vector<literal>, additional_variables> > effex = a.eff->expand();
-		cout << "\tnumber of effect expansions: " << effex.size() << endl;
-		assert(effex.size() == 1);
-		for(auto e : effex){
-			cout << "\texpansion: " << endl;
-			for (literal l : e.first){
-				cout << "\t\t" << (l.positive ? "+" : "-") << " " << color(COLOR_RED,l.predicate);
-				for(string v : l.arguments) cout << " " << v;
-				cout << endl;
-			}
-			for(pair<string,string> nv : e.second)
-				cout << "\t\t" << nv.first << " - " << nv.second << endl;
-		}
-	}*/
-
-	cout << "number of primitives: " << primitive_tasks.size() << endl;
-   	for(task t : primitive_tasks){
-		cout << "\t" << color(COLOR_RED, t.name) << endl;
-		cout << "\t\tvars:" << endl;
-		for(auto v : t.vars) cout << "\t\t     " << v.first << " - " << v.second << endl;
-		cout << "\t\tprec:" << endl;
-		for(literal l : t.prec){
-			cout << "\t\t     " << (l.positive?"+":"-") << " " << color(COLOR_BLUE,l.predicate);
-			for(string v : l.arguments) cout << " " << v;
-			cout << endl;
-		}
-		cout << "\t\teff:" << endl;
-		for(literal l : t.eff){
-			cout << "\t\t     " << (l.positive?"+":"-") << " " << color(COLOR_GREEN,l.predicate);
-			for(string v : l.arguments) cout << " " << v;
-			cout << endl;
-		}
-		cout << "\t\tconstraints:" << endl;
-		for(literal l : t.constraints){
-			cout << "\t\t     " << (l.positive?"+":"-") << " " << color(COLOR_CYAN,l.predicate);
-			for(string v : l.arguments) cout << " " << v;
-			cout << endl;
-		}
-	}	
-
-	cout << "number of methods: " << methods.size() << endl;
-	
-
-
-
-
-	//for (auto def : predicate_definitions){
-	//	cout << "Predicate: " << def.name;
-	//	for (string arg : def.argument_sorts) cout << " " << arg;
-	//	cout << endl;
-	//}
 }

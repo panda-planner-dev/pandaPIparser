@@ -269,7 +269,7 @@ tasknetwork_def :
 		for(unsigned int i = 1; i < $$->tasks.size(); i++){
 			pair<string,string>* o = new pair<string,string>();
 			o->first = $$->tasks[i-1]->id;
-			o->first = $$->tasks[i]->id;
+			o->second = $$->tasks[i]->id;
 			$$->ordering.push_back(o);
 		}
 	}
@@ -287,7 +287,7 @@ ordering_option: KEY_ORDER ordering_defs {$$ = $2;}| {$$ = new vector<pair<strin
 constraints_option: KEY_CONSTRAINTS constraint_def {$$ = $2;} | {$$ = new general_formula(); $$->type = EMPTY;}
 causal_links_option: KEY_CAUSAL_LINKS causallink_defs |   
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+ /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Subtasks
 // @HDDL
 // @LABEL The subtask definition may contain one or more subtasks. The tasks consist of a task symbol as well as a
@@ -368,7 +368,7 @@ gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general
 
 var_or_const-list :   var_or_const-list NAME {
 						$$ = $1;
-						string c($2); string s = "sort_for_" + c; string v = "var_for_" + c;
+						string c($2); string s = "sort_for_" + c; string v = "?var_for_" + c;
 						sorts[s].insert(c);
 						$$->vars.push_back(v);
 						$$->newVar.insert(make_pair(v,s));

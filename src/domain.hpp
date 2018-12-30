@@ -26,7 +26,7 @@ struct task{
 	vector<literal> eff;
 	vector<literal> constraints;
 
-	void check_integrety();
+	void check_integrity();
 };
 
 struct plan_step{
@@ -43,6 +43,8 @@ struct method{
 	vector<plan_step> ps;
 	vector<literal> constraints;
 	vector<pair<string,string>> ordering;
+	
+	void check_integrity();
 };
 
 
@@ -51,6 +53,7 @@ extern map<string,set<string> > sorts;
 extern vector<method> methods;
 extern vector<task> primitive_tasks;
 extern vector<task> abstract_tasks;
+extern map<string, task> task_name_map;
 
 void flatten_tasks();
 void parsed_method_to_data_structures();
