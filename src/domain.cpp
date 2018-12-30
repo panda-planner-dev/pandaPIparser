@@ -151,7 +151,7 @@ void parsed_method_to_data_structures(){
 				ps.id = "__m-prec-id";
 				for(auto v : t.vars) {
 					string arg = v.first;
-					if (mprec_additional_vars.count(arg)) mprec_additional_vars[arg];
+					if (mprec_additional_vars.count(arg)) arg = mprec_additional_vars[arg];
 					ps.args.push_back(arg);
 				}
 
