@@ -54,6 +54,14 @@ void verbose_output(int verbosity){
 		}
 	}	
 
+	cout << "number of abstracts: " << abstract_tasks.size() << endl;
+   	if (verbosity > 0) for(task t : abstract_tasks){
+		cout << "\t" << color(COLOR_RED, t.name) << endl;
+		if (verbosity == 1) continue;
+		cout << "\t\tvars:" << endl;
+		for(auto v : t.vars) cout << "\t\t     " << v.first << " - " << v.second << endl;
+	}
+
 	cout << "number of methods: " << methods.size() << endl;
 	if (verbosity > 0) for (method m : methods) {
 		cout << "\t" << color(COLOR_RED, m.name) << endl;

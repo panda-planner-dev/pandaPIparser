@@ -7,6 +7,7 @@
 #include "hddl.hpp"
 #include "domain.hpp"
 #include "sortexpansion.hpp"
+#include "parametersplitting.hpp"
 #include "util.hpp"
 #include "output.hpp"
 
@@ -72,9 +73,12 @@ int main(int argc, char** argv) {
 	
 	// flatten all primitive tasks
 	flatten_tasks();
-	// create appropriate
+	// create appropriate methods and expand method preconditions
 	parsed_method_to_data_structures();
+	// split methods with independent parameters to reduce size of grounding
+	split_independent_parameters();
 
+	// write to output
 	verbose_output(6);
 
 }
