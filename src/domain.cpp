@@ -60,12 +60,12 @@ void flatten_tasks(){
 			t.check_integrity();
 			primitive_tasks.push_back(t);	
 		}
-		for(parsed_task a : parsed_abstract){
-			task at;
-			at.name = a.name;
-			at.vars = a.arguments->vars;
-			abstract_tasks.push_back(at);
-		}
+	}
+	for(parsed_task a : parsed_abstract){
+		task at;
+		at.name = a.name;
+		at.vars = a.arguments->vars;
+		abstract_tasks.push_back(at);
 	}
 	for(task t : primitive_tasks) task_name_map[t.name] = t;
 	for(task t : abstract_tasks) task_name_map[t.name] = t;
