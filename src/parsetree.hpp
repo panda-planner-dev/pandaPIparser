@@ -90,5 +90,6 @@ extern vector<parsed_task> parsed_primitive;
 extern vector<parsed_task> parsed_abstract;
 extern map<string,vector<parsed_method> > parsed_methods;
 
+string sort_for_const(string c);
 
 #endif

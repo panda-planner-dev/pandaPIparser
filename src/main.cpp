@@ -36,6 +36,8 @@ map<string, task> task_name_map;
 
 
 int main(int argc, char** argv) {
+	cin.sync_with_stdio(false);
+	cout.sync_with_stdio(false);
 	if (argc < 2){
 		cout << "You need to provide a domain and problem file as input." << endl;
 		return 1;
@@ -43,6 +45,14 @@ int main(int argc, char** argv) {
 	// open c-style file handle 
 	FILE *domain_file = fopen(argv[1], "r");
 	FILE *problem_file = fopen(argv[2], "r");
+	bool verboseOutput = false;
+	int level = 0;
+	if (argc > 3){
+		string s(argv[3]);
+		verboseOutput = s == "-debug";
+		if (argc > 4) level = atoi(argv[4]);
+	}
+
 	if (!domain_file) {
 		cout << "I can't open " << argv[1] << "!" << endl;
 		return 2;
@@ -67,16 +77,13 @@ int main(int argc, char** argv) {
 	parsed_method_to_data_structures();
 	// split methods with independent parameters to reduce size of grounding
 	split_independent_parameters();
-
-	vector<ground_literal> init = compute_cwa();
-	//cout << init.size() << endl;
-
-	for(ground_literal l : goal){
-		cout << "\t" << (l.positive?"+":"-")<< color(COLOR_BLUE,l.predicate);
-		for(string c : l.args) cout << " " << c;
-		cout << endl;
-	}
+	// cwa
+	compute_cwa();
+	// simplify constraints as far as possible
+	reduce_constraints();
+	clean_up_sorts();
 
 	// write to output
-	verbose_output(0);
+	if (verboseOutput) verbose_output(level);
+	else simple_hddl_output();
 }

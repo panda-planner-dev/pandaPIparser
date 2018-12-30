@@ -128,6 +128,7 @@ init_el : init_el literal {
 		map<string,string> access;
 		for(auto x : $2->arguments.newVar) access[x.first] = *sorts[x.second].begin(); 
 		ground_literal l;
+		l.positive = true;
 		l.predicate = $2->predicate;
 		for(string v : $2->arguments.vars) l.args.push_back(access[v]);
 		init.push_back(l);
@@ -147,8 +148,14 @@ p_htn : '(' htn_type
 		m.prec = new general_formula(); m.prec->type = EMPTY;
 		m.eff = new general_formula(); m.eff->type = EMPTY;
 		m.tn = $4;
-
 		parsed_methods[atName].push_back(m);
+
+		parsed_task	top;
+		top.name = "__top";
+		top.arguments = new var_declaration();
+		top.prec = new general_formula(); top.prec->type = EMPTY;
+		top.eff = new general_formula(); top.eff->type = EMPTY;
+		parsed_abstract.push_back(top);
 }
 
 p_constraint : '(' KEY_CONSTRAINTS gd ')'

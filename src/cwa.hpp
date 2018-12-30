@@ -14,7 +14,7 @@ struct ground_literal{
 };
 
 void flatten_goal();
-vector<ground_literal> compute_cwa();
+void compute_cwa();
 
 extern vector<ground_literal> init;
 extern vector<ground_literal> goal;

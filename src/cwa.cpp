@@ -29,7 +29,7 @@ void flatten_goal(){
 }
 
 
-vector<ground_literal> compute_cwa(){
+void compute_cwa(){
 	// find predicates occuring negatively in preconditions and their types
 	map<string,set<vector<string>>> neg_predicates_with_arg_sorts;
 	
@@ -39,12 +39,19 @@ vector<ground_literal> compute_cwa(){
 		assert(argSorts.size() == l.arguments.size());
 		neg_predicates_with_arg_sorts[l.predicate].insert(argSorts);
 	}
+	
+	// predicates negative in goal
+	for (auto l : goal) if (!l.positive) {
+		vector<string> args;
+		for (string c : l.args) args.push_back(sort_for_const(c));
+		neg_predicates_with_arg_sorts[l.predicate].insert(args);
+	} 
+	
 
 	map<string,set<vector<string>>> init_check;
 	for(auto l : init)
 		init_check[l.predicate].insert(l.args);
-	
-	vector<ground_literal> ret = init;
+
 	for (auto np : neg_predicates_with_arg_sorts){
 		set<vector<string>> instantiations;
 		for (vector<string> arg_sorts : np.second){
@@ -65,9 +72,7 @@ vector<ground_literal> compute_cwa(){
 			ground_literal lit; lit.predicate = np.first;
 			lit.args = p;
 			lit.positive = false;
-			ret.push_back(lit);
+			init.push_back(lit);
 		}
 	}
-
-	return ret;
 }

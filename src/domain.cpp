@@ -192,14 +192,166 @@ void parsed_method_to_data_structures(){
 				}
 			}
 
-
 			m.check_integrity();
 			methods.push_back(m);
 		}
 	}
-
 }
 
+void reduce_constraints(){
+	int ns_count = 0;
+	vector<method> oldm = methods;
+	methods.clear();
+	for (method m : oldm){
+		method nm = m;
+		vector<literal> oldC = nm.constraints;
+		nm.constraints.clear();
+
+		map<string,string> vSort; for (auto x : m.vars) vSort[x.first] = x.second;
+		for (literal l : oldC){
+			if (l.arguments[1][0] == '?'){
+				nm.constraints.push_back(l);
+				continue;
+			}
+
+			string v = l.arguments[0];
+			string c = l.arguments[1];
+
+			// v != c and c is not in the sort of v
+			if (!l.positive && !sorts[vSort[v]].count(c)) continue;
+			// recompute sort
+			set<string> vals = sorts[vSort[v]];
+			if (l.positive) {
+				if (vals.count(c)) {
+					vals.clear();
+					vals.insert(c);
+				} else vals.clear();
+			} else vals.erase(c);
+			if (vals != sorts[vSort[v]]){
+				string ns = vSort[v] + "_constraint_propagated_" + to_string(++ns_count);
+				vSort[v] = ns;
+				sorts[ns] = vals;
+			}
+		}
+		// rebuild args
+		vector<pair<string,string>>	nvar;
+		for (auto x : nm.vars) nvar.push_back(make_pair(x.first,vSort[x.first]));
+		nm.vars = nvar;
+		methods.push_back(nm);
+	}
+	
+	vector<task> oldt = primitive_tasks;
+	primitive_tasks.clear();
+	for (task t : oldt){
+		task nt = t;
+		vector<literal> oldC = t.constraints;
+		nt.constraints.clear();
+
+		map<string,string> vSort; for (auto x : t.vars) vSort[x.first] = x.second;
+		for (literal l : oldC){
+			if (l.arguments[1][0] == '?'){
+				nt.constraints.push_back(l);
+				continue;
+			}
+
+			string v = l.arguments[0];
+			string c = l.arguments[1];
+
+			// v != c and c is not in the sort of v
+			if (!l.positive && !sorts[vSort[v]].count(c)) continue;
+			// recompute sort
+			set<string> vals = sorts[vSort[v]];
+			if (l.positive) {
+				if (vals.count(c)) {
+					vals.clear();
+					vals.insert(c);
+				} else vals.clear();
+			} else vals.erase(c);
+			if (vals != sorts[vSort[v]]){
+				string ns = vSort[v] + "_constraint_propagated_" + to_string(++ns_count);
+				vSort[v] = ns;
+				sorts[ns] = vals;
+			}
+		}
+		// rebuild args
+		vector<pair<string,string>>	nvar;
+		for (auto x : nt.vars) nvar.push_back(make_pair(x.first,vSort[x.first]));
+		nt.vars = nvar;
+		primitive_tasks.push_back(nt);
+	}
+}
+
+void clean_up_sorts(){
+	// reduce the number of sorts
+	map<set<string>,string> elems_to_sort;
+	
+	vector<task> oldt = primitive_tasks;
+	primitive_tasks.clear();
+	for (task t : oldt){
+		task nt = t;
+		vector<pair<string,string>>	nvar;
+		for (auto x : nt.vars) {
+			set<string> elems = sorts[x.second];
+			if (!elems_to_sort.count(elems))
+				elems_to_sort[elems] = x.second;
+			nvar.push_back(make_pair(x.first,elems_to_sort[elems]));
+		}
+		nt.vars = nvar;
+		nt.check_integrity();
+		primitive_tasks.push_back(nt);
+	}
+
+	vector<task> olda = abstract_tasks;
+	abstract_tasks.clear();
+	for (task t : olda){
+		task nt = t;
+		vector<pair<string,string>>	nvar;
+		for (auto x : nt.vars) {
+			set<string> elems = sorts[x.second];
+			if (!elems_to_sort.count(elems))
+				elems_to_sort[elems] = x.second;
+			nvar.push_back(make_pair(x.first,elems_to_sort[elems]));
+		}
+		nt.vars = nvar;
+		nt.check_integrity();
+		abstract_tasks.push_back(nt);
+	}
+	
+	vector<method> oldm = methods;
+	methods.clear();
+	for (method m : oldm){
+		method nm = m;
+		vector<pair<string,string>>	nvar;
+		for (auto x : nm.vars) {
+			set<string> elems = sorts[x.second];
+			if (!elems_to_sort.count(elems))
+				elems_to_sort[elems] = x.second;
+			nvar.push_back(make_pair(x.first,elems_to_sort[elems]));
+		}
+		nm.vars = nvar;
+		nm.check_integrity();
+		methods.push_back(nm);
+	}
+
+	vector<predicate_definition> opred = predicate_definitions;
+	predicate_definitions.clear();
+	for (auto p : opred){
+		predicate_definition np = p;
+		vector<string>	nvar;
+		for (auto x : np.argument_sorts) {
+			set<string> elems = sorts[x];
+			if (!elems_to_sort.count(elems))
+				elems_to_sort[elems] = x;
+			nvar.push_back(elems_to_sort[elems]);
+		}
+		np.argument_sorts = nvar;
+		predicate_definitions.push_back(np);
+	}
+
+	sorts.clear();
+	for (auto x : elems_to_sort)
+		sorts[x.second] = x.first;
+}
 
 void task::check_integrity(){
 	for(auto v : this->vars)
