@@ -74,6 +74,12 @@ void verbose_output(int verbosity){
 		cout << "\t\tordering:" << endl;
 		for(auto o : m.ordering)
 			cout << "\t\t     " << color(COLOR_YELLOW,o.first) << " < " << color(COLOR_YELLOW,o.second) << endl;
+		cout << "\t\tconstraints:" << endl;
+		for(literal l : m.constraints){
+			cout << "\t\t     " << (l.positive?"+":"-") << " " << color(COLOR_CYAN,l.predicate);
+			for(string v : l.arguments) cout << " " << v;
+			cout << endl;
+		}
 	}
 
 

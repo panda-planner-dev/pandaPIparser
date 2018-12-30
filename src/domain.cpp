@@ -118,6 +118,8 @@ void parsed_method_to_data_structures(){
 					m.constraints.push_back(l);
 				else mPrec.push_back(l);
 
+			map<string,string> sorts_of_vars; for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
+
 			// actually have method precondition
 			if (mPrec.size()){
 				task t;
@@ -126,7 +128,6 @@ void parsed_method_to_data_structures(){
 				set<string> args;
 				for (literal l : t.prec) for (string a : l.arguments) args.insert(a);
 				// get types of vars
-				map<string,string> sorts_of_vars; for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
 				for (string v : args) {
 					string accessV = v;
 					if (mprec_additional_vars.count(v)) accessV = mprec_additional_vars[v];
@@ -154,6 +155,35 @@ void parsed_method_to_data_structures(){
 
 			// ordering
 			for(auto o : pm.tn->ordering) m.ordering.push_back(*o);
+
+			// constraints
+			vector<pair<vector<literal>, additional_variables> > exconstraints = pm.tn->constraint->expand();
+			assert(exconstraints.size() == 1);
+			assert(exconstraints[0].second.size() == 0); // no additional vars due to constraints
+			for(literal l : exconstraints[0].first) m.constraints.push_back(l);
+
+			// remove sort constraints
+			vector<literal> oldC = m.constraints;
+			m.constraints.clear();
+			for(literal l : oldC) if (l.predicate == dummy_equal_literal) m.constraints.push_back(l); else {
+				// determine the now forbidden variables
+				set<string> currentVals = sorts[sorts_of_vars[l.arguments[0]]];
+				set<string> sortElems = sorts[l.arguments[1]];
+				vector<string> forbidden;
+				if (l.positive) {
+					for (string s : currentVals) if (sortElems.count(s) == 0) forbidden.push_back(s);
+				} else
+					for (string s : sortElems) forbidden.push_back(s);
+				for(string f : forbidden){
+					literal nl;
+					nl.positive = false;
+					nl.predicate = dummy_equal_literal;
+					nl.arguments.push_back(l.arguments[0]);
+					nl.arguments.push_back(f);
+					m.constraints.push_back(nl);
+				}
+			}
+
 
 			m.check_integrity();
 			methods.push_back(m);
