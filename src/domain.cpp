@@ -1,6 +1,7 @@
 #include "domain.hpp"
 #include "parsetree.hpp"
 #include "util.hpp"
+#include "cwa.hpp"
 #include <iostream>
 #include <cassert>
 
@@ -351,6 +352,54 @@ void clean_up_sorts(){
 	sorts.clear();
 	for (auto x : elems_to_sort)
 		sorts[x.second] = x.first;
+}
+
+void remove_unnecessary_predicates(){
+	set<string> occuring_preds;
+	for (task t : primitive_tasks) for (literal l : t.prec) occuring_preds.insert(l.predicate);
+	for (ground_literal gl : goal) occuring_preds.insert(gl.predicate);
+
+	vector<predicate_definition> old = predicate_definitions;
+	predicate_definitions.clear();
+
+
+	// find predicates that occur only in effects
+	set<string> removed_predicates;
+	for (predicate_definition p : old){
+		if (occuring_preds.count(p.name)){
+			predicate_definitions.push_back(p);
+		} else
+			removed_predicates.insert(p.name);
+	}
+
+	// remove these from primitive tasks and the goal
+	vector<task> oldt = primitive_tasks;
+	primitive_tasks.clear();
+	for (task t : oldt){
+		task nt = t;
+		vector<literal> np;
+		// filter effects
+		for (literal l: nt.eff)
+			if (!removed_predicates.count(l.predicate))
+				np.push_back(l);
+		nt.eff = np;
+		nt.check_integrity();
+		primitive_tasks.push_back(nt);
+	}
+
+	// remove useless predicates from init
+	vector<ground_literal> ni;
+	for (ground_literal l : init)
+		if (!removed_predicates.count(l.predicate))
+			ni.push_back(l);
+	init = ni;
+	
+	// remove useless predicates from goal
+	vector<ground_literal> ng;
+	for (ground_literal l : goal)
+		if (!removed_predicates.count(l.predicate))
+			ng.push_back(l);
+	goal = ng;
 }
 
 void task::check_integrity(){

@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
 	// simplify constraints as far as possible
 	reduce_constraints();
 	clean_up_sorts();
+	remove_unnecessary_predicates();
 
 	// write to output
 	if (verboseOutput) verbose_output(level);

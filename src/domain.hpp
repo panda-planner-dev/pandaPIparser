@@ -59,5 +59,6 @@ void flatten_tasks();
 void parsed_method_to_data_structures();
 void reduce_constraints();
 void clean_up_sorts();
+void remove_unnecessary_predicates();
 
 #endif
