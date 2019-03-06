@@ -1,6 +1,11 @@
 CC=g++
-COMPILEFLAGS=-O2 -Wall -std=c++11
-LINKERFLAG=-lm
+
+CWARN=-Wno-unused-parameter
+CERROR=-Werror=implicit-function-declaration
+
+COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++11 $(CWARN) $(CERROR)
+LINKERFLAG=-O3 -lm -flto
+#-flto
 
 .PHONY = parser clean
 
