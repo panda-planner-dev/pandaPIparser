@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <cassert>
+#include <cstring>
 #include "parsetree.hpp"
 #include "hddl.hpp"
 #include "domain.hpp"
@@ -42,6 +43,20 @@ int main(int argc, char** argv) {
 		cout << "You need to provide a domain and problem file as input." << endl;
 		return 1;
 	}
+	int dfile = -1;
+	int pfile = -1;
+	bool splitParameters = true;
+	for (int i = 1; i < argc; i++){
+		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
+		else if (dfile == -1) dfile = i;
+		else if (pfile == -1) pfile = i;
+		else {
+			cout << "Don't know what you meant with \"" << argv[i] <<"\"." << endl;
+			return 1;
+		}
+	}
+
+
 	// open c-style file handle 
 	FILE *domain_file = fopen(argv[1], "r");
 	FILE *problem_file = fopen(argv[2], "r");
@@ -76,7 +91,7 @@ int main(int argc, char** argv) {
 	// create appropriate methods and expand method preconditions
 	parsed_method_to_data_structures();
 	// split methods with independent parameters to reduce size of grounding
-	split_independent_parameters();
+	if (splitParameters) split_independent_parameters();
 	// cwa
 	compute_cwa();
 	// simplify constraints as far as possible
