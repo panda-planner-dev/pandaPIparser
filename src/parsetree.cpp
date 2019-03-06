@@ -32,10 +32,11 @@ string sort_for_const(string c){
 vector<pair<vector<literal>, additional_variables> > general_formula::expand(){
 	vector<pair<vector<literal>, additional_variables> > ret;
 
-	if (this->type == EMPTY || (this-subformulae.size() == 0 &&
+	if (this->type == EMPTY || (this->subformulae.size() == 0 &&
 				(this->type == AND || this->type == OR || this->type == FORALL || this->type == EXISTS))){
 		vector<literal> empty; additional_variables none;
 		ret.push_back(make_pair(empty,none));
+		return ret;
 	}
 	
 	vector<vector<pair<vector<literal>, additional_variables> > > subresults;
