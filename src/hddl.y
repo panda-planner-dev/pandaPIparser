@@ -253,6 +253,7 @@ method_def :
 		m.name = $3;		
 		string atName($10); // later for insertion into map
 		m.atArguments = $11->vars; // TODO do something with $11->newVar
+		m.newVarForAT = $11->newVar;
 		m.vars = $6;
 		m.prec = $13;
 		m.eff = $14;

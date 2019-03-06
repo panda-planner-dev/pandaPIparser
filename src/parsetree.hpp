@@ -76,6 +76,7 @@ struct parsed_method{
 	string name;
 	vector<string> atArguments;
 	var_declaration* vars; 	
+	additional_variables newVarForAT; // varname & sort
 	general_formula* prec;
 	general_formula* eff;
 	parsed_task_network* tn;

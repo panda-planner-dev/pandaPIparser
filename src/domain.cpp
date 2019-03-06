@@ -80,11 +80,26 @@ void parsed_method_to_data_structures(){
 		for (auto prec : precs){
 			method m; i++;
 			m.name = pm.name; if (precs.size() > 1) m.name += "_" + to_string(i);
-			m.at = e.first;
-			m.atargs = pm.atArguments;
-			
 			// collect all the variable
 			m.vars = pm.vars->vars;
+
+			
+			// add variables needed due to constants in the arguments of the abstract task
+			map<string,string> at_arg_additional_vars;
+			for (pair<string, string> av : pm.newVarForAT){
+				at_arg_additional_vars[av.first] = av.first + "_" + to_string(i++);
+				m.vars.push_back(make_pair(at_arg_additional_vars[av.first],av.second));
+			}
+			// compute arguments of the abstract task
+			m.at = e.first;
+			m.atargs.clear();
+			for (string arg : pm.atArguments){
+				if (at_arg_additional_vars.count(arg))
+					m.atargs.push_back(at_arg_additional_vars[arg]);
+				else
+					m.atargs.push_back(arg);
+			}
+			
 			// variables from precondition
 			map<string,string> mprec_additional_vars;
 			for (pair<string, string> av : prec.second){
