@@ -165,7 +165,24 @@ vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > gene
 		
 	}
 
-	if (this->type == WHEN) assert(false); // this function should not be called for effects
+	if (this->type == WHEN) {
+		for (auto expanded_condition : subresults[0]) for (auto expanded_effect : subresults[1]){
+			vector<literal> eff = expanded_effect.first.first;
+			vector<literal> cond = expanded_effect.first.second;
+			cond.insert(cond.end(), expanded_condition.first.first.begin(), expanded_condition.first.first.end());
+			additional_variables avs = expanded_effect.second;
+			avs.insert(expanded_condition.second.begin(), expanded_condition.second.end());
+			ret.push_back(make_pair(make_pair(eff,cond),avs));
+		}
+
+		general_formula cond = *(this->subformulae[0]);
+		cond.negate();
+		for (auto expanded_condition : cond.expand()){
+			expanded_condition.first.second = expanded_condition.first.first;
+			expanded_condition.first.first.clear();
+			ret.push_back(expanded_condition);
+		}
+	}
 
 	return ret;
 }
