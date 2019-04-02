@@ -39,7 +39,15 @@ void flatten_tasks(){
 			// gather the additional variables
 			additional_variables addVars = p.second;
 			for (auto elem : e.second) addVars.insert(elem);
-			for (auto v : addVars) t.vars.push_back(v);
+			for (auto v : addVars) {
+				// check whether this variable actually occurs anywhere
+				bool contained = false;
+				for (auto pre : t.prec) for (auto arg : pre.arguments) contained |= v.first == arg;
+				for (auto eff : t.eff) for (auto arg : eff.arguments) contained |= v.first == arg;
+
+				if (!contained) continue;
+				t.vars.push_back(v);
+			}
 			
 			if (plist.size() > 1 || elist.size() > 1) {
 				t.name += "_instance_" + to_string(i);
