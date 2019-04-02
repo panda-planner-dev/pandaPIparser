@@ -48,7 +48,11 @@ class general_formula{
 		string arg2;
 
 		void negate();
-		vector<pair<vector<literal>, additional_variables> > expand();
+		// first: effect, second: additional precondition for that effect
+		vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > expand();
+
+	private:
+		general_formula* copyReplace(map<string,string>& replace);
 };
 
 

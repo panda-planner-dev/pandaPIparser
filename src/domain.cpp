@@ -10,30 +10,38 @@ using namespace std;
 void flatten_tasks(){
 	for(parsed_task a : parsed_primitive){
 		// expand the effects first, as they will contain only one element
-		vector<pair<vector<literal>, additional_variables> > elist = a.eff->expand();
-		assert(elist.size() == 1); // can't handle disjuctive effects
-			
-		vector<pair<vector<literal>, additional_variables> > plist = a.prec->expand();
+		vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > elist = a.eff->expand();
+		
+		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > plist = a.prec->expand();
 		int i = 0;
-		for(auto p : plist){
+		for(auto e : elist) for(auto p : plist){
+			assert(p.first.second.size() == 0); // precondition cannot contain conditional effects
 			task t; i++;
 			t.name = a.name;
 			// sort out the constraints
-			for(literal pl : p.first)
+			for(literal pl : p.first.first)
 				if (pl.predicate == dummy_equal_literal)
 					t.constraints.push_back(pl);
 				else
 					t.prec.push_back(pl);
-			t.eff = elist[0].first;
+
+			// add preconditions for conditional effects
+			for(literal ep : e.first.second){
+				assert(ep.predicate != dummy_equal_literal);
+				t.prec.push_back(ep);
+			}
+
+			// set effects
+			t.eff = e.first.first;
 			
 			// add declared vars
 			t.vars = a.arguments->vars;
 			// gather the additional variables
 			additional_variables addVars = p.second;
-			for (auto elem : elist[0].second) addVars.insert(elem);
+			for (auto elem : e.second) addVars.insert(elem);
 			for (auto v : addVars) t.vars.push_back(v);
 			
-			if (plist.size() > 1) {
+			if (plist.size() > 1 || elist.size() > 1) {
 				t.name += "_instance_" + to_string(i);
 				// we have to create a new decomposition method at this point
 				method m;
@@ -76,7 +84,7 @@ void parsed_method_to_data_structures(){
 	int i = 0;
 	for (auto e : parsed_methods) for (parsed_method pm : e.second) {
 		// compute flattening of method precondition
-		vector<pair<vector<literal>, additional_variables> > precs = pm.prec->expand();
+		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > precs = pm.prec->expand();
 		for (auto prec : precs){
 			method m; i++;
 			m.name = pm.name; if (precs.size() > 1) m.name += "_" + to_string(i);
@@ -137,7 +145,7 @@ void parsed_method_to_data_structures(){
 
 			// add a subtask for the method precondition
 			vector<literal> mPrec;
-			for (literal l : prec.first)
+			for (literal l : prec.first.first)
 				if (l.predicate == dummy_equal_literal || l.predicate == dummy_ofsort_literal)
 					m.constraints.push_back(l);
 				else mPrec.push_back(l);
@@ -181,10 +189,11 @@ void parsed_method_to_data_structures(){
 			for(auto o : pm.tn->ordering) m.ordering.push_back(*o);
 
 			// constraints
-			vector<pair<vector<literal>, additional_variables> > exconstraints = pm.tn->constraint->expand();
+			vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > exconstraints = pm.tn->constraint->expand();
 			assert(exconstraints.size() == 1);
 			assert(exconstraints[0].second.size() == 0); // no additional vars due to constraints
-			for(literal l : exconstraints[0].first) m.constraints.push_back(l);
+			assert(exconstraints[0].first.second.size() == 0); // no conditional effects
+			for(literal l : exconstraints[0].first.first) m.constraints.push_back(l);
 
 			// remove sort constraints
 			vector<literal> oldC = m.constraints;

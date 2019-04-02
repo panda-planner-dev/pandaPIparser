@@ -10,8 +10,9 @@ general_formula* goal_formula = NULL;
 
 void flatten_goal(){
 	if (goal_formula == NULL) return;
-	vector<pair<vector<literal>, additional_variables> > ex = goal_formula->expand();
+	vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > ex = goal_formula->expand();
 	assert(ex.size() == 1);
+	assert(ex[0].first.second.size() == 0);
 	map<string,string> access;
 	for (auto x : ex[0].second){
 		string sort = x.second;
@@ -19,7 +20,7 @@ void flatten_goal(){
 		access[x.first] = *sorts[sort].begin();
 	}
 
-	for (literal l : ex[0].first){
+	for (literal l : ex[0].first.first){
 		ground_literal gl;
 		gl.predicate = l.predicate;
 		gl.positive = l.positive;
