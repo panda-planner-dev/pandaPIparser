@@ -465,6 +465,10 @@ void task::check_integrity(){
 }
 
 void method::check_integrity(){
+	set<string> varnames;
+	for (auto v : vars) varnames.insert(v.first);
+	assert(varnames.size() == vars.size());
+	
 	for (plan_step ps : this->ps){
 		task t = task_name_map[ps.task];
 		assert(ps.args.size() == t.vars.size());
