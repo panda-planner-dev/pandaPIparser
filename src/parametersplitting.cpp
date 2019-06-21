@@ -53,15 +53,23 @@ void split_independent_parameters(){
 			method sm;
 			sm.name = "splitting_method_" + at.name;
 			sm.at = at.name;
+			set<string> smVars; // for duplicate check
 			
 			// variables
 			for (string v : ops.args){	
-				if (!variables_to_remove.count(v)) // if we don't remove it, it is an argument of the abstract task
-					at.vars.push_back(make_pair(v,sorts_of_remaining[v])),
-					nps.args.push_back(v),
-					sm.vars.push_back(make_pair(v,sorts_of_remaining[v]));
-				else
-					sm.vars.push_back(make_pair(v,variables_to_remove[v]));
+				if (!variables_to_remove.count(v)){	// if we don't remove it, it is an argument of the abstract task
+					at.vars.push_back(make_pair(v,sorts_of_remaining[v]));
+					nps.args.push_back(v);
+					if (!smVars.count(v)){
+						smVars.insert(v);
+						sm.vars.push_back(make_pair(v,sorts_of_remaining[v]));
+					}
+				} else {
+					if (!smVars.count(v)){
+						smVars.insert(v);
+						sm.vars.push_back(make_pair(v,variables_to_remove[v]));
+					}
+				}
 			}
 			abstract_tasks.push_back(at);
 			task_name_map[at.name] = at;
