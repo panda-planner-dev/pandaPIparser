@@ -30,8 +30,43 @@ void flatten_goal(){
 }
 
 
+map<string,vector<int> > int_sorts;
+map<string,int> const_int;
+vector<string> int_const;
+
+
+// fully instantiate predicate via recursion
+void fully_instantiate(int * inst, unsigned int pos, vector<string> & arg_sorts, vector<vector<int>> & result){
+	if (pos == arg_sorts.size()){
+		vector<int> instance(inst,inst + arg_sorts.size());
+		result.push_back(instance);
+		return;
+	}
+
+	for (int c : int_sorts[arg_sorts[pos]]) {
+		inst[pos] = c;
+		fully_instantiate(inst,pos+1,arg_sorts,result);
+	}
+}
+
+
 void compute_cwa(){
-	// find predicates occuring negatively in preconditions and their types
+	// transform sort representation to ints
+	for (auto & s : sorts){
+		for (string c : s.second){
+			auto it = const_int.find(c);
+			int id;
+			if (it == const_int.end()) {
+				id = const_int.size();
+				const_int[c] = id;
+				int_const.push_back(c);
+			} else id = it->second;
+			int_sorts[s.first].push_back(id);
+		}
+	}
+
+
+	// find predicates occurring negatively in preconditions and their types
 	map<string,set<vector<string>>> neg_predicates_with_arg_sorts;
 	
 	for (task t : primitive_tasks) for (literal l : t.prec) if (!l.positive) {
@@ -47,33 +82,31 @@ void compute_cwa(){
 		for (string c : l.args) args.push_back(sort_for_const(c));
 		neg_predicates_with_arg_sorts[l.predicate].insert(args);
 	} 
-	
 
-	map<string,set<vector<string>>> init_check;
-	for(auto l : init)
-		init_check[l.predicate].insert(l.args);
+	map<string,set<vector<int>>> init_check;
+	for(auto l : init){
+		vector<int> args;
+		for (string & arg : l.args) args.push_back(const_int[arg]);
+		init_check[l.predicate].insert(args);
+	}
 
 	for (auto np : neg_predicates_with_arg_sorts){
-		set<vector<string>> instantiations;
-		for (vector<string> arg_sorts : np.second){
-			vector<vector<string>> inst;
-			vector<string> __empty; inst.push_back(__empty);
+		set<vector<int>> instantiations;
 
-			for (string s : arg_sorts) {
-				vector<vector<string>> prev = inst; inst.clear();
-				for (string c : sorts[s]) for (vector<string> p : prev) {
-					p.push_back(c); inst.push_back(p);
-				}
+		for (vector<string> arg_sorts : np.second){
+			vector<vector<int>> inst;
+			int * partial_instance = new int[arg_sorts.size()];
+			fully_instantiate(partial_instance, 0, arg_sorts, inst);
+			delete[] partial_instance;
+
+			for (vector<int> & p : inst) if (instantiations.count(p) == 0){
+				instantiations.insert(p);
+				if (init_check[np.first].count(p)) continue;
+				ground_literal lit; lit.predicate = np.first;
+				for (int arg : p) lit.args.push_back(int_const[arg]);
+				lit.positive = false;
+				init.push_back(lit);
 			}
-			
-			for (vector<string> p : inst) instantiations.insert(p);
-		}
-		for (vector<string> p : instantiations){
-			if (init_check[np.first].count(p)) continue;
-			ground_literal lit; lit.predicate = np.first;
-			lit.args = p;
-			lit.positive = false;
-			init.push_back(lit);
 		}
 	}
 }

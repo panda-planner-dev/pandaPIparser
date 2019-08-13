@@ -58,8 +58,8 @@ int main(int argc, char** argv) {
 
 
 	// open c-style file handle 
-	FILE *domain_file = fopen(argv[1], "r");
-	FILE *problem_file = fopen(argv[2], "r");
+	FILE *domain_file = fopen(argv[dfile], "r");
+	FILE *problem_file = fopen(argv[pfile], "r");
 	bool verboseOutput = false;
 	int level = 0;
 	if (argc > 3){
@@ -69,11 +69,11 @@ int main(int argc, char** argv) {
 	}
 
 	if (!domain_file) {
-		cout << "I can't open " << argv[1] << "!" << endl;
+		cout << "I can't open " << argv[dfile] << "!" << endl;
 		return 2;
 	}
 	if (!problem_file) {
-		cout << "I can't open " << argv[2] << "!" << endl;
+		cout << "I can't open " << argv[pfile] << "!" << endl;
 		return 2;
 	}
 	// parse the domain file
