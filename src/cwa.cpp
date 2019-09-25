@@ -4,6 +4,7 @@
 #include <iostream>
 
 vector<ground_literal> init;
+vector<pair<ground_literal,int>> init_functions;
 vector<ground_literal> goal;
 general_formula* goal_formula = NULL;
 

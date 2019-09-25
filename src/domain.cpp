@@ -32,7 +32,12 @@ void flatten_tasks(){
 			}
 
 			// set effects
-			t.eff = e.first.first;
+			for (auto eff : e.first.first){
+				if (eff.isCostChangeExpression)
+					t.costExpression.push_back(eff);
+				else
+					t.eff.push_back(eff);
+			}
 			
 			// add declared vars
 			t.vars = a.arguments->vars;

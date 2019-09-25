@@ -33,6 +33,7 @@ general_formula* general_formula::copyReplace(map<string,string> & replace){
 	if (replace.count(ret->arg1)) ret->arg1 = replace[ret->arg1];
 	ret->arg2 = this->arg2;
 	if (replace.count(ret->arg2)) ret->arg2 = replace[ret->arg2];
+	ret->value = this->value;
 
 	ret->predicate = this->predicate;
 	for (auto sub : this->subformulae) ret->subformulae.push_back(sub->copyReplace(replace));
@@ -134,10 +135,12 @@ vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > gene
 	}
 
 
-	if (this->type == ATOM || this->type == NOTATOM) {
+	if (this->type == ATOM || this->type == NOTATOM || this->type == COST) {
 		vector<literal> ls;
 		literal l;
 		l.positive = this->type == ATOM;
+		l.isConstantCostExpression = false;
+		l.isCostChangeExpression = false;
 		l.predicate = this->predicate;
 		l.arguments = this->arguments.vars;
 		ls.push_back(l);
@@ -146,6 +149,33 @@ vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > gene
 		vector<literal> empty;
 		ret.push_back(make_pair(make_pair(ls,empty),vars));	
 	}
+
+	if (this->type == VALUE){
+		vector<literal> ls;
+		literal l;
+		l.positive = this->type == ATOM;
+		l.isConstantCostExpression = true;
+		l.costValue = this->value;
+		ls.push_back(l);
+
+		additional_variables vars;
+		vector<literal> empty;
+		ret.push_back(make_pair(make_pair(ls,empty),vars));	
+	}
+	
+	if (this->type == COST_CHANGE){
+		assert(subresults.size() == 2);
+		assert(subresults[0].size() == 1);
+		assert(subresults[0][0].first.first.size() == 1);
+		assert(subresults[0][0].first.first[0].predicate == metric_target);
+		assert(subresults[0][0].first.first[0].arguments.size() == 0);
+
+		assert(subresults[1].size() == 1);
+		assert(subresults[1][0].first.first.size() == 1);
+		subresults[1][0].first.first[0].isCostChangeExpression = true;
+		ret.push_back(subresults[1][0]);
+	}
+
 	// add dummy literal for equal and not equal constraints
 	if (this->type == EQUAL || this->type == NOTEQUAL || this->type == OFSORT || this->type == NOTOFSORT){
 		vector<literal> ls;

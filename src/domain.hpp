@@ -11,11 +11,16 @@ using namespace std;
 
 const string dummy_equal_literal = "__equal";
 const string dummy_ofsort_literal = "__ofsort";
+const string dummy_function_type = "__none";
+const string numeric_funtion_type = "number";
 
 struct literal{
 	bool positive;
+	bool isConstantCostExpression;
+	bool isCostChangeExpression;
 	string predicate;
 	vector<string> arguments;
+	int costValue;
 };
 
 
@@ -25,6 +30,7 @@ struct task{
 	vector<literal> prec;
 	vector<literal> eff;
 	vector<literal> constraints;
+	vector<literal> costExpression;
 
 	void check_integrity();
 };

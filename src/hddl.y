@@ -3,6 +3,7 @@
 	#include <iostream>
 	#include <vector>
 	#include <cassert>
+	#include <string.h>
 	#include "parsetree.hpp"
 	#include "domain.hpp"
 	#include "cwa.hpp"
@@ -28,6 +29,7 @@
 	var_declaration* vardecl;
 	predicate_definition* preddecl;
 	general_formula* formula;
+	std::vector<predicate_definition*>* preddecllist;
 	std::vector<general_formula*>* formulae;
 	var_and_const* varandconst;
 	sub_task* subtask;
@@ -38,9 +40,9 @@
 	std::vector<std::pair<string,string>*>* spairlist;
 }
 
-%token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES 
+%token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES KEY_FUNCTIONS
 %token KEY_TASK KEY_CONSTANTS KEY_ACTION KEY_PARAMETERS KEY_PRECONDITION KEY_EFFECT KEY_METHOD
-%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN
+%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC   
 %token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF
 %token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS 
 %token <sval> NAME REQUIRE_NAME VAR_NAME 
@@ -48,13 +50,14 @@
 %token <ival> INT
 
 %type <sval> var_or_const
+%type <sval> typed_function_list_continuation 
 %type <bval> task_or_action
 %type <vstring> NAME-list NAME-list-non-empty 
 %type <vstring> VAR_NAME-list VAR_NAME-list-non-empty
 %type <vardecl> parameters-option typed_var_list typed_var typed_vars
 %type <preddecl> atomic_predicate_def 
+%type <preddecllist> atomic_function_def-list
 %type <varandconst> var_or_const-list
-
 %type <formulae> gd-list
 %type <formula> atomic_formula
 %type <formula> gd
@@ -77,6 +80,9 @@
 %type <formula> literal
 %type <formula> p_effect
 %type <formula> neg_atomic_formula 
+%type <formula> f_head 
+%type <formula> f_exp
+
 
 %type <formula> constraint_def 
 %type <formulae> constraint_def-list
@@ -106,6 +112,7 @@ domain_defs:	domain_defs require_def |
 				domain_defs type_def |
 				domain_defs const_def |
 				domain_defs predicates_def |
+				domain_defs functions_def |
 				domain_defs task_def |
 				domain_defs method_def |
 
@@ -120,19 +127,33 @@ problem_defs: problem_defs require_def |
               problem_defs p_init | 
               problem_defs p_goal | 
               problem_defs p_constraint | // I think this is only for global LTL constraints
+			  problem_defs p_metric |
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list')';
 p_init : '(' KEY_INIT init_el ')';
 init_el : init_el literal {
 		assert($2->type == ATOM);
 		map<string,string> access;
-		for(auto x : $2->arguments.newVar) access[x.first] = *sorts[x.second].begin(); 
+		// for each constant a new sort with a uniq name has been created. We access it here and retrieve its only element, the constant in questions
+		for(auto x : $2->arguments.newVar) access[x.first] = *sorts[x.second].begin();  
 		ground_literal l;
 		l.positive = true;
 		l.predicate = $2->predicate;
 		for(string v : $2->arguments.vars) l.args.push_back(access[v]);
 		init.push_back(l);
 	} |
+	init_el '(' '=' literal INT ')' {
+		assert($4->type == ATOM);
+		map<string,string> access;
+		// for each constant a new sort with a uniq name has been created. We access it here and retrieve its only element, the constant in questions
+		for(auto x : $4->arguments.newVar) access[x.first] = *sorts[x.second].begin();
+		ground_literal l;
+		l.positive = true;
+		l.predicate = $4->predicate;
+		for(string v : $4->arguments.vars) l.args.push_back(access[v]);
+		init_functions.push_back(std::make_pair(l,$5));
+	} |
+
 p_goal : '(' KEY_GOAL gd ')' {goal_formula = $3;}
 
 htn_type: KEY_HTN | KEY_TIHTN {assert(false); /*we don't support ti-htn yet*/}
@@ -159,6 +180,10 @@ p_htn : '(' htn_type
 }
 
 p_constraint : '(' KEY_CONSTRAINTS gd ')'
+
+p_metric : '(' KEY_METRIC KEY_MIMIZE metric_f_exp ')' 
+metric_f_exp : NAME { metric_target = $1; }
+metric_f_exp : '(' NAME ')' { metric_target = $2; }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // @PDDL
@@ -207,6 +232,23 @@ atomic_predicate_def : '(' NAME typed_var_list ')' {
 		$$->name = $2;
 		for (unsigned int i = 0; i < $3->vars.size(); i++) $$->argument_sorts.push_back($3->vars[i].second);
 	}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions Definition
+// @PDDL
+functions_def : '(' KEY_FUNCTIONS typed_atomic_function_def-list ')'
+
+typed_atomic_function_def-list : atomic_function_def-list typed_function_list_continuation {
+	char * type_of_functions = $2;
+	for (predicate_definition* p : *$1){
+		parsed_functions.push_back(std::make_pair(*p,type_of_functions));
+		delete p;
+	}
+	delete $1;
+}
+typed_function_list_continuation : '-' NAME typed_atomic_function_def-list { $$ = $2; } | { $$ = strdup(numeric_funtion_type.c_str()); }
+
+atomic_function_def-list : atomic_function_def-list atomic_predicate_def { $$->push_back($2); } | { $$ = new std::vector<predicate_definition*>();}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -426,10 +468,12 @@ neg_atomic_formula : '(' KEY_NOT atomic_formula ')' {$$ = $3; $$->negate();}
 
 
 // these rules are just here to be able to parse action consts in the future
-p_effect : '(' assign_op f_head f_exp ')' {$$ = new general_formula(); $$->type=EMPTY;} // TODO actions costs
+p_effect : '(' assign_op f_head f_exp ')' {$$ = new general_formula(); $$->type=COST_CHANGE; $$->subformulae.push_back($3); $$->subformulae.push_back($4); }
 assign_op : KEY_INCREASE
-f_head : NAME 
-f_exp : INT 
+f_head : NAME { $$ = new general_formula(); $$->type = COST; $$->predicate = $1; }
+f_head : '(' NAME var_or_const-list ')' { $$ = new general_formula(); $$->type = COST; $$->predicate = $2; $$->arguments = *($3); }
+f_exp : INT { $$ = new general_formula(); $$->type = VALUE; $$->value = $1; }
+f_exp : f_head { $$ = $1; }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // elementary list of names

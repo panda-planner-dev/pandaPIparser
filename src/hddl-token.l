@@ -21,6 +21,7 @@ problem			{return KEY_PROBLEM;}
 :types			{return KEY_TYPES;}
 :constants		{return KEY_CONSTANTS;}
 :predicates		{return KEY_PREDICATES;}
+:functions		{return KEY_FUNCTIONS;}
 :task			{return KEY_TASK;}
 :action			{return KEY_ACTION;}
 :parameters		{return KEY_PARAMETERS;}
@@ -42,6 +43,8 @@ problem			{return KEY_PROBLEM;}
 :order				{return KEY_ORDER;}
 
 :constraints		{return KEY_CONSTRAINTS;}
+:metric				{return KEY_METRIC;}
+minimize			{return KEY_MIMIZE;}
 
 :causal-links		{return KEY_CAUSAL_LINKS;}
 :causallinks		{return KEY_CAUSAL_LINKS;}
@@ -67,7 +70,7 @@ sortof			{return KEY_TYPEOF;}
 :[a-zA-Z][a-zA-Z0-9\-_]*	{yylval.sval = strdup(yytext); return REQUIRE_NAME;}
 [a-zA-Z][a-zA-Z0-9\-_]*		{yylval.sval = strdup(yytext); return NAME;}
 [0-9]+\.[0-9]+  			{yylval.fval = atof(yytext); return FLOAT;}
-[0-9]+          			{yylval.fval = atoi(yytext); return INT;}
+[0-9]+          			{yylval.ival = atoi(yytext); return INT;}
 %%
 /*
 

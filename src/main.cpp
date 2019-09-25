@@ -26,6 +26,8 @@ vector<predicate_definition> predicate_definitions;
 vector<parsed_task> parsed_primitive;
 vector<parsed_task> parsed_abstract;
 map<string,vector<parsed_method> > parsed_methods;
+vector<pair<predicate_definition,string>> parsed_functions;
+string metric_target = dummy_function_type;
 
 
 map<string,set<string> > sorts;

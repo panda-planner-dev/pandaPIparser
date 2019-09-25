@@ -135,6 +135,22 @@ void simple_hddl_output(){
 		}
 	}
 
+	map<string,int> function_declarations;
+	vector<predicate_definition> functions_out;
+	for (auto p : parsed_functions){
+		if (p.second != numeric_funtion_type){
+			cerr << "the parser currently supports only numeric (type \"number\") functions." << endl;
+			exit(1);
+		}
+
+		if (p.first.name == metric_target) continue; // don't output the metric target, we don't need it
+		function_declarations[p.first.name] = function_declarations.size();
+		functions_out.push_back(p.first);
+	}
+
+	// determine whether the instance actually has action costs. If not, we insert in the output that every action has cost 1
+	bool instance_has_action_costs = metric_target != dummy_function_type;
+
 	map<string,int> task_id;
 	vector<pair<task,bool>> task_out;
 	for (task t : primitive_tasks){
@@ -168,20 +184,48 @@ void simple_hddl_output(){
 		cout << endl;
 	}
 	cout << "#end_predicates" << endl;
-	cout << "#number_primitiv_tasks_and_number_abstract_tasks" << endl;
+	cout << "#number_of_functions" << endl;
+	cout << function_declarations.size() << endl;
+	cout << "#function_declarations_with_number_of_arguments_and_argument_sorts" << endl;
+	for(auto f : functions_out){
+		cout << f.name << " " << f.argument_sorts.size();
+		for(string s : f.argument_sorts) assert(sort_id.count(s)), cout << " " << sort_id[s];
+		cout << endl;
+	}
+	cout << "#number_primitive_tasks_and_number_abstract_tasks" << endl;
 	cout << primitive_tasks.size() << " " << abstract_tasks.size() << endl;
 
 	for (auto tt : task_out){
 		task t = tt.first;
-		cout << "#begin_task_name_costs_number_of_variables" << endl;
-		cout << t.name << " " << 1 << " " << t.vars.size() << endl;
+		cout << "#begin_task_name_number_of_variables" << endl;
+		cout << t.name << " " << t.vars.size() << endl;
 		cout << "#sorts_of_variables" << endl;
 		map<string,int> v_id;
 		for (auto v : t.vars) assert(sort_id.count(v.second)), cout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
 		cout << endl;
 		cout << "#end_variables" << endl;
-		
+
 		if (tt.second){
+			cout << "#number_of_cost_statements" << endl;
+			if (instance_has_action_costs)
+				cout << t.costExpression.size() << endl;
+			else
+				cout << 1 << endl;
+			cout << "#begin_cost_statements" << endl;
+			if (instance_has_action_costs){
+				for (auto c : t.costExpression){
+					if (c.isConstantCostExpression)
+						cout << "const " << c.costValue << endl;
+					else {
+						cout << "var " << function_declarations[c.predicate];
+						for (string v : c.arguments) cout << " " << v_id[v];
+						cout << endl;
+					}
+				}
+			} else
+				cout << "const 1" << endl;
+			cout << "#end_cost_statements" << endl;
+
 			cout << "#preconditions_each_predicate_and_argument_variables" << endl;
 			cout << t.prec.size() << endl;
 			for (literal l : t.prec){
@@ -284,7 +328,21 @@ void simple_hddl_output(){
 		cout << endl;
 	}
 	cout << "#end_goal" << endl;
+	cout << "#init_function_facts" << endl;
+	vector<string> function_lines;
+	for (auto f : init_functions){
+		if (f.first.predicate == metric_target){
+			cerr << "Ignoring initialisation of metric target \"" << metric_target << "\"" << endl;
+			continue;
+		}
+		string line = to_string(function_declarations[f.first.predicate]);
+		for (auto c : f.first.args) line += " " + to_string(constants[c]);
+		line += " " + to_string(f.second);
+		function_lines.push_back(line);
+	}
+	cout << function_lines.size() << endl;
+	for (string l : function_lines)
+		cout << l << endl;
 	cout << "#initial_task" << endl;
 	cout << task_id["__top"] << endl;
 }
-

@@ -24,7 +24,7 @@ src/hddl-token.cpp: src/hddl.cpp src/hddl-token.l
 
 
 src/hddl.cpp: src/hddl.y
-	bison -d -o src/hddl.cpp src/hddl.y
+	bison -v -d -o src/hddl.cpp src/hddl.y
 
 src/hddl.hpp: src/hddl.cpp
 

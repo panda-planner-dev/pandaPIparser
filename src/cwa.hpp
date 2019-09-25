@@ -17,6 +17,7 @@ void flatten_goal();
 void compute_cwa();
 
 extern vector<ground_literal> init;
+extern vector<pair<ground_literal,int>> init_functions;
 extern vector<ground_literal> goal;
 extern general_formula* goal_formula;
 

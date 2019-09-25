@@ -31,9 +31,17 @@ struct var_and_const{
 	additional_variables newVar; // varname & sort
 };
 
+struct function_expression{
+	bool isOnlyValue;
+	int value;
+	string name;
+	var_and_const arguments;
+};
+
 enum formula_type {EMPTY, AND, OR, FORALL, EXISTS, ATOM, NOTATOM,  // formulae
 				   EQUAL, NOTEQUAL, OFSORT, NOTOFSORT,
-				   WHEN   // conditional effect
+				   WHEN,   // conditional effect
+				   VALUE, COST, COST_CHANGE // cost statement
 				  };
 
 class general_formula{
@@ -43,9 +51,11 @@ class general_formula{
 		string predicate;
 		var_and_const arguments;
 		var_declaration qvariables;
+		function_expression *value_increased, *increase_amount;
 
 		string arg1;
 		string arg2;
+		int value;
 
 		void negate();
 		// first: effect, second: additional precondition for that effect
@@ -86,7 +96,6 @@ struct parsed_method{
 	parsed_task_network* tn;
 };
 
-
 // global places to put data structures
 extern bool has_typeof_predicate;
 extern vector<sort_definition> sort_definitions;
@@ -94,6 +103,9 @@ extern vector<predicate_definition> predicate_definitions;
 extern vector<parsed_task> parsed_primitive;
 extern vector<parsed_task> parsed_abstract;
 extern map<string,vector<parsed_method> > parsed_methods;
+extern vector<pair<predicate_definition,string>> parsed_functions;
+extern string metric_target;
+
 
 string sort_for_const(string c);
 
