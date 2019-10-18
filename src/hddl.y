@@ -260,15 +260,15 @@ atomic_function_def-list : atomic_function_def-list atomic_predicate_def { $$->p
 task_or_action: KEY_TASK {$$=true;} | KEY_ACTION {$$=false;}
 
 task_def : '(' task_or_action NAME
-			KEY_PARAMETERS '(' typed_var_list ')'
+			parameters-option
 			precondition_option
 			effect_option ')'{
 				// found a new task, add it to list
 				parsed_task t;
 				t.name = $3;
-				t.arguments = $6;
-				t.prec = $8; 
-				t.eff = $9;
+				t.arguments = $4;
+				t.prec = $5; 
+				t.eff = $6;
 
 				if ($2) parsed_abstract.push_back(t); else parsed_primitive.push_back(t);
 }
@@ -285,7 +285,7 @@ effect_option: KEY_EFFECT effect {$$ = $2;} | {$$ = new general_formula(); $$->t
 //         requirement, one might use method preconditions and effects similar to the ones used in SHOP.
 method_def :
    '(' KEY_METHOD NAME
-      KEY_PARAMETERS '(' typed_var_list ')'
+      parameters-option
       KEY_TASK '(' NAME var_or_const-list ')'
       precondition_option
 	  effect_option
@@ -293,13 +293,13 @@ method_def :
 	')'{
 		parsed_method m;
 		m.name = $3;		
-		string atName($10); // later for insertion into map
-		m.atArguments = $11->vars; // TODO do something with $11->newVar
-		m.newVarForAT = $11->newVar;
-		m.vars = $6;
-		m.prec = $13;
-		m.eff = $14;
-		m.tn = $15;
+		string atName($7); // later for insertion into map
+		m.atArguments = $8->vars; 
+		m.newVarForAT = $8->newVar;
+		m.vars = $4;
+		m.prec = $10;
+		m.eff = $11;
+		m.tn = $12;
 
 		parsed_methods[atName].push_back(m);
 	}
