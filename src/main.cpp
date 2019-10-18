@@ -1,5 +1,7 @@
 #include <cstdio>
 #include <iostream>
+#include <fstream>
+#include <algorithm>
 #include <vector>
 #include <map>
 #include <cassert>
@@ -13,6 +15,7 @@
 #include "typeof.hpp"
 #include "util.hpp"
 #include "output.hpp"
+#include "shopWriter.hpp"
 
 using namespace std;
 
@@ -47,11 +50,28 @@ int main(int argc, char** argv) {
 	}
 	int dfile = -1;
 	int pfile = -1;
+	int doutfile = -1;
+	int poutfile = -1;
 	bool splitParameters = true;
+	bool shopOutput = false;
+	bool verboseOutput = false;
+	int level = 0;
 	for (int i = 1; i < argc; i++){
 		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
+		else if (strcmp(argv[i], "-shop") == 0) shopOutput = true;
+		else if (strcmp(argv[i], "-debug") == 0){
+		   	verboseOutput = true;
+			if (i+1 == argc) continue;
+			string s(argv[i+1]);
+			if (all_of(s.begin(), s.end(), ::isdigit)){
+				i++;
+				level = atoi(argv[i]);
+			}
+		}
 		else if (dfile == -1) dfile = i;
 		else if (pfile == -1) pfile = i;
+		else if (doutfile == -1) doutfile = i;
+		else if (poutfile == -1) poutfile = i;
 		else {
 			cout << "Don't know what you meant with \"" << argv[i] <<"\"." << endl;
 			return 1;
@@ -62,13 +82,6 @@ int main(int argc, char** argv) {
 	// open c-style file handle 
 	FILE *domain_file = fopen(argv[dfile], "r");
 	FILE *problem_file = fopen(argv[pfile], "r");
-	bool verboseOutput = false;
-	int level = 0;
-	if (argc > 3){
-		string s(argv[3]);
-		verboseOutput = s == "-debug";
-		if (argc > 4) level = atoi(argv[4]);
-	}
 
 	if (!domain_file) {
 		cout << "I can't open " << argv[dfile] << "!" << endl;
@@ -92,6 +105,32 @@ int main(int argc, char** argv) {
 	flatten_goal();
 	// create appropriate methods and expand method preconditions
 	parsed_method_to_data_structures();
+
+	if (shopOutput){
+		// produce streams for output
+		ostream * dout = &cout;
+		ostream * pout = &cout;
+		if (doutfile != -1){
+			ofstream * df  = new ofstream(argv[doutfile]);
+			if (!df->is_open()){
+				cout << "I can't open " << argv[doutfile] << "!" << endl;
+				return 2;
+			}
+			dout = df;
+		}
+		if (poutfile != -1){
+			ofstream * pf  = new ofstream(argv[poutfile]);
+			if (!pf->is_open()){
+				cout << "I can't open " << argv[poutfile] << "!" << endl;
+				return 2;
+			}
+			pout = pf;
+		}
+		write_instance_as_SHOP(*dout,*pout);
+		return 0;
+	}
+
+
 	// split methods with independent parameters to reduce size of grounding
 	if (splitParameters) split_independent_parameters();
 	// cwa
@@ -103,5 +142,16 @@ int main(int argc, char** argv) {
 
 	// write to output
 	if (verboseOutput) verbose_output(level);
-	else simple_hddl_output();
+	else {
+		ostream * dout = &cout;
+		if (doutfile != -1){
+			ofstream * df  = new ofstream(argv[doutfile]);
+			if (!df->is_open()){
+				cout << "I can't open " << argv[doutfile] << "!" << endl;
+				return 2;
+			}
+			dout = df;
+		}
+		simple_hddl_output(*dout);
+	}
 }

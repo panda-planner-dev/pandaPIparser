@@ -106,7 +106,7 @@ void verbose_output(int verbosity){
 	}
 }
 
-void simple_hddl_output(){
+void simple_hddl_output(ostream & dout){
 	// prep indices
 	map<string,int> constants;
 	vector<string> constants_out;
@@ -163,76 +163,76 @@ void simple_hddl_output(){
 	}
 
 	// write domain to std out
-	cout << "#number_constants_number_sorts" << endl;
-	cout << constants.size() << " " << sorts.size() << endl;
-	cout << "#constants" << endl;
-	for (string c : constants_out) cout << c << endl;
-	cout << "#end_constants" << endl;
-	cout << "#sorts_each_with_number_of_members_and_members" << endl;
+	dout << "#number_constants_number_sorts" << endl;
+	dout << constants.size() << " " << sorts.size() << endl;
+	dout << "#constants" << endl;
+	for (string c : constants_out) dout << c << endl;
+	dout << "#end_constants" << endl;
+	dout << "#sorts_each_with_number_of_members_and_members" << endl;
 	for(auto s : sort_out) {
-		cout << s.first << " " << s.second.size();
-		for (auto c : s.second) cout << " " << constants[c];
-		cout << endl;	
+		dout << s.first << " " << s.second.size();
+		for (auto c : s.second) dout << " " << constants[c];
+		dout << endl;	
 	}
-	cout << "#end_sorts" << endl;
-	cout << "#number_of_predicates" << endl;
-	cout << predicate_out.size() << endl;
-	cout << "#predicates_each_with_number_of_arguments_and_argument_sorts" << endl;
+	dout << "#end_sorts" << endl;
+	dout << "#number_of_predicates" << endl;
+	dout << predicate_out.size() << endl;
+	dout << "#predicates_each_with_number_of_arguments_and_argument_sorts" << endl;
 	for(auto p : predicate_out){
-		cout << p.first << " " << p.second.argument_sorts.size();
-		for(string s : p.second.argument_sorts) assert(sort_id.count(s)), cout << " " << sort_id[s];
-		cout << endl;
+		dout << p.first << " " << p.second.argument_sorts.size();
+		for(string s : p.second.argument_sorts) assert(sort_id.count(s)), dout << " " << sort_id[s];
+		dout << endl;
 	}
-	cout << "#end_predicates" << endl;
-	cout << "#number_of_functions" << endl;
-	cout << function_declarations.size() << endl;
-	cout << "#function_declarations_with_number_of_arguments_and_argument_sorts" << endl;
+	dout << "#end_predicates" << endl;
+	dout << "#number_of_functions" << endl;
+	dout << function_declarations.size() << endl;
+	dout << "#function_declarations_with_number_of_arguments_and_argument_sorts" << endl;
 	for(auto f : functions_out){
-		cout << f.name << " " << f.argument_sorts.size();
-		for(string s : f.argument_sorts) assert(sort_id.count(s)), cout << " " << sort_id[s];
-		cout << endl;
+		dout << f.name << " " << f.argument_sorts.size();
+		for(string s : f.argument_sorts) assert(sort_id.count(s)), dout << " " << sort_id[s];
+		dout << endl;
 	}
-	cout << "#number_primitive_tasks_and_number_abstract_tasks" << endl;
-	cout << primitive_tasks.size() << " " << abstract_tasks.size() << endl;
+	dout << "#number_primitive_tasks_and_number_abstract_tasks" << endl;
+	dout << primitive_tasks.size() << " " << abstract_tasks.size() << endl;
 
 	for (auto tt : task_out){
 		task t = tt.first;
-		cout << "#begin_task_name_number_of_variables" << endl;
-		cout << t.name << " " << t.vars.size() << endl;
-		cout << "#sorts_of_variables" << endl;
+		dout << "#begin_task_name_number_of_variables" << endl;
+		dout << t.name << " " << t.vars.size() << endl;
+		dout << "#sorts_of_variables" << endl;
 		map<string,int> v_id;
-		for (auto v : t.vars) assert(sort_id.count(v.second)), cout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
-		cout << endl;
-		cout << "#end_variables" << endl;
+		for (auto v : t.vars) assert(sort_id.count(v.second)), dout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
+		dout << endl;
+		dout << "#end_variables" << endl;
 
 		if (tt.second){
-			cout << "#number_of_cost_statements" << endl;
+			dout << "#number_of_cost_statements" << endl;
 			if (instance_has_action_costs)
-				cout << t.costExpression.size() << endl;
+				dout << t.costExpression.size() << endl;
 			else
-				cout << 1 << endl;
-			cout << "#begin_cost_statements" << endl;
+				dout << 1 << endl;
+			dout << "#begin_cost_statements" << endl;
 			if (instance_has_action_costs){
 				for (auto c : t.costExpression){
 					if (c.isConstantCostExpression)
-						cout << "const " << c.costValue << endl;
+						dout << "const " << c.costValue << endl;
 					else {
-						cout << "var " << function_declarations[c.predicate];
-						for (string v : c.arguments) cout << " " << v_id[v];
-						cout << endl;
+						dout << "var " << function_declarations[c.predicate];
+						for (string v : c.arguments) dout << " " << v_id[v];
+						dout << endl;
 					}
 				}
 			} else
-				cout << "const 1" << endl;
-			cout << "#end_cost_statements" << endl;
+				dout << "const 1" << endl;
+			dout << "#end_cost_statements" << endl;
 
-			cout << "#preconditions_each_predicate_and_argument_variables" << endl;
-			cout << t.prec.size() << endl;
+			dout << "#preconditions_each_predicate_and_argument_variables" << endl;
+			dout << t.prec.size() << endl;
 			for (literal l : t.prec){
 				string p = (l.positive ? "+" : "-") + l.predicate;
-				cout << predicates[p];
-				for (string v : l.arguments) cout << " " << v_id[v];
-				cout << endl;
+				dout << predicates[p];
+				for (string v : l.arguments) dout << " " << v_id[v];
+				dout << endl;
 			}
 	
 			// determine number of add and delete effects
@@ -242,93 +242,93 @@ void simple_hddl_output(){
 				else if (l.positive) add++;
 				else del++;
 			}
-			cout << "#add_each_predicate_and_argument_variables" << endl;
-			cout << add << endl;
+			dout << "#add_each_predicate_and_argument_variables" << endl;
+			dout << add << endl;
 			for (literal l : t.eff){
 				if (!neg_pred.count(l.predicate) && !l.positive) continue;
 				string p = (l.positive ? "+" : "-") + l.predicate;
-				cout << predicates[p];
-				for (string v : l.arguments) cout << " " << v_id[v];
-				cout << endl;
+				dout << predicates[p];
+				for (string v : l.arguments) dout << " " << v_id[v];
+				dout << endl;
 			}
 			
-			cout << "#del_each_predicate_and_argument_variables" << endl;
-			cout << del << endl;
+			dout << "#del_each_predicate_and_argument_variables" << endl;
+			dout << del << endl;
 			for (literal l : t.eff){
 				if (!neg_pred.count(l.predicate) && l.positive) continue;
 				string p = (l.positive ? "-" : "+") + l.predicate;
-				cout << predicates[p];
-				for (string v : l.arguments) cout << " " << v_id[v];
-				cout << endl;
+				dout << predicates[p];
+				for (string v : l.arguments) dout << " " << v_id[v];
+				dout << endl;
 			}
 	
-			cout << "#variable_constaints_first_number_then_individual_constraints" << endl;
-			cout << t.constraints.size() << endl;
+			dout << "#variable_constaints_first_number_then_individual_constraints" << endl;
+			dout << t.constraints.size() << endl;
 			for (literal l : t.constraints){
-				if (!l.positive) cout << "!";
-				cout << "= " << v_id[l.arguments[0]] << " " << v_id[l.arguments[1]] << endl;
+				if (!l.positive) dout << "!";
+				dout << "= " << v_id[l.arguments[0]] << " " << v_id[l.arguments[1]] << endl;
 				assert(l.arguments[1][0] == '?'); // cannot be a constant
 			}
 		}
-		cout << "#end_of_task" << endl;
+		dout << "#end_of_task" << endl;
 	}
 	
-	cout << "#number_of_methods" << endl;
-	cout << methods.size() << endl;
+	dout << "#number_of_methods" << endl;
+	dout << methods.size() << endl;
 
 	for (method m : methods){
-		cout << "#begin_method_name_abstract_task_number_of_variables" << endl;
-		cout << m.name << " " << task_id[m.at] << " " << m.vars.size() << endl;
-		cout << "#variable_sorts" << endl;
+		dout << "#begin_method_name_abstract_task_number_of_variables" << endl;
+		dout << m.name << " " << task_id[m.at] << " " << m.vars.size() << endl;
+		dout << "#variable_sorts" << endl;
 		map<string,int> v_id;
-		for (auto v : m.vars) assert(sort_id.count(v.second)), cout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
-		cout << endl;
-		cout << "#parameter_of_abstract_task" << endl;
-		for (string v : m.atargs) cout << v_id[v] << " ";
-		cout << endl;
-		cout << "#number_of_subtasks" << endl;
-		cout << m.ps.size() << endl;
-		cout << "#subtasks_each_with_task_id_and_parameter_variables" << endl;
+		for (auto v : m.vars) assert(sort_id.count(v.second)), dout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
+		dout << endl;
+		dout << "#parameter_of_abstract_task" << endl;
+		for (string v : m.atargs) dout << v_id[v] << " ";
+		dout << endl;
+		dout << "#number_of_subtasks" << endl;
+		dout << m.ps.size() << endl;
+		dout << "#subtasks_each_with_task_id_and_parameter_variables" << endl;
 		map<string,int> ps_id;
 		for (plan_step ps : m.ps){
 			ps_id[ps.id] = ps_id.size();
-			cout << task_id[ps.task];
-			for (string v : ps.args) cout << " " << v_id[v];
-			cout << endl;
+			dout << task_id[ps.task];
+			for (string v : ps.args) dout << " " << v_id[v];
+			dout << endl;
 		}
-		cout << "#number_of_ordering_constraints_and_ordering" << endl;
-		cout << m.ordering.size() << endl;
-		for (auto o : m.ordering) cout << ps_id[o.first] << " " << ps_id[o.second] << endl;
+		dout << "#number_of_ordering_constraints_and_ordering" << endl;
+		dout << m.ordering.size() << endl;
+		for (auto o : m.ordering) dout << ps_id[o.first] << " " << ps_id[o.second] << endl;
 
-		cout << "#variable_constraints" << endl;
-		cout << m.constraints.size() << endl;
+		dout << "#variable_constraints" << endl;
+		dout << m.constraints.size() << endl;
 		for (literal l : m.constraints){
-			if (!l.positive) cout << "!";
-			cout << "= " << v_id[l.arguments[0]] << " " << v_id[l.arguments[1]] << endl;
+			if (!l.positive) dout << "!";
+			dout << "= " << v_id[l.arguments[0]] << " " << v_id[l.arguments[1]] << endl;
 			assert(l.arguments[1][0] == '?'); // cannot be a constant
 		}
-		cout << "#end_of_method" << endl;
+		dout << "#end_of_method" << endl;
 	}
 
-	cout << "#init_and_goal_facts" << endl;
-	cout << init.size() << " " << goal.size() << endl;
+	dout << "#init_and_goal_facts" << endl;
+	dout << init.size() << " " << goal.size() << endl;
 	for (auto gl : init){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
 		assert(predicates.count(pn) != 0);
-		cout << predicates[pn];
-		for (string c : gl.args) cout << " " << constants[c];
-		cout << endl;
+		dout << predicates[pn];
+		for (string c : gl.args) dout << " " << constants[c];
+		dout << endl;
 	}
-	cout << "#end_init" << endl;
+	dout << "#end_init" << endl;
 	for (auto gl : goal){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
 		assert(predicates.count(pn) != 0);
-		cout << predicates[pn];
-		for (string c : gl.args) cout << " " << constants[c];
-		cout << endl;
+		dout << predicates[pn];
+		for (string c : gl.args) dout << " " << constants[c];
+		dout << endl;
 	}
-	cout << "#end_goal" << endl;
-	cout << "#init_function_facts" << endl;
+	dout << "#end_goal" << endl;
+	dout << "#init_function_facts" << endl;
 	vector<string> function_lines;
 	for (auto f : init_functions){
 		if (f.first.predicate == metric_target){
@@ -340,9 +340,9 @@ void simple_hddl_output(){
 		line += " " + to_string(f.second);
 		function_lines.push_back(line);
 	}
-	cout << function_lines.size() << endl;
+	dout << function_lines.size() << endl;
 	for (string l : function_lines)
-		cout << l << endl;
-	cout << "#initial_task" << endl;
-	cout << task_id["__top"] << endl;
+		dout << l << endl;
+	dout << "#initial_task" << endl;
+	dout << task_id["__top"] << endl;
 }

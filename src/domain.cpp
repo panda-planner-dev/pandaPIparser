@@ -38,7 +38,7 @@ void flatten_tasks(){
 				else
 					t.eff.push_back(eff);
 			}
-			
+
 			// add declared vars
 			t.vars = a.arguments->vars;
 			// gather the additional variables

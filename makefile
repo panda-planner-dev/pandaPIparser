@@ -3,15 +3,15 @@ CC=g++
 CWARN=-Wno-unused-parameter
 CERROR=-Werror=implicit-function-declaration
 
-COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++11 $(CWARN) $(CERROR)
+COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
 LINKERFLAG=-O3 -lm -flto
-#COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++11 $(CWARN) $(CERROR)
+#COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
 #LINKERFLAG=-O0 -ggdb
 
 .PHONY = parser clean
 
-parser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.cpp
-	${CC} ${LINKERFLAG} $^ -o parser
+pandaPIparser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o
+	${CC} ${LINKERFLAG} $^ -o pandaPIparser 
 
 %.o: %.cpp %.hpp
 	${CC} ${COMPILEFLAGS} -o $@ -c $<
