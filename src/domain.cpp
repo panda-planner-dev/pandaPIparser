@@ -146,6 +146,9 @@ void parsed_method_to_data_structures(){
 
 				// we might have added more parameters to these tasks to account for constants in them. We have to add them here
 				task psTask = task_name_map[ps.task];
+				if (psTask.name != ps.task){
+					cerr << "There is no declaration of the subtask " << ps.task << " in the input" << endl;
+				}
 				assert(psTask.name == ps.task); // ensure that we have found one
 				for (unsigned int j = st->arguments->vars.size(); j < psTask.vars.size(); j++){
 					string v = psTask.vars[j].first + "_method_" + m.name + "_instance_" + to_string(i++);
