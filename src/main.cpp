@@ -91,6 +91,13 @@ int main(int argc, char** argv) {
 		cout << "I can't open " << argv[pfile] << "!" << endl;
 		return 2;
 	}
+	if (!shopOutput && poutfile != -1){
+		cout << "For ordinary pandaPI output, you may only specify one output file, but you specified two: " << argv[doutfile] << " and " << argv[poutfile] << endl;
+	}
+	
+	// parsing of command line arguments has been completed	
+		
+		
 	// parse the domain file
 	run_parser_on_file(domain_file);
 	run_parser_on_file(problem_file);
