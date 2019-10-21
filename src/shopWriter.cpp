@@ -9,6 +9,10 @@
 
 const string shop_type_predicate_prefix = "(type_";
 
+string sanitise(string in){
+	if (in == "call") return "_call";
+	return in;
+}
 
 void write_literal_list_SHOP(ostream & dout, vector<literal> & literals){
 	bool first = true;
@@ -16,7 +20,7 @@ void write_literal_list_SHOP(ostream & dout, vector<literal> & literals){
 		if (!first) dout << " "; else first=false;
 		dout << "(";
 		if (!l.positive) dout << "not (";
-		dout << l.predicate;
+		dout << sanitise(l.predicate);
 		for (string arg : l.arguments) dout << " " << arg;
 		if (!l.positive) dout << ")";
 		dout << ")";
@@ -150,7 +154,7 @@ void write_shop_order(ostream & dout, shop_order* order, map<string,plan_step> &
 			plan_step ps = idmap[get<string>(elem)];
 			dout << "(";
 			if (names_of_primitives.count(ps.task)) dout << "!";
-		   	dout << ps.task;
+		   	dout << sanitise(ps.task);
 			for (string & arg : ps.args) dout << " " << arg;
 			dout << ")";
 		} else
@@ -168,7 +172,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 	// output all actions, in shop they are named operators
 	for (task & prim : primitive_tasks){
 		names_of_primitives.insert(prim.name);
-		dout << "  (:operator (!" << prim.name;
+		dout << "  (:operator (!" << sanitise(prim.name);
 		// arguments
 		for (pair<string,string> var : prim.vars)
 			dout << " " << var.first;
@@ -222,7 +226,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 
 	for (method & m : methods){
 		dout << "  ;; method named " << m.name << endl;
-		dout << "  (:method (" << m.at;
+		dout << "  (:method (" << sanitise(m.at);
 		for (string & atarg : m.atargs)
 			dout << " " << atarg;
 		dout << ")" << endl;
@@ -316,7 +320,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 	// initial state
 	for (ground_literal & gl : init){
 		if (!gl.positive) continue;
-		pout << "    (" << gl.predicate;
+		pout << "    (" << sanitise(gl.predicate);
 		for (string & arg : gl.args)
 			pout << " " << arg;
 		pout << ")" << endl;
