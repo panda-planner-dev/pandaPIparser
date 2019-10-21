@@ -34,57 +34,85 @@ struct shop_order {
 };
 
 
-bool shop_order_matrix[64][64];
+bool shop_order_matrix[1024][1024];
+
+shop_order* extract_shop_order_dfs(vector<string> & ids, vector<int> bitmask);
 
 
-shop_order* extract_shop_order_dfs(vector<string> & ids, int bitmask){
-	//cout << "Split " << bitset<5>(bitmask) << endl;	
-	if (__builtin_popcount(bitmask) == 1) return 0;
-	
-	// try to find a subset to split on
-	for (int i = 1; i < bitmask; i++){
-		if (i & ~bitmask) continue; // if there is any bit set in i that is not set in bitmask
-		// check
-		bool anyOrder = false;
-		bool allAfter = true;
+shop_order* try_extract_shop_order(vector<string> & ids, vector<int> bitmask, set<int> bitmask_set, set<int> split, bool & success){
+	success = false;
 
-		for (size_t ax = 0; ax < ids.size(); ax++){
-			int a = 1 << ax;
-			if (!(a & bitmask)) continue;
-			if (a & ~i) continue;
-			for (size_t bx = 0; bx < ids.size(); bx++){
-				int b = 1 << bx; 
-				if (!(b & bitmask)) continue;
-				if (i & b) continue;
-				if (shop_order_matrix[ax][bx] || shop_order_matrix[bx][ax]) anyOrder = true;
-				if (!shop_order_matrix[ax][bx]) allAfter = false;
-			}
+	// check
+	bool anyOrder = false;
+	bool allAfter = true;
+
+	for (size_t ax = 0; ax < ids.size(); ax++){
+		if (! bitmask_set.count(ax)) continue;
+		if (! split.count(ax)) continue;
+		for (size_t bx = 0; bx < ids.size(); bx++){
+			if (! bitmask_set.count(bx)) continue;
+			if (  split.count(bx)) continue;
+
+			if (shop_order_matrix[ax][bx] || shop_order_matrix[bx][ax]) anyOrder = true;
+			if (!shop_order_matrix[ax][bx]) allAfter = false;
 		}
-
-
-		if (anyOrder && (!allAfter)) continue;
-		//cout << "Try " << bitset<5>(i) << " anyorder " << anyOrder << " allorder " << allAfter << endl;	
-
-
-		shop_order* first = extract_shop_order_dfs(ids, i);
-		shop_order* second = extract_shop_order_dfs(ids, bitmask & (~i));
-
-		shop_order* ret = new shop_order;
-		if (first) ret->elements.push_back(first);
-		else ret->elements.push_back(ids[ffs(i)-1]);
-		
-		if (second) ret->elements.push_back(second);
-		else ret->elements.push_back(ids[ffs(bitmask & (~i))-1]);
-
-
-		if (!anyOrder) ret->isParallel = true;
-		else ret->isParallel = false;
-
-		return ret;
 	}
+
+	if (anyOrder && (!allAfter)) return 0;
+	vector<int> first_set,second_set;
+	for (int & b : bitmask)
+		if (split.count(b)) first_set.push_back(b);
+		else second_set.push_back(b);
+
+	shop_order* first = extract_shop_order_dfs(ids, first_set);
+	shop_order* second = extract_shop_order_dfs(ids, second_set);
+
+	shop_order* ret = new shop_order;
+	if (first) ret->elements.push_back(first);
+	else ret->elements.push_back(ids[*first_set.begin()]);
+	
+	if (second) ret->elements.push_back(second);
+	else ret->elements.push_back(ids[*second_set.begin()]);
+
+
+	if (!anyOrder) ret->isParallel = true;
+	else ret->isParallel = false;
+
+	success = true;
+	return ret;
+}
+
+
+shop_order* extract_shop_order_dfs(vector<string> & ids, vector<int> bitmask){
+	//cout << "try for:";
+	//for (int b : bitmask) cout << " " << b;
+	//cout << endl;
+
+	if (bitmask.size() == 1) return 0;
+	set<int> bitmask_set;
+	for (int &b : bitmask) bitmask_set.insert(b);
+	
+	for (size_t e = 0; e < bitmask.size(); e++){
+		set<int> split; split.insert(bitmask[e]);
+		bool succ;
+		//cout << "try split on: " << e << endl;
+		shop_order* ord = try_extract_shop_order(ids,bitmask,bitmask_set,split,succ);
+		if (succ) return ord;
+	}
+
+	// try to find a subset to split on
+	for (int i = 1; i < (1 << bitmask.size()); i++){
+		set<int> split;
+		for (int b = 0; b < 32; b++) if (i & (1 << b)) split.insert(bitmask[b]);
+		bool succ;
+		shop_order* ord = try_extract_shop_order(ids,bitmask,bitmask_set,split,succ);
+		if (succ) return ord;
+	}
+
 	assert(false);
 	return NULL;
 }
+
 
 shop_order* extract_shop_order(vector<pair<string,string>> ordering, vector<string> ids){
 	if (!ids.size()) return NULL;
@@ -110,13 +138,10 @@ shop_order* extract_shop_order(vector<pair<string,string>> ordering, vector<stri
 				if (shop_order_matrix[i][k] && shop_order_matrix[k][j])
 					shop_order_matrix[i][j] = true;
 
-	/*for (size_t i = 0; i < ids.size(); i++){
-		for (size_t j = 0; j < ids.size(); j++)
-			cout << shop_order_matrix[i][j] << " "; 
-		cout << endl;
-	}*/
+	vector<int> bitmask;
+	for (size_t i = 0; i < ids.size(); i++) bitmask.push_back(i);
 
-	return extract_shop_order_dfs(ids,(1<<ids.size()) - 1);
+	return extract_shop_order_dfs(ids,bitmask);
 }
 
 shop_order* simplify_shop_order(shop_order* ord){
