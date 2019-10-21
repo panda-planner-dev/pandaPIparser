@@ -13,10 +13,10 @@ LINKERFLAG=-O3 -lm -flto
 pandaPIparser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o
 	${CC} ${LINKERFLAG} $^ -o pandaPIparser 
 
-%.o: %.cpp %.hpp
+%.o: %.cpp %.hpp src/hddl.hpp
 	${CC} ${COMPILEFLAGS} -o $@ -c $<
 
-%.o: %.cpp
+%.o: %.cpp src/hddl.hpp
 	${CC} ${COMPILEFLAGS} -o $@ -c $<
 
 src/hddl-token.cpp: src/hddl.cpp src/hddl-token.l
