@@ -196,6 +196,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 	set<string> names_of_primitives; // this is needed for writing the !'s in methods
 	// output all actions, in shop they are named operators
 	for (task & prim : primitive_tasks){
+		if (prim.name.rfind(method_precondition_action_name, 0) == 0) continue; // don't output method precondition action ... they will be part of the output
 		names_of_primitives.insert(prim.name);
 		dout << "  (:operator (!" << sanitise(prim.name);
 		// arguments
@@ -288,7 +289,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		dout << endl << "      ";
 		// method precondition in the input
 		for (plan_step & ps : m.ps){
-			if (ps.task.rfind("method_precondition_", 0)) continue;
+			if (ps.task.rfind(method_precondition_action_name, 0)) continue;
 			found = false;
 			for (task & p : primitive_tasks)
 				if (p.name == ps.task){
@@ -307,7 +308,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		vector<string> ids;
 		map<string,plan_step> idmap;
 		for (plan_step & ps : m.ps){
-			if (ps.task.rfind("method_precondition_", 0) == 0) continue;
+			if (ps.task.rfind(method_precondition_action_name, 0) == 0) continue;
 			ids.push_back(ps.id);
 			idmap[ps.id] = ps;
 		}

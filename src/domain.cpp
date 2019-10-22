@@ -171,7 +171,7 @@ void parsed_method_to_data_structures(){
 			// actually have method precondition
 			if (mPrec.size()){
 				task t;
-				t.name = "method_precondition_" + m.name;
+				t.name = method_precondition_action_name + m.name;
 				t.prec = mPrec;
 				set<string> args;
 				for (literal l : t.prec) for (string a : l.arguments) args.insert(a);
