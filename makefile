@@ -1,7 +1,7 @@
 CC=g++
 
 CWARN=-Wno-unused-parameter
-CERROR=-Werror=implicit-function-declaration
+CERROR=
 
 COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
 LINKERFLAG=-O3 -lm -flto
