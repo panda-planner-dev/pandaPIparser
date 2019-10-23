@@ -36,9 +36,13 @@ As an example consider
 Note that
 * pandaPIparser will shift some of the contents of the HDDL problem file to the (J)SHOP2 domain file. Most notably, pandaPIparser moves the initial task network of the HDDL problem into the (J)SHOP2 domain by compiling it into a method for a new abstract task `__top`.
 * any propositional goal will be ignored in the translation.
-* action costs will (for the time being) be ignored.
+* only constant action costs (i.e. integer valued ones that do not depend on parameters and state) are supported.
 * any action named `call` will be renamed to `_call`, as `call` is a keyword for (J)SHOP2.
 * current `forall` statements in preconditions are fully instantiated.
+
+### Usage for Compilation to (J)SHOP1
+pandaPIparser also supports (J)SHOP1's output. This is essentially the same as the output for (J)SHOP2 with the only difference that underscores will be replaced by minuses and leading minuses are prepended with an `x`.
+To call the translator in this compatibility mode, use `-shop1` instead of `-shop` as the command line argument.
 
 ## Contact
 If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:gregor.behnke@uni-ulm.de).
