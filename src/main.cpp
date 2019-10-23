@@ -16,6 +16,7 @@
 #include "util.hpp"
 #include "output.hpp"
 #include "shopWriter.hpp"
+#include "verify.hpp"
 
 using namespace std;
 
@@ -55,10 +56,15 @@ int main(int argc, char** argv) {
 	bool splitParameters = true;
 	bool shopOutput = false;
 	bool verboseOutput = false;
+	bool verifyPlan = false;
 	int level = 0;
 	for (int i = 1; i < argc; i++){
 		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
-		else if (strcmp(argv[i], "-shop") == 0) shopOutput = true;
+		else if (strcmp(argv[i], "-shop") == 0 || strcmp(argv[i], "-shop1") == 0){
+		   	shopOutput = true;
+			if (strcmp(argv[i], "-shop1") == 0)
+			shop_1_compatability_mode = true;
+		} else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
 		else if (strcmp(argv[i], "-debug") == 0){
 		   	verboseOutput = true;
 			if (i+1 == argc) continue;
@@ -106,6 +112,17 @@ int main(int argc, char** argv) {
 	
 	// handle typeof-predicate
 	if (has_typeof_predicate) create_typeof();
+
+	// do not preprocess the instance at all if we are validating a solution
+	if (verifyPlan){
+		ifstream * plan  = new ifstream(argv[doutfile]);
+		bool result = verify_plan(*plan);
+		if (result) cout << "correct" << endl;
+		else cout << "wrong" << endl;
+		return 0;
+	}
+
+
 	// flatten all primitive tasks
 	flatten_tasks();
 	// .. and the goal

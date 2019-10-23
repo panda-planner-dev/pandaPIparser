@@ -1,6 +1,7 @@
 #include "shopWriter.hpp"
 #include "cwa.hpp"
 #include <iostream>
+#include <algorithm>
 #include <cassert>
 #include <variant>
 #include <strings.h> // for ffs
@@ -9,8 +10,16 @@
 
 const string shop_type_predicate_prefix = "(type_";
 
+bool shop_1_compatability_mode = false;
+
 string sanitise(string in){
-	if (in == "call") return "_call";
+	if (in == "call") in = "_call";
+	
+	if (!shop_1_compatability_mode) return in;
+	
+	replace(in.begin(),in.end(),'_','-');
+	// replace leading minus by training
+	if (in[0] == '-') return "x" + in;
 	return in;
 }
 
@@ -21,7 +30,7 @@ void write_literal_list_SHOP(ostream & dout, vector<literal> & literals){
 		dout << "(";
 		if (!l.positive) dout << "not (";
 		dout << sanitise(l.predicate);
-		for (string arg : l.arguments) dout << " " << arg;
+		for (string arg : l.arguments) dout << " " << sanitise(arg);
 		if (!l.positive) dout << ")";
 		dout << ")";
 	}
@@ -180,7 +189,7 @@ void write_shop_order(ostream & dout, shop_order* order, map<string,plan_step> &
 			dout << "(";
 			if (names_of_primitives.count(ps.task)) dout << "!";
 		   	dout << sanitise(ps.task);
-			for (string & arg : ps.args) dout << " " << arg;
+			for (string & arg : ps.args) dout << " " << sanitise(arg);
 			dout << ")";
 		} else
 			write_shop_order(dout, get<shop_order*>(elem),idmap, names_of_primitives);
@@ -201,7 +210,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		dout << "  (:operator (!" << sanitise(prim.name);
 		// arguments
 		for (pair<string,string> var : prim.vars)
-			dout << " " << var.first;
+			dout << " " << sanitise(var.first);
 		dout << ")" << endl;
 		
 		// precondition
@@ -210,7 +219,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		dout << "      ";
 		for (size_t i = 0; i < prim.vars.size(); i++){
 			if (i) dout << " ";
-			dout << shop_type_predicate_prefix << prim.vars[i].second << " " << prim.vars[i].first << ")";
+			dout << sanitise(shop_type_predicate_prefix) << sanitise(prim.vars[i].second) << " " << sanitise(prim.vars[i].first) << ")";
 		}
 		dout << endl << "      ";
 		write_literal_list_SHOP(dout, prim.prec);
@@ -219,7 +228,7 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 			dout << " (";
 			if (!constraint.positive) dout << "not (";
 			dout << "call =";
-			for (string arg : constraint.arguments) dout << " " << arg;
+			for (string arg : constraint.arguments) dout << " " << sanitise(arg);
 			if (!constraint.positive) dout << ")";
 			dout << ")";
 		}
@@ -253,10 +262,10 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 	for (method & m : methods){
 		dout << "  (:method (" << sanitise(m.at);
 		for (string & atarg : m.atargs)
-			dout << " " << atarg;
+			dout << " " << sanitise(atarg);
 		dout << ")" << endl;
 		// method name
-		dout << "    " << m.name << endl;
+		dout << "    " << sanitise(m.name) << endl;
 
 		// find the corresponding at
 		task at; bool found = false;
@@ -278,14 +287,14 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		// typing constraints of the AT
 		for (size_t i = 0; i < at.vars.size(); i++){
 			if (i) dout << " ";
-			dout << shop_type_predicate_prefix << at.vars[i].second << " " << m.atargs[i] << ")";
+			dout << sanitise(shop_type_predicate_prefix) << sanitise(at.vars[i].second) << " " << sanitise(m.atargs[i]) << ")";
 		}
 		dout << endl << "      ";
 		// typing of the method
 		bool first = true;
 		for (pair<string,string> & v : m.vars){
 			if (first) first = false; else dout << " ";
-			dout << shop_type_predicate_prefix << v.second << " " << v.first << ")";
+			dout << sanitise(shop_type_predicate_prefix) << sanitise(v.second) << " " << sanitise(v.first) << ")";
 		}
 		dout << endl << "      ";
 		// method precondition in the input
@@ -349,19 +358,19 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		if (!gl.positive) continue;
 		pout << "    (" << sanitise(gl.predicate);
 		for (string & arg : gl.args)
-			pout << " " << arg;
+			pout << " " << sanitise(arg);
 		pout << ")" << endl;
 	}
 	
 	// type assertions
 	for (auto & entry : sorts){
 		for (const string & constant : entry.second){
-			pout << "    " << shop_type_predicate_prefix << entry.first << " " << constant << ")" << endl;
+			pout << "    " << sanitise(shop_type_predicate_prefix) << sanitise(entry.first) << " " << sanitise(constant) << ")" << endl;
 		}	
 	}
 
 	pout << "  )" << endl;
-	pout << "  ((__top))" << endl;
+	pout << "  ((" << sanitise("__top") << "))" << endl;
 	pout << ")" << endl;
 
 }

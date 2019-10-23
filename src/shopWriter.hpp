@@ -5,5 +5,6 @@
 
 void write_instance_as_SHOP(ostream & dout, ostream & pout);
 
+extern bool shop_1_compatability_mode;
 
 #endif

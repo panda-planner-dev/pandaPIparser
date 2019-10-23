@@ -1,23 +1,25 @@
 ==>
-0 drive ?v=truck-0 ?l1=city-loc-2 ?l2=city-loc-1 
-1 pick-up ?v=truck-0 ?l=city-loc-1 ?p=package-1 ?s1=capacity-0 ?s2=capacity-1 
-2 drive ?v=truck-0 ?l1=city-loc-1 ?l2=city-loc-2 
-3 noop ?v=truck-0 ?l2=city-loc-2 
-4 drop ?v=truck-0 ?l=city-loc-2 ?p=package-1 ?s1=capacity-0 ?s2=capacity-1 
-5 drive ?v=truck-0 ?l1=city-loc-2 ?l2=city-loc-1 
-6 pick-up ?v=truck-0 ?l=city-loc-1 ?p=package-0 ?s1=capacity-0 ?s2=capacity-1 
-7 drive ?v=truck-0 ?l1=city-loc-1 ?l2=city-loc-0 
-8 drop ?v=truck-0 ?l=city-loc-0 ?p=package-0 ?s1=capacity-0 ?s2=capacity-1 
-root 18
-9 load ?v=truck-0 ?l=city-loc-1 ?p=package-0  -> m-load ?p=package-0 ?l=city-loc-1 ?v=truck-0 ?s2=capacity-1 ?s1=capacity-0  -> 6
-10 deliver ?p=package-0 ?l=city-loc-0  -> m-deliver ?l=city-loc-0 ?v=truck-0 ?l1=city-loc-1 ?p=package-0  -> 9 12 13 17
-11 deliver ?p=package-1 ?l=city-loc-2  -> m-deliver ?l=city-loc-2 ?v=truck-0 ?l1=city-loc-1 ?p=package-1  -> 14 15 19 20
-12 get-to ?v=truck-0 ?l=city-loc-1  -> m-drive-to-via ?v=truck-0 ?l=city-loc-1 ?l2=city-loc-2  -> 5 16
-13 get-to ?v=truck-0 ?l=city-loc-0  -> m-drive-to ?l1=city-loc-1 ?v=truck-0 ?l=city-loc-0  -> 7
-14 unload ?v=truck-0 ?l=city-loc-2 ?p=package-1  -> m-unload ?s1=capacity-0 ?s2=capacity-1 ?v=truck-0 ?l=city-loc-2 ?p=package-1  -> 4
-15 get-to ?v=truck-0 ?l=city-loc-2  -> m-i-am-there ?v=truck-0 ?l=city-loc-2  -> 3
-16 get-to ?v=truck-0 ?l=city-loc-2  -> m-drive-to ?l1=city-loc-1 ?v=truck-0 ?l=city-loc-2  -> 2
-17 unload ?v=truck-0 ?l=city-loc-0 ?p=package-0  -> m-unload ?s1=capacity-0 ?s2=capacity-1 ?v=truck-0 ?l=city-loc-0 ?p=package-0  -> 8
-18 __top -> __top_method -> 10 11
-19 get-to ?v=truck-0 ?l=city-loc-1  -> m-drive-to ?l1=city-loc-2 ?v=truck-0 ?l=city-loc-1  -> 0
-20 load ?v=truck-0 ?l=city-loc-1 ?p=package-1  -> m-load ?p=package-1 ?l=city-loc-1 ?v=truck-0 ?s2=capacity-1 ?s1=capacity-0  -> 1
+0 drive truck-0 city-loc-2 city-loc-1 
+1 pick-up truck-0 city-loc-1 package-1 capacity-0 capacity-1 
+2 drive truck-0 city-loc-1 city-loc-2 
+3 drive truck-0 city-loc-2 city-loc-1 
+4 drive truck-0 city-loc-1 city-loc-2 
+5 drop truck-0 city-loc-2 package-1 capacity-0 capacity-1 
+6 drive truck-0 city-loc-2 city-loc-1 
+7 pick-up truck-0 city-loc-1 package-0 capacity-0 capacity-1 
+8 drive truck-0 city-loc-1 city-loc-0 
+9 drop truck-0 city-loc-0 package-0 capacity-0 capacity-1 
+root 13
+10 deliver package-1 city-loc-2  -> m-deliver -> 11 15 17 19
+11 unload truck-0 city-loc-2 package-1  -> m-unload -> 5
+12 get-to truck-0 city-loc-0  -> m-drive-to -> 8
+13 __top -> __top_method -> 10 20
+14 get-to truck-0 city-loc-1  -> m-drive-to -> 3
+15 get-to truck-0 city-loc-2  -> m-drive-to-via -> 14 4
+16 load truck-0 city-loc-1 package-0  -> m-load -> 7
+17 get-to truck-0 city-loc-1  -> m-drive-to -> 0
+18 get-to truck-0 city-loc-1  -> m-drive-to-via -> 6 22
+19 load truck-0 city-loc-1 package-1  -> m-load -> 1
+20 deliver package-0 city-loc-0  -> m-deliver -> 12 16 18 21
+21 unload truck-0 city-loc-0 package-0  -> m-unload -> 9
+22 get-to truck-0 city-loc-2  -> m-drive-to -> 2
