@@ -254,6 +254,19 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		write_literal_list_SHOP(dout, add);
 		dout << ")" << endl;
 
+		// costs
+		if (prim.costExpression.size()){
+			int value = 0;
+			for (literal & cexpr : prim.costExpression){
+				if (!cexpr.isConstantCostExpression){
+					cerr << "Primitive action \"" << prim.name << "\" does not have constant costs" << endl;
+					return;
+				}
+
+				value += cexpr.costValue;
+			}
+			dout << "    " << value << endl;
+		}
 
 		dout << "  )" << endl;
 	}
