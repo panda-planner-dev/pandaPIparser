@@ -251,11 +251,12 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 
 
 	for (method & m : methods){
-		dout << "  ;; method named " << m.name << endl;
 		dout << "  (:method (" << sanitise(m.at);
 		for (string & atarg : m.atargs)
 			dout << " " << atarg;
 		dout << ")" << endl;
+		// method name
+		dout << "    " << m.name << endl;
 
 		// find the corresponding at
 		task at; bool found = false;
