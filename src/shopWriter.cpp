@@ -227,7 +227,8 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		for (literal & constraint : prim.constraints){
 			dout << " (";
 			if (!constraint.positive) dout << "not (";
-			dout << "call =";
+			dout << "call ";
+			if (shop_1_compatability_mode) dout << "equal"; else dout << "=";
 			for (string arg : constraint.arguments) dout << " " << sanitise(arg);
 			if (!constraint.positive) dout << ")";
 			dout << ")";
