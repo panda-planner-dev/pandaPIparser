@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 	int level = 0;
 	for (int i = 1; i < argc; i++){
 		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
-		else if (strcmp(argv[i], "-shop") == 0 || strcmp(argv[i], "-shop1") == 0){
+		else if (strcmp(argv[i], "-shop") == 0 || strcmp(argv[i], "-shop2") == 0 || strcmp(argv[i], "-shop1") == 0){
 		   	shopOutput = true;
 			if (strcmp(argv[i], "-shop1") == 0)
 			shop_1_compatability_mode = true;
