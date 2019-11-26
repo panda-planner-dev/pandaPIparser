@@ -16,6 +16,7 @@
 #include "util.hpp"
 #include "output.hpp"
 #include "shopWriter.hpp"
+#include "hpdlWriter.hpp"
 #include "verify.hpp"
 
 using namespace std;
@@ -55,6 +56,7 @@ int main(int argc, char** argv) {
 	int poutfile = -1;
 	bool splitParameters = true;
 	bool shopOutput = false;
+	bool hpdlOutput = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
 	int level = 0;
@@ -64,7 +66,9 @@ int main(int argc, char** argv) {
 		   	shopOutput = true;
 			if (strcmp(argv[i], "-shop1") == 0)
 			shop_1_compatability_mode = true;
-		} else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
+		}
+		else if (strcmp(argv[i], "-hpdl") == 0) hpdlOutput = true;
+		else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
 		else if (strcmp(argv[i], "-debug") == 0){
 		   	verboseOutput = true;
 			if (i+1 == argc) continue;
@@ -130,7 +134,7 @@ int main(int argc, char** argv) {
 	// create appropriate methods and expand method preconditions
 	parsed_method_to_data_structures();
 
-	if (shopOutput){
+	if (shopOutput || hpdlOutput){
 		// produce streams for output
 		ostream * dout = &cout;
 		ostream * pout = &cout;
@@ -150,7 +154,8 @@ int main(int argc, char** argv) {
 			}
 			pout = pf;
 		}
-		write_instance_as_SHOP(*dout,*pout);
+		if (shopOutput)	write_instance_as_SHOP(*dout,*pout);
+		if (hpdlOutput)	write_instance_as_HPDL(*dout,*pout);
 		return 0;
 	}
 
