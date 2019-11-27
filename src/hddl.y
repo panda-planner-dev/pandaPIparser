@@ -4,6 +4,7 @@
 	#include <vector>
 	#include <cassert>
 	#include <string.h>
+	#include <algorithm>
 	#include "parsetree.hpp"
 	#include "domain.hpp"
 	#include "cwa.hpp"
@@ -200,9 +201,10 @@ require_defs : require_defs REQUIRE_NAME {string r($2); if (r == ":typeof-predic
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Type Definition
 // @PDDL
-type_def : '(' KEY_TYPES type_def_list ')';
+type_def : '(' KEY_TYPES type_def_list ')' { /*reverse list after all types have been parsed*/ reverse(sort_definitions.begin(), sort_definitions.end()); };
 type_def_list : NAME-list {	sort_definition s; s.has_parent_sort = false; s.declared_sorts = *($1); delete $1;
-			  				sort_definitions.push_back(s);}
+			  				if (s.declared_sorts.size()) sort_definitions.push_back(s);
+				}
 			  | NAME-list-non-empty '-' NAME type_def_list {
 							sort_definition s; s.has_parent_sort = true; s.parent_sort = $3; free($3);
 							s.declared_sorts = *($1); delete $1;
