@@ -14,9 +14,14 @@
 	extern int yylex();
 	extern int yyparse();
 	extern FILE *yyin;
+	char* current_parser_file_name;
 	
 	void yyerror(const char *s);
 %}
+
+%locations
+%define parse.error verbose
+%define parse.lac full
 
 %locations
 
@@ -505,13 +510,18 @@ typed_var_list : typed_var_list typed_vars {
 			   | {$$ = new var_declaration;} 
 
 %%
-void run_parser_on_file(FILE* f){
+void run_parser_on_file(FILE* f, char* filename){
+	current_parser_file_name = filename;
 	yyin = f;
 	yyparse();
 }
 
 void yyerror(const char *s) {
-  cout << "Parse error in line " << yylloc.first_line << endl << "Message: " << s << endl;
+  cout << "\x1b[31mParse error\x1b[0m in file " << current_parser_file_name << " in line \x1b[1m" << yylloc.first_line << "\x1b[0m" << endl;
+  if (strlen(s) >= 14 && (strncmp("syntax error, ",s,14) == 0)){
+    s += 14;
+  }
+  cout << s << endl;
   // might as well halt now:
   exit(-1);
 }
