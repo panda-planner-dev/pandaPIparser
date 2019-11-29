@@ -22,7 +22,7 @@
 using namespace std;
 
 // declare parser function manually
-void run_parser_on_file(FILE* f);
+void run_parser_on_file(FILE* f, char* filename);
 
 // parsed domain data structures
 bool has_typeof_predicate = false;
@@ -109,8 +109,8 @@ int main(int argc, char** argv) {
 		
 		
 	// parse the domain file
-	run_parser_on_file(domain_file);
-	run_parser_on_file(problem_file);
+	run_parser_on_file(domain_file, argv[dfile]);
+	run_parser_on_file(problem_file, argv[pfile]);
 
 	if (!hpdlOutput) expand_sorts(); // add constants to all sorts
 	

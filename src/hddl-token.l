@@ -3,8 +3,10 @@
 	#include <vector>
 	#include "parsetree.hpp"
 	#include "hddl.hpp"
+	#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno;
 	using namespace std;
 %}
+
 %option noyywrap
 %option yylineno
 %%
