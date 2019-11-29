@@ -449,24 +449,36 @@ void task::check_integrity(){
 	for(literal l : this->prec) {
 		bool hasPred = false;
 		for(auto p : predicate_definitions) if (p.name == l.predicate) hasPred = true;
-		assert(hasPred);
+		if (! hasPred){
+			cerr << "Task " << this->name << " has the predicate \"" << l.predicate << "\" in its precondition, which is not declared." << endl;
+			assert(hasPred);
+		}
 		
 		for(string v : l.arguments) {
 			bool hasVar = false;
 			for(auto mv : this->vars) if (mv.first == v) hasVar = true;
-			assert(hasVar);
+			if (! hasVar){
+				cerr << "Task " << this->name << " has the predicate \"" << l.predicate << "\" in its precondition, which has the argument \"" << v << "\", which is unknown." << endl;
+				assert(hasVar);
+			}
 		}
 	}
 
 	for(literal l : this->eff) {
 		bool hasPred = false;
 		for(auto p : predicate_definitions) if (p.name == l.predicate) hasPred = true;
-		assert(hasPred);
+		if (! hasPred){
+			cerr << "Task " << this->name << " has the predicate \"" << l.predicate << "\" in its effects, which is not declared." << endl;
+			assert(hasPred);
+		}
 		
 		for(string v : l.arguments) {
 			bool hasVar = false;
 			for(auto mv : this->vars) if (mv.first == v) hasVar = true;
-			assert(hasVar);
+			if (! hasVar){
+				cerr << "Task " << this->name << " has the predicate \"" << l.predicate << "\" in its effects, which has the argument \"" << v << "\", which is unknown." << endl;
+				assert(hasVar);
+			}
 		}
 	}
 
