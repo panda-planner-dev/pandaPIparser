@@ -60,6 +60,7 @@ class general_formula{
 		void negate();
 		// first: effect, second: additional precondition for that effect
 		vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > expand();
+		additional_variables variables_for_constants();
 
 	private:
 		general_formula* copyReplace(map<string,string>& replace);

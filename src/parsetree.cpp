@@ -18,6 +18,15 @@ void general_formula::negate(){
 
 	for(auto sub : this->subformulae) sub->negate();
 }
+additional_variables general_formula::variables_for_constants(){
+	additional_variables ret;
+	ret.insert(this->arguments.newVar.begin(),this->arguments.newVar.end());
+	for (general_formula* sf : this->subformulae){
+		additional_variables sfr = sf->variables_for_constants();
+		ret.insert(sfr.begin(),sfr.end());
+	}
+	return ret;
+}
 
 string sort_for_const(string c){
 	string s = "sort_for_" + c;
