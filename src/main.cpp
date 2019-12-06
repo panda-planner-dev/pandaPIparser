@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 		cout << "I can't open " << argv[pfile] << "!" << endl;
 		return 2;
 	}
-	if (!shopOutput && poutfile != -1){
+	if (!shopOutput && !hpdlOutput && poutfile != -1){
 		cout << "For ordinary pandaPI output, you may only specify one output file, but you specified two: " << argv[doutfile] << " and " << argv[poutfile] << endl;
 	}
 	
@@ -112,10 +112,10 @@ int main(int argc, char** argv) {
 	run_parser_on_file(domain_file);
 	run_parser_on_file(problem_file);
 
-	expand_sorts(); // add constants to all sorts
+	if (!hpdlOutput) expand_sorts(); // add constants to all sorts
 	
 	// handle typeof-predicate
-	if (has_typeof_predicate) create_typeof();
+	if (!hpdlOutput && has_typeof_predicate) create_typeof();
 
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
@@ -126,13 +126,14 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-
-	// flatten all primitive tasks
-	flatten_tasks();
-	// .. and the goal
-	flatten_goal();
-	// create appropriate methods and expand method preconditions
-	parsed_method_to_data_structures();
+	if (!hpdlOutput) {
+		// flatten all primitive tasks
+		flatten_tasks();
+		// .. and the goal
+		flatten_goal();
+		// create appropriate methods and expand method preconditions
+		parsed_method_to_data_structures();
+	}
 
 	if (shopOutput || hpdlOutput){
 		// produce streams for output
