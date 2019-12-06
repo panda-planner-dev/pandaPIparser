@@ -164,7 +164,9 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 	dout << "  )" << endl;
 
 	dout << endl << endl;
-	
+
+	set<string> sortsWithDeclaredPredicates;
+
 	// write abstract tasks
 	for (parsed_task & at : parsed_abstract){
 		dout << "  (:task " << at.name << endl;
@@ -174,17 +176,43 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 		for (parsed_method & method : parsed_methods[at.name]){
 			dout << "    (:method "  << method.name << endl;
 
-			map<string,string> method2Task;
-			map<string,string> task2Method;
-			for (unsigned int i = 0; i < method.atArguments.size(); i++){
-				method2Task[method.atArguments[i]] = at.arguments->vars[i].first;
-				task2Method[at.arguments->vars[i].first] = method.atArguments[i];
-			}
-
+			// determine which variables are actually constants
 			map<string,string> varsForConst;
 			add_var_for_const_to_map(method.newVarForAT,varsForConst);
 			for (sub_task* st : method.tn->tasks)
 				add_var_for_const_to_map(st->arguments->newVar,varsForConst);
+			
+			
+			map<string,string> method2Task;
+			map<string,string> task2Method;
+			vector<pair<string,string>> variableTypesToCheck;
+			vector<pair<string,string>> variableConstantToCheck;
+			for (unsigned int i = 0; i < method.atArguments.size(); i++){
+				string methodArg = method.atArguments[i];
+				string atArg = at.arguments->vars[i].first;
+				method2Task[methodArg] = atArg;
+				task2Method[atArg] = methodArg;
+
+				
+				if (varsForConst.count(methodArg)){
+					// we are dealing with an artificial parameter, i.e. a constant.
+					variableConstantToCheck.push_back(make_pair(atArg,varsForConst[methodArg]));
+					continue;
+				}
+				
+				// the new variable may have another type than the old one, in this case we have to write a constraint into the precondition
+				string sortOfAT = at.arguments->vars[i].second;
+				// iterate over variables in method to find the correct one
+				string sortOfParam = "";
+				for (unsigned int j = 0; j < method.vars->vars.size(); j++)
+					if (method.vars->vars[j].first == methodArg)
+						sortOfParam = method.vars->vars[j].second;
+				assert(sortOfParam.size()); // must be found
+				if (sortOfAT == sortOfParam) continue;
+				variableTypesToCheck.push_back(make_pair(atArg,sortOfParam));
+				sortsWithDeclaredPredicates.insert(sortOfParam);
+			}
+
 
 
 			// preconditions
@@ -192,6 +220,14 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			set<string> state_declared_variables;
 			auto variable_declaration = variable_declaration_closure(method2Task,varsForConst,method,state_declared_variables);
 			write_HPDL_general_formula_outer_and(dout,method.prec,variable_declaration,4);
+			for (pair<string,string> v : variableConstantToCheck){
+				write_HPDL_indent(dout,4);
+				dout << "(= " << v.first << " " << v.second << ")" << endl;
+			}
+			for (pair<string,string> v : variableTypesToCheck){
+				write_HPDL_indent(dout,4);
+				dout << "(type_member_" << v.second << " " << v.first << ")" << endl;
+			}
 			dout << "      )" << endl;
 
 			// subtasks
