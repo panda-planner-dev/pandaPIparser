@@ -196,20 +196,27 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 	for (sort_definition sort_def : sort_definitions){
 		assert(!lastSorts); // only one sort definition without parents
 
-		if (sort_def.declared_sorts.size() == 1 && *(sort_def.declared_sorts.begin()) == "object"){
-				sorts_rhs.insert(sort_def.parent_sort);
+		string _s = *(sort_def.declared_sorts.begin()); transform(_s.begin(), _s.end(), _s.begin(), ::tolower);
+
+		if (sort_def.declared_sorts.size() == 1 && _s == "object"){
+			sorts_rhs.insert(sort_def.parent_sort);
 			continue; // ignore the rest of this definition
 		}
 
-		if (sort_def.has_parent_sort && sort_def.parent_sort == "object"){
+		_s = sort_def.parent_sort; transform(_s.begin(), _s.end(), _s.begin(), ::tolower);
+
+		if (sort_def.has_parent_sort && _s == "object"){
 			for (string sort : sort_def.declared_sorts)
 				sorts_rhs.insert(sort);
 			continue;
 		}
 
 		dout << "   ";
-		for (string sort : sort_def.declared_sorts) if (sort != "object") // it is a build-in in HPDL 
-			dout << " " << sort, sorts_lhs.insert(sort);
+		for (string sort : sort_def.declared_sorts){
+			_s = sort; transform(_s.begin(), _s.end(), _s.begin(), ::tolower);
+			if (_s != "object") // it is a build-in in HPDL 
+				dout << " " << sort, sorts_lhs.insert(sort);
+		}
 
 		if (sort_def.has_parent_sort)
 			dout << " - " << sort_def.parent_sort, sorts_rhs.insert(sort_def.parent_sort);
