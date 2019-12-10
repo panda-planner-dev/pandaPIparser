@@ -1,10 +1,11 @@
 #ifndef __DOMAIN
 #define __DOMAIN
 
-#include<vector>
-#include<map>
-#include<set>
-#include<string>
+#include <vector>
+#include <map>
+#include <set>
+#include <string>
+#include "sortexpansion.hpp"
 
 using namespace std;
 

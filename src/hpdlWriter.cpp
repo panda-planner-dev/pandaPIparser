@@ -65,9 +65,10 @@ inline void write_HPDL_indent(ostream & out, int indent){
 void write_HPDL_general_formula(ostream & out, general_formula * f, function<string(string)> & var, int indent){
 	if (!f) return;
 	if (f->type == EMPTY) return;
+	
+	write_HPDL_indent(out,indent);
 
 	if (f->type == ATOM || f->type == NOTATOM){
-		write_HPDL_indent(out,indent);
 		if (f->type == NOTATOM) out << "(not ";
 		out << "(" << f->predicate;
 		for (string & v : f->arguments.vars) out << " " << var(v);
@@ -76,10 +77,12 @@ void write_HPDL_general_formula(ostream & out, general_formula * f, function<str
 		return;
 	}
 	
-	if (f->type == AND || f->type == OR){
-		write_HPDL_indent(out,indent);
+	if (f->type == AND || f->type == OR ||
+		f->type == FORALL || f->type == EXISTS ||
+		f->type == WHEN){
 		if (f->type == AND) out << "(and" << endl;
 		if (f->type == OR)  out << "(or"  << endl;
+		if (f->type == WHEN)  out << "(when"  << endl;
 		if (f->type == FORALL) out << "(forall";
 		if (f->type == EXISTS)  out << "(exists";
 		
@@ -104,13 +107,19 @@ void write_HPDL_general_formula(ostream & out, general_formula * f, function<str
 
 	if (f->type == EQUAL || f->type == NOTEQUAL){
 		if (f->type == NOTEQUAL) out << "(not ";
-		out << "(=";
-		for (string & v : f->arguments.vars) out << " " << var(v);
-		out << ")";
+		out << "(= " << var(f->arg1) << " " << var(f->arg2) << ")";
 		if (f->type == NOTEQUAL) out << ")";
+		out << endl;
 		return;
 	}
 
+	if (f->type == OFSORT || f->type == NOTOFSORT){
+		if (f->type == NOTOFSORT) out << "(not ";
+		out << "(type_member_" << f->arg2 << " " << var(f->arg1) << ")";
+		if (f->type == NOTOFSORT) out << ")";
+		out << endl;
+		return;
+	}
 
 	// something occurred inside the formula that we cannot handle
 	cout << "formula of type " << f->type << " occurred, which we cannot handle." << endl;
@@ -144,17 +153,22 @@ vector<sub_task*> get_tasks_in_total_order(vector<sub_task*> tasks, vector<pair<
 	for (pair<string,string>* p : ordering) pre[p->second]++;
 	
 	for (unsigned int r = 0; r < tasks.size(); r++){
+		int found = -1;
 		for (unsigned int i = 0; i < tasks.size(); i++){
 			if (pre[tasks[i]->id] == -1) continue; // already added
 			if (pre[tasks[i]->id]) continue; // still has predecessors
-			ordered_subtasks.push_back(tasks[i]);
-			for (pair<string,string>*  p : ordering)
-				if (p->first == tasks[i]->id)
-					pre[p->second]--;
-			pre[tasks[i]->id] = -1;
-			
-			break;
+			if (found != -1){
+				cout << "Domain contains non-totally-ordered method" << endl;
+				exit(1);
+			}
+			found = i;
 		}
+
+		ordered_subtasks.push_back(tasks[found]);
+		for (pair<string,string>*  p : ordering)
+			if (p->first == tasks[found]->id)
+				pre[p->second]--;
+		pre[tasks[found]->id] = -1;
 	}
 
 	assert(ordered_subtasks.size() == tasks.size());
@@ -167,22 +181,53 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 	dout << "    :typing" << endl;
 	dout << "    :htn-expansion" << endl;
 	dout << "    :negative-preconditions" << endl;
+	dout << "    :conditional-effects" << endl;
+	dout << "    :universal-preconditions" << endl;
+	dout << "    :disjuntive-preconditions" << endl;
+	dout << "    :equality" << endl;
+	dout << "    :existential-preconditions" << endl;
 	dout << "  )" << endl;
 	dout << "  (:types " << endl;
+
+	// the one declaring only elementary types will be the last one
+	set<string> sorts_rhs;
+	set<string> sorts_lhs;
+	bool lastSorts = false;
 	for (sort_definition sort_def : sort_definitions){
+		assert(!lastSorts); // only one sort definition without parents
+
+		if (sort_def.declared_sorts.size() == 1 && *(sort_def.declared_sorts.begin()) == "object"){
+				sorts_rhs.insert(sort_def.parent_sort);
+			continue; // ignore the rest of this definition
+		}
+
+		if (sort_def.has_parent_sort && sort_def.parent_sort == "object"){
+			for (string sort : sort_def.declared_sorts)
+				sorts_rhs.insert(sort);
+			continue;
+		}
+
 		dout << "   ";
-		for (string sort : sort_def.declared_sorts)
-			dout << " " << sort;
+		for (string sort : sort_def.declared_sorts) if (sort != "object") // it is a build-in in HPDL 
+			dout << " " << sort, sorts_lhs.insert(sort);
+
 		if (sort_def.has_parent_sort)
-			dout << " - " << sort_def.parent_sort;
+			dout << " - " << sort_def.parent_sort, sorts_rhs.insert(sort_def.parent_sort);
+		else {
+			lastSorts = true;
+		}
+
 		dout << endl;
 	}
+	// output all sorts on the RHS, which are not on an LHS
+	for (string r : sorts_rhs) if (!sorts_lhs.count(r)) dout << " " << r;
 	dout << "  )" << endl;
 
 	dout << endl;
 	dout << "  (:constants" << endl;
 	for (auto & s_entry : sorts){
 		if (s_entry.first.rfind("sort_for", 0) == 0) continue;
+		if (!s_entry.second.size()) continue;
 			
 		dout << "   ";
 		for(string constant : s_entry.second) dout << " " << constant;
@@ -192,7 +237,8 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 
 	dout << "  (:predicates" << endl;
-	for(auto [s,_] : sorts){
+	for(auto [s,elems] : sorts){
+		(void) elems; // get rid of unused variable
 		if (s.rfind("sort_for", 0) == 0) continue;
 		dout << "    (type_member_" << s << " ?var - " << s << ")" << endl;
 	}
@@ -214,6 +260,10 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 		if (at.name[0] == '_') dout << "t";
 		dout << at.name << endl;
 		write_HPDL_parameters(dout,at);
+			
+		set<string> atArgs;
+		for (unsigned int i = 0; i < at.arguments->vars.size(); i++)
+			atArgs.insert(at.arguments->vars[i].first);
 		
 		// HPDL puts methods into the abstract tasks, so output them
 		for (parsed_method & method : parsed_methods[at.name]){
@@ -227,17 +277,25 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			for (sub_task* st : method.tn->tasks)
 				add_var_for_const_to_map(st->arguments->newVar,varsForConst);
 			
-			
+			// the method might contain variables that have the same name as variables of the AT, we first have to rename them
+
 			map<string,string> method2Task;
 			map<string,string> method2TaskSort;
-			map<string,string> task2Method;
+			
+			for (auto & varDecl : method.vars->vars)
+				if (atArgs.count(varDecl.first)) {
+					method2Task[varDecl.first] = varDecl.first + "_in_method";
+					method2TaskSort[method2Task[varDecl.first]] = varDecl.second;
+				}
+
+
 			vector<pair<string,string>> variableTypesToCheck;
 			vector<pair<string,string>> variableConstantToCheck;
 			for (unsigned int i = 0; i < method.atArguments.size(); i++){
 				string methodArg = method.atArguments[i];
 				string atArg = at.arguments->vars[i].first;
 				method2Task[methodArg] = atArg;
-				task2Method[atArg] = methodArg;
+
 				// the new variable may have another type than the old one, in this case we have to write a constraint into the precondition
 				string sortOfAT = at.arguments->vars[i].second;
 				method2TaskSort[atArg] = sortOfAT;
@@ -262,7 +320,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 
 			// preconditions
-			dout << "    :precondition (";
+			dout << "      :precondition (";
 			bool variableToBind = false;
 			for (pair<string,string> & varDecl : method.vars->vars){
 				if (varsForConst.count(varDecl.first)) continue;
@@ -358,8 +416,10 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			pout << " " << arg;
 		pout << ")" << endl;
 	}
-	//for(string s : sortsWithDeclaredPredicates){
-	for(auto [s,_] : sorts){
+	// expand sorts before writing the sort membership information to keep them correct
+	expand_sorts(); // add constants to all sorts
+	for(auto [s, elems] : sorts){
+		(void) elems; // get rid of unused variable
 		if (s.rfind("sort_for", 0) == 0) continue;
 		for (string constant : sorts[s]){
 			pout << "    (type_member_" << s << " " << constant << ")" << endl;
