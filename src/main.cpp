@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(argv[doutfile]);
 		bool result = verify_plan(*plan);
-		if (result) cout << "correct" << endl;
-		else cout << "wrong" << endl;
+		//if (result) cout << "correct" << endl;
+		//else cout << "wrong" << endl;
 		return 0;
 	}
 
