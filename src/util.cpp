@@ -1,9 +1,9 @@
 #include "util.hpp"
 
-string color(Color color, string text){
+string color(Color color, string text, Mode m){
   return string ()
-    + "\033[" + std::to_string (30 + color) + "m"
+    + "\033[" +std::to_string (m)+ ";" + std::to_string (30 + color) + "m"
     + text
-    + "\033[m"
+    + "\033[0;m"
   ;
 }
