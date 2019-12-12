@@ -36,6 +36,7 @@ instantiated_plan_step parse_plan_step_from_string(string input){
 	while (1){
 		if (ss.eof()) break;
 		string s; ss >> s;
+		if (s == "") break;
 		if (first) {
 			first = false;
 			ps.name = s;
@@ -152,6 +153,7 @@ bool verify_plan(istream & plan){
 		if (domain_task.name == "__none_found"){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" and task name \"" + ps.name + "\" is not declared in the domain.") << endl;
 			wrongTaskDeclarations = true;
+			continue;
 		}
 	
 		if (foundInPrimitive != ps.declaredPrimitive){
@@ -159,6 +161,13 @@ bool verify_plan(istream & plan){
 			string inDomainAs = foundInPrimitive ?   "primitive" : "abstract";
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" is a " + inPlanAs + " in the plan, but is declared as an " + inDomainAs + " in the domain.") << endl;
 			wrongTaskDeclarations = true;
+			continue;
+		}
+
+		if (domain_task.arguments->vars.size() != ps.arguments.size()){
+			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has wrong number of arguments. "+ to_string(ps.arguments.size()) + " are given in the plan, but the domain required " + to_string(domain_task.arguments->vars.size()) + " parameters.") << endl;
+			wrongTaskDeclarations = true;
+			continue;
 		}
 	}
 	cout << "Tasks declared in plan actually exist and can be instantiated as given: ";
