@@ -29,6 +29,141 @@ vector<int> parse_list_of_integers(string & line){
 	return parse_list_of_integers(ss);
 }
 
+
+
+vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_method & m, map<int,instantiated_plan_step> & tasks,
+							set<string> doneIDs, vector<int> & subtasks, int curpos,
+							map<string,string> variableAssignment,
+							map<string,int> matching){
+	vector<pair<map<string,int>,map<string,string>>> ret;
+	if (doneIDs.size() == subtasks.size()){
+		// check whether the variable assignment is ok
+		for (pair<string,string> varDecl : m.vars->vars){
+			string sort = varDecl.second;
+			if (!variableAssignment.count(varDecl.first)){
+				cout << "unassigned variable " << varDecl.first << endl;
+				continue;
+			}
+
+			string param = variableAssignment[varDecl.first];
+			if (!sorts[sort].count(param)) return ret; // parameter is not consistent with delcared sort
+		}
+		
+		
+		// found a full matching
+		ret.push_back(make_pair(matching, variableAssignment));
+		return ret;
+	}
+	
+	
+	// find the remaining sources
+	set<string> allIDs;
+	map<string,sub_task*> subtasksAccess;
+	for (sub_task* st : m.tn->tasks) allIDs.insert(st->id), subtasksAccess[st->id] = st;
+	for (string id : doneIDs) allIDs.erase(id);
+	for (auto & order : m.tn->ordering){
+		// this order is completely dealt with
+		if (doneIDs.count(order->first)) continue;
+		if (doneIDs.count(order->second)) continue;
+		allIDs.erase(order->second); // has a predecessor
+	}
+
+	// allIDs now contains sources
+	for (string source : allIDs){
+		// now we try to map source to subtasks[curpos]
+		instantiated_plan_step & ps = tasks[subtasks[curpos]];
+		// check whether this task is ok
+
+		//1. has to be the same task type as declared
+		if (subtasksAccess[source]->task != ps.name) continue;
+
+		// check that the variable assignment is compatible
+		map<string,string> newVariableAssignment = variableAssignment;
+		bool assignmentOk = true;
+		for (unsigned int i = 0; i < ps.arguments.size(); i++){
+			string methodVar = subtasksAccess[source]->arguments->vars[i];
+			string taskParam = ps.arguments[i];
+			if (newVariableAssignment.count(methodVar)){
+				if (newVariableAssignment[methodVar] != taskParam)
+					assignmentOk = false; 
+			}
+			newVariableAssignment[methodVar] = taskParam;
+		}
+		if (!assignmentOk) continue; // if the assignment is not ok then don't continue on it
+		set<string> newDone = doneIDs; newDone.insert(source);
+		map<string,int> newMatching = matching;
+		newMatching[source] = subtasks[curpos];
+		
+		auto recursive = generateAssignmentsDFS(m, tasks, newDone,
+							   subtasks, curpos + 1,
+							   newVariableAssignment, newMatching);
+
+		for (auto r : recursive) ret.push_back(r);
+	}
+	
+	return ret;
+}
+
+
+void getRecursive(int source, vector<int> & allSub,map<int,vector<int>> & subtasksForTask){
+	if (!subtasksForTask.count(source)) {
+		allSub.push_back(source);
+		return;
+	}
+	for (int sub : subtasksForTask[source])
+		getRecursive(sub,allSub,subtasksForTask);	
+}
+
+
+bool findLinearisation(int currentTask,
+		map<int,parsed_method> & parsedMethodForTask,
+		map<int,instantiated_plan_step> & tasks,
+		map<int,vector<int>> & subtasksForTask,
+		map<int,vector<pair<map<string,int>,map<string,string>>>> & matchings,
+		map<int,int> pos_in_primitive_plan,
+		bool uniqueMatching){
+	if (tasks[currentTask].declaredPrimitive) return true; // order is ok
+	
+	for (auto & matching : matchings[currentTask]){
+		// check all orderings
+		map<int,vector<int>> allSubs;
+		for (int st : subtasksForTask[currentTask]){
+			vector<int> subs;
+			getRecursive(st, subs, subtasksForTask);
+			allSubs[st] = subs;
+		}
+		
+		bool badOrdering = false;
+		for (auto ordering : parsedMethodForTask[currentTask].tn->ordering){
+			vector<int> allBefore = allSubs[matching.first[ordering->first]];
+			vector<int> allAfter = allSubs[matching.first[ordering->second]];
+
+			// check whether this ordering is adhered to for all
+			for (int before : allBefore) for (int after : allAfter){
+				bool primitiveBad = pos_in_primitive_plan[before] > pos_in_primitive_plan[after];
+				if (primitiveBad && uniqueMatching){
+					cout << color(COLOR_RED,"Task with id="+to_string(currentTask)+" has two children: " +
+					to_string(matching.first[ordering->first]) + " (" + ordering->first + ") and "  +
+					to_string(matching.first[ordering->second]) + " (" + ordering->second + ") who will be decomposed into primitive tasks: " + to_string(before) + " and " + to_string(after) + ". The method enforces " + to_string(before) + " < " + to_string(after) + " but the plan is ordered the other way around.") << endl;
+				}
+
+				badOrdering |= primitiveBad;
+			}
+		}
+		if (badOrdering) continue;
+		// check recursively
+		bool subtasksOk = true;
+		for (int st : subtasksForTask[currentTask])
+			subtasksOk &= findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,uniqueMatching && (matchings[currentTask].size() == 1));
+
+		if (!subtasksOk) continue;
+
+		return true;
+	}
+	return false; // no good matching found
+}
+
+
 instantiated_plan_step parse_plan_step_from_string(string input){
 	istringstream ss (input);
 	bool first = true;
@@ -56,6 +191,7 @@ bool verify_plan(istream & plan){
 	
 	map<int,instantiated_plan_step> tasks;
 	vector<int> primitive_plan;
+	map<int,int> pos_in_primitive_plan;
 	map<int,string> appliedMethod;
 	map<int,vector<int>> subtasksForTask;
 	
@@ -70,6 +206,7 @@ bool verify_plan(istream & plan){
 		instantiated_plan_step ps = parse_plan_step_from_string(rest_of_line);		
 		ps.declaredPrimitive = true;
 		primitive_plan.push_back(id);
+		pos_in_primitive_plan[id] = primitive_plan.size() - 1;
 		if (tasks.count(id)){
 			cout << color(COLOR_RED,"Two primitive task have the same id: ") << 
 				color(COLOR_RED,to_string(id)) << endl;
@@ -132,11 +269,12 @@ bool verify_plan(istream & plan){
 	}
 
 	// now that we successfully got the input, we can start to run the checker
-
+	//=========================================================================================================================
 	
 	//=========================================
 	// check whether the individual tasks exist, and comply with their argument restrictions
 	bool wrongTaskDeclarations = false;
+	map<int,map<string,string>> variableValues;
 	for (auto & entry : tasks){
 		instantiated_plan_step & ps = entry.second;
 		// search for the name of the plan step
@@ -169,6 +307,19 @@ bool verify_plan(istream & plan){
 			wrongTaskDeclarations = true;
 			continue;
 		}
+
+		// check whether the individual arguments are ok
+		for (unsigned int arg = 0; arg < ps.arguments.size(); arg++){
+			string param = ps.arguments[arg];
+			string argumentSort = domain_task.arguments->vars[arg].second;
+			// check that the parameter is part of the variable's sort
+			if (sorts[argumentSort].count(param) == 0){
+				cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has the parameter " + param + " assigned to variable " + domain_task.arguments->vars[arg].first + " of sort " + argumentSort + " - but the parameter is not a member of this sort.") << endl;
+				wrongTaskDeclarations = true;
+				continue;
+			}
+			variableValues[entry.first][domain_task.arguments->vars[arg].first] = param;
+		}
 	}
 	cout << "Tasks declared in plan actually exist and can be instantiated as given: ";
 	if (!wrongTaskDeclarations) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
@@ -176,6 +327,9 @@ bool verify_plan(istream & plan){
 
 
 
+	//=========================================
+	// TODO: this is not properly tested yet
+	// check the validity of variable constraints
 	cout << "Plan is executable: " << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 
 	
@@ -211,9 +365,77 @@ bool verify_plan(istream & plan){
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
 	
 
-	cout << "Plan is executable: " << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
+	//=========================================
+	bool wrongMethodApplication = false;
+	map<int,vector<pair<map<string,int>,map<string,string>>>> possibleMethodInstantiations;
+	map<int,parsed_method> parsedMethodForTask;
+	for (auto & entry : appliedMethod){
+		int atID = entry.first;
+		instantiated_plan_step & at = tasks[atID];
+		string taskName = at.name;
+		// look for the applied method
+		parsed_method m; m.name == "__no_method";
+		for (parsed_method & mm : parsed_methods[taskName])
+			if (mm.name == entry.second) // if method's name is the name of the method that was given in in the input
+				m = mm;
 
+		if (m.name == "__no_method"){
+			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" is decomposed with method \"" + entry.second + "\", but there is no such method.") << endl;
+			wrongMethodApplication  = true;
+			continue;
+		}
+		parsedMethodForTask[atID] = m;
 
+		// the __top_method is added by the parser as an artificial top method. We check the top tasks later (either those given in the problem or the __top task)
+
+		map<string,string> methodParamers;
+
+		// assert at args to variables
+		for (unsigned int i = 0; i < m.atArguments.size(); i++){
+			string atParam = at.arguments[i];
+			string atVar = m.atArguments[i];
+			if (methodParamers.count(atVar)){
+				if (methodParamers[atVar] != atParam){
+					cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" is instantiated with \"" + atParam + "\" as its " + to_string(i) + "th parameter, but the variable \"" + atVar + "\" is already assigned to \"" + methodParamers[atVar] + "\".") << endl;
+					wrongMethodApplication = true;
+				}
+			}
+			methodParamers[atVar] = atParam;
+		}
+		
+		// generate all compatible assignment of given subtasks to subtasks declared in the method
+		set<string> done;
+		map<string,int> __matching;
+		auto matchings = generateAssignmentsDFS(m, tasks, done,
+							   subtasksForTask[atID], 0,
+							   methodParamers, __matching);
+
+		if (matchings.size() == 0){
+			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has no matchings for its subtasks.") << endl;
+			wrongMethodApplication = true;
+		}
+		
+		possibleMethodInstantiations[atID] = matchings;
+	}	
+		
+	cout << "Methods can be instantiated: ";
+	if (!wrongMethodApplication) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
+	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+
+	//==============================================
+	// check whether the applied methods leads to the ordering enforced by the methods
+	bool orderingIsConsistent = true;
+
+	for (int rt : root_tasks){
+		if (!findLinearisation(rt,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,true)){
+			cout << color(COLOR_RED,"Ordering below task with id="+to_string(rt)+" is under no matching compatible with primitive plan.") << endl;
+			orderingIsConsistent = false;
+		}
+	}
+	
+	cout << "Order induced by methods is present in plan: ";
+	if (orderingIsConsistent) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
+	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
 	return true;
 }
 
