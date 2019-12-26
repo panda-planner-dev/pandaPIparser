@@ -37,8 +37,16 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 							map<string,int> matching){
 	vector<pair<map<string,int>,map<string,string>>> ret;
 	if (doneIDs.size() == subtasks.size()){
+		vector<pair<string,string>> varDecls;
 		// check whether the variable assignment is ok
-		for (pair<string,string> varDecl : m.vars->vars){
+		for (pair<string,string> varDecl : m.vars->vars) varDecls.push_back(varDecl);
+		// implicit variables (i.e. constants) declared in subtasks
+		for (sub_task* st : m.tn->tasks)
+			for (pair<string,string> implicit_variable : st->arguments->newVar)
+				varDecls.push_back(implicit_variable);
+		for (pair<string,string> varDecl : m.newVarForAT) varDecls.push_back(varDecl);
+		
+		for (pair<string,string> varDecl : varDecls){
 			string sort = varDecl.second;
 			if (!variableAssignment.count(varDecl.first)){
 				cout << "unassigned variable " << varDecl.first << endl;
@@ -48,7 +56,6 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 			string param = variableAssignment[varDecl.first];
 			if (!sorts[sort].count(param)) return ret; // parameter is not consistent with delcared sort
 		}
-		
 		
 		// found a full matching
 		ret.push_back(make_pair(matching, variableAssignment));
@@ -413,6 +420,8 @@ bool verify_plan(istream & plan){
 		if (matchings.size() == 0){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has no matchings for its subtasks.") << endl;
 			wrongMethodApplication = true;
+		} else if (matchings.size() > 1){
+			cout << color(COLOR_YELLOW,"Task with id="+to_string(entry.first)+" has multiple valid matchings. This might be due to the domain, but it disables detailed output for checking the ordering") << endl;
 		}
 		
 		possibleMethodInstantiations[atID] = matchings;
