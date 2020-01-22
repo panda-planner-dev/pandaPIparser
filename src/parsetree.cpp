@@ -15,9 +15,33 @@ void general_formula::negate(){
 	else if (this->type == ATOM) this->type = NOTATOM;
 	else if (this->type == NOTATOM) this->type = ATOM;
 	else if (this->type == WHEN) assert(false); // conditional effect cannot be negated 
+	else if (this->type == VALUE) assert(false); // conditional effect cannot be negated 
+	else if (this->type == COST_CHANGE) assert(false); // conditional effect cannot be negated 
+	else if (this->type == COST) assert(false); // conditional effect cannot be negated 
 
 	for(auto sub : this->subformulae) sub->negate();
 }
+
+
+bool general_formula::isEmpty(){
+	if (this->type == EMPTY) return true;
+
+	if (this->type == ATOM) return false;
+	if (this->type == NOTATOM) return false;
+	if (this->type == EQUAL) return false;
+	if (this->type == NOTEQUAL) return false;
+	
+	if (this->type == VALUE) return false;
+	if (this->type == COST) return false;
+	if (this->type == COST_CHANGE) return false;
+
+
+	for(auto sub : this->subformulae) if (!sub->isEmpty()) return false;
+
+	return true;
+}
+
+
 additional_variables general_formula::variables_for_constants(){
 	additional_variables ret;
 	ret.insert(this->arguments.newVar.begin(),this->arguments.newVar.end());

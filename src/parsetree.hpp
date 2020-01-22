@@ -58,6 +58,7 @@ class general_formula{
 		int value;
 
 		void negate();
+		bool isEmpty();
 		// first: effect, second: additional precondition for that effect
 		vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > expand();
 		additional_variables variables_for_constants();
