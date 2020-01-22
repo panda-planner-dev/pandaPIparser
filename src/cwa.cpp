@@ -8,6 +8,18 @@ vector<pair<ground_literal,int>> init_functions;
 vector<ground_literal> goal;
 general_formula* goal_formula = NULL;
 
+bool operator< (const ground_literal& lhs, const ground_literal& rhs){
+	if (lhs.predicate < rhs.predicate) return true;
+	if (lhs.predicate > rhs.predicate) return false;
+	
+	if (lhs.positive < rhs.positive) return true;
+	if (lhs.positive > rhs.positive) return false;
+	
+	if (lhs.args < rhs.args) return true;
+	if (lhs.args > rhs.args) return false;
+
+	return false; // equal
+}
 
 void flatten_goal(){
 	if (goal_formula == NULL) return;

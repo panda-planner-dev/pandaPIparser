@@ -13,6 +13,8 @@ struct ground_literal{
 	vector<string> args;
 };
 
+bool operator< (const ground_literal& lhs, const ground_literal& rhs);
+
 void flatten_goal();
 void compute_cwa();
 
