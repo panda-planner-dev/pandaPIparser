@@ -386,10 +386,12 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 
 
 
+
 vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_method & m, map<int,instantiated_plan_step> & tasks,
 							set<string> doneIDs, vector<int> & subtasks, int curpos,
 							map<string,string> variableAssignment,
 							map<string,int> matching,
+							map<string,string> & varDecls,
 							bool useOrderInformation,
 							int debugMode){
 	vector<pair<map<string,int>,map<string,string>>> ret;
@@ -397,19 +399,6 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		if (debugMode) {
 			print_n_spaces(1 + 2*curpos);
 			cout << color(COLOR_GREEN,"Found compatible linearisation.") << endl;
-			print_n_spaces(1 + 2*curpos + 1);
-			cout << "Checking constraints on variables ... " << endl;
-		}
-		vector<pair<string,string>> varDecls;
-		// check whether the variable assignment is ok
-		for (pair<string,string> varDecl : m.vars->vars) varDecls.push_back(varDecl);
-		// implicit variables (i.e. constants) declared in subtasks
-		for (sub_task* st : m.tn->tasks)
-			for (pair<string,string> implicit_variable : st->arguments->newVar)
-				varDecls.push_back(implicit_variable);
-		for (pair<string,string> varDecl : m.newVarForAT) varDecls.push_back(varDecl);
-		
-		if (debugMode) {
 			print_n_spaces(1 + 2*curpos + 1);
 			cout << "Checking constants are in variable type ... " << endl;
 		}
@@ -518,6 +507,15 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 					assignmentOk = false; 
 				}
 			}
+			string sortOfMethodVar = varDecls[methodVar];
+			if (!sorts[sortOfMethodVar].count(taskParam)){
+				if (debugMode){
+					print_n_spaces(1 + 2*curpos + 1);
+					cout << color(COLOR_RED,"Variable " + methodVar + "=" + taskParam + " is not in sort " + sortOfMethodVar) << endl;
+				}
+				assignmentOk = false;
+			}
+
 			newVariableAssignment[methodVar] = taskParam;
 			if (debugMode){
 				print_n_spaces(1 + 2*curpos + 1);
@@ -531,7 +529,8 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		
 		auto recursive = generateAssignmentsDFS(m, tasks, newDone,
 							   subtasks, curpos + 1,
-							   newVariableAssignment, newMatching,useOrderInformation, debugMode);
+							   newVariableAssignment, newMatching,
+							   varDecls, useOrderInformation, debugMode);
 
 		for (auto r : recursive) ret.push_back(r);
 	}
@@ -539,6 +538,29 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 	return ret;
 }
 
+
+vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_method & m, map<int,instantiated_plan_step> & tasks,
+							vector<int> & subtasks, int curpos,
+							map<string,string> variableAssignment,
+							bool useOrderInformation,
+							int debugMode){
+	// extract variable declaration for early abort checking
+
+	map<string,string> varDecls;
+	// check whether the variable assignment is ok
+	for (pair<string,string> varDecl : m.vars->vars) varDecls[varDecl.first] = varDecl.second;
+	// implicit variables (i.e. constants) declared in subtasks
+	for (sub_task* st : m.tn->tasks)
+		for (pair<string,string> implicit_variable : st->arguments->newVar)
+			varDecls[implicit_variable.first] = implicit_variable.second;
+	for (pair<string,string> varDecl : m.newVarForAT) varDecls[varDecl.first] = varDecl.second;
+
+	map<string,int> __matching;
+	set<string> done;
+
+	return generateAssignmentsDFS(m,tasks,done,subtasks,curpos,variableAssignment,__matching,varDecls, useOrderInformation, debugMode);	
+
+}
 
 void getRecursive(int source, vector<int> & allSub,map<int,vector<int>> & subtasksForTask){
 	if (!subtasksForTask.count(source)) {
@@ -1251,12 +1273,10 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 		}
 		
 		// generate all compatible assignment of given subtasks to subtasks declared in the method
-		set<string> done;
-		map<string,int> __matching;
 		if (debugMode) cout << color(COLOR_YELLOW,"Generating Matchings for task with id="+to_string(entry.first),MODE_UNDERLINE) << endl;
-		auto matchings = generateAssignmentsDFS(m, tasks, done,
+		auto matchings = generateAssignmentsDFS(m, tasks, 
 							   subtasksForTask[atID], 0,
-							   methodParamers, __matching,useOrderInformation, debugMode);
+							   methodParamers, useOrderInformation, debugMode);
 		if (debugMode) cout << "Found " << matchings.size() << " matchings for task with id=" << entry.first << endl;
 
 		if (matchings.size() == 0){
