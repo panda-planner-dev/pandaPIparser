@@ -59,6 +59,8 @@ int main(int argc, char** argv) {
 	bool hpdlOutput = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
+	int verifyPlanVerbosity = 0;
+	
 	int level = 0;
 	for (int i = 1; i < argc; i++){
 		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
@@ -69,6 +71,9 @@ int main(int argc, char** argv) {
 		}
 		else if (strcmp(argv[i], "-hpdl") == 0) hpdlOutput = true;
 		else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
+		else if (strcmp(argv[i], "-vverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 1; }
+		else if (strcmp(argv[i], "-vvverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 2; }
+		else if (strcmp(argv[i], "-nocolor") == 0) no_colors_in_output = true;
 		else if (strcmp(argv[i], "-debug") == 0){
 		   	verboseOutput = true;
 			if (i+1 == argc) continue;
@@ -120,9 +125,11 @@ int main(int argc, char** argv) {
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(argv[doutfile]);
-		bool result = verify_plan(*plan);
-		//if (result) cout << "correct" << endl;
-		//else cout << "wrong" << endl;
+		bool result = verify_plan(*plan, verifyPlanVerbosity);
+		cout << "Plan verification result: ";
+		if (result) cout << color(COLOR_GREEN,"true",MODE_BOLD);
+		else cout << color(COLOR_RED,"false",MODE_BOLD);
+		cout << endl;
 		return 0;
 	}
 

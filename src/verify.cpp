@@ -15,7 +15,7 @@ struct instantiated_plan_step{
 	bool declaredPrimitive;
 };
 
-vector<int> parse_list_of_integers(istringstream & ss){
+vector<int> parse_list_of_integers(istringstream & ss, int debugMode){
 	vector<int> ints;
 	while (true){
 		if (ss.eof()) break;
@@ -26,10 +26,17 @@ vector<int> parse_list_of_integers(istringstream & ss){
 	return ints;
 }
 
-vector<int> parse_list_of_integers(string & line){
+vector<int> parse_list_of_integers(string & line, int debugMode){
+	if (debugMode) cout << "Reading list of integers from \"" << line << "\"" << endl;
 	istringstream ss (line);
-	return parse_list_of_integers(ss);
+	return parse_list_of_integers(ss,debugMode);
 }
+
+
+inline void print_n_spaces(int n){
+	for (int i = 0; i < n; i++) cout << " ";
+}
+
 
 string get_const(string varOrConst, map<string,string> & variableAssignment, additional_variables additionalVars = additional_variables()){
 	auto it = variableAssignment.find(varOrConst);
@@ -47,27 +54,173 @@ string get_const(string varOrConst, map<string,string> & variableAssignment, add
 	return varOrConst; // a constant
 }
 
+// FORWARD DECLARATION -- the recursion of the next two function is intertwined
+bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state, int debugMode, int level);
 
-bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state){
-	if (f->type == EMPTY) return true;
+bool evaluateFormulaOnStateQuantified(formula_type type, var_declaration & qvariables, size_t done, int & instance_counter, general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state, int debugMode, int level){
+
+	// if we have assigned all variables evaluate the sub expression
+	if (qvariables.vars.size() == done){
+		instance_counter++;
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_PURPLE,"Checking instantiation #" + to_string(instance_counter)) << endl;
+		}
+
+		bool sub_result = evaluateFormulaOnState(f,state,variable_assignment,ignore_state, debugMode, level+1);
+
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_CYAN,"Instantiation #" + to_string(instance_counter)) << " result: ";
+			if (sub_result) cout << color(COLOR_GREEN,"true");
+			else cout << color(COLOR_RED,"false");
+			cout << endl;
+		}
+		
+		return sub_result;
+	}
+
+	pair<string,string> var = qvariables.vars[done];
+
+	// assign value to variable done!
+	if (debugMode == 2){
+		print_n_spaces(1+2*level+1);
+		cout << "Var " << done << " |sort| = " << sorts[var.second].size() << endl;
+	}
+
+	for(string constant : sorts[var.second]){
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_CYAN,"Assigning") << " " << var.first << "=" << constant << endl;
+		}
+		variable_assignment[var.first] = constant; // add new variable binding
+
+		bool result = evaluateFormulaOnStateQuantified(type,qvariables,done+1,instance_counter,f,state,variable_assignment,ignore_state,debugMode,level+1);
+
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_PURPLE,"Recursion gave result: ");
+			if (result) cout << color(COLOR_GREEN,"true");
+			else cout << color(COLOR_RED,"false");
+			cout << endl;
+		}
+
+		if (type == FORALL && !result) {
+			if (debugMode == 2) {
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_RED,"Formula is now false. Aborting evaluation.") << endl;
+			}
+			variable_assignment.erase(var.first);
+	   		return false;
+		}
+		if (type == EXISTS && result) {
+			if (debugMode == 2) {
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_GREEN,"Formula is now true. Aborting evaluation.") << endl;
+			}
+			variable_assignment.erase(var.first);
+			return true;
+		}
+	}
+
+	if (debugMode == 2) {
+		print_n_spaces(1+2*level+1);
+		cout << color(COLOR_PURPLE,"Checked every instantiation.") << " Formula is now: ";
+		if (type == FORALL) cout << color(COLOR_GREEN,"true");
+		else cout << color(COLOR_RED,"false");
+	}
+
+	variable_assignment.erase(var.first);
+	return type == FORALL;
+}
+
+bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state, int debugMode, int level){
+	if (f->type == EMPTY) {
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_GREEN,"EMPTY") << endl;
+		}
+		return true;
+	}
 	if (f->type == EQUAL || f->type == NOTEQUAL) {
 		string a = get_const(f->arg1,variable_assignment);
 		string b = get_const(f->arg2,variable_assignment);
-		return (a == b) == (f->type == EQUAL);
+		
+		bool result = (a == b) == (f->type == EQUAL);
+
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			if (f->type == EQUAL) cout << color(COLOR_PURPLE,"EQUAL");
+			else                  cout << color(COLOR_PURPLE,"NOT EQUAL");
+			cout << " " << a << " " << b << " ";
+			if (result) cout << color(COLOR_GREEN,"true");
+			else cout << color(COLOR_RED,"false");
+			cout << endl;
+		}
+		
+		return result;
 	}
 	if (f->type == OFSORT || f->type == NOTOFSORT) {
 		string a = get_const(f->arg1,variable_assignment);
 		string sortname = f->arg2;
 		
-		return sorts[sortname].count(a) == (f->type == OFSORT);
+		bool result = sorts[sortname].count(a) == (f->type == OFSORT);
+		
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			if (f->type == OFSORT) cout << color(COLOR_PURPLE,"OFSORT") << endl;
+			else                   cout << color(COLOR_PURPLE,"NOT OF SORT") << endl;
+			cout << a << " " << sortname << " ";
+			if (result) cout << color(COLOR_GREEN,"true");
+			else cout << color(COLOR_RED,"false");
+			cout << endl;
+		}
+
+		return result;
 	}
 
 	if (f->type == AND || f->type == OR){
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			if (f->type == AND) cout << color(COLOR_PURPLE,"AND") << endl;
+			else                cout << color(COLOR_PURPLE,"OR") << endl;
+		}
 		bool ok = f->type == AND;
+		int i = 0;
 		for (auto sub : f->subformulae){
-			bool sub_result = evaluateFormulaOnState(sub,state,variable_assignment,ignore_state);
+			if (debugMode == 2) {
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_PURPLE,"Checking sub-formula #" + to_string(++i)) << endl;
+			}
+			bool sub_result = evaluateFormulaOnState(sub,state,variable_assignment,ignore_state, debugMode, level+1);
 			if (f->type == AND) ok &= sub_result;
 			else ok |= sub_result;
+			
+			if (debugMode == 2) {
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_CYAN,"Sub-formula #" + to_string(i)) << " result: ";
+				if (sub_result) cout << color(COLOR_GREEN,"true");
+				else cout << color(COLOR_RED,"false");
+				cout << " new overall: ";
+				if (ok) cout << color(COLOR_GREEN,"true");
+				else cout << color(COLOR_RED,"false");
+				cout << endl;
+			}
+
+			if (f->type == AND && !ok) {
+				if (debugMode == 2) {
+					print_n_spaces(1+2*level+1);
+					cout << color(COLOR_RED,"Formula is now false. Aborting evaluation") << endl;
+				}
+			   	break;
+			}
+			if (f->type == OR && ok) {
+				if (debugMode == 2) {
+					print_n_spaces(1+2*level+1);
+					cout << color(COLOR_GREEN,"Formula is now true. Aborting evaluation") << endl;
+				}
+				break;
+			}
 		}
 		return ok;
 	}
@@ -75,39 +228,52 @@ bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, ma
 	if (f->type == ATOM || f->type == NOTATOM){
 		if (ignore_state) return true;
 		// construct atom
+
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			if (f->type == ATOM) cout << color(COLOR_PURPLE,"ATOM") << endl;
+			else                 cout << color(COLOR_PURPLE,"NOTATOM") << endl;
+			print_n_spaces(1+2*level+1);
+			cout << "atom: " << f->predicate;
+			for (string v : f->arguments.vars) cout << " " << v;
+			cout << endl;
+		}
+
 		ground_literal atom;
 		atom.positive = true; // even for not atom, because the state is CWA
 		atom.predicate = f->predicate;
-		for (string v : f->arguments.vars)
-			atom.args.push_back(get_const(v,variable_assignment, f->arguments.newVar));
+		for (string v : f->arguments.vars){
+			string value = get_const(v,variable_assignment, f->arguments.newVar);
+			if (debugMode == 2){
+				print_n_spaces(1+2*level+1);
+				cout << "Variable " << v << " evaluates to " << value << endl;
+			}
+			atom.args.push_back(value);
+		}
 
-		return state.count(atom) == (f->type == ATOM);
+		/*print_n_spaces(1+2*level+1);
+		cout << "  " << (atom.positive?"+":"-") << atom.predicate;
+		for (string arg : atom.args) cout << " " << arg;
+			cout << endl;*/
+
+		int stateCount = state.count(atom);
+		if (debugMode == 2){
+			print_n_spaces(1+2*level+1);
+			cout << "State count for this atom: " << stateCount << endl;
+		}
+
+		return stateCount == (f->type == ATOM);
 	}
 
 	if (f->type == FORALL || f->type == EXISTS){
-		// compute all instantiations of the quantified variables
-		vector<map<string,string> > var_replace;
-		var_replace.push_back(variable_assignment);
-		for(pair<string,string> var : f->qvariables.vars) {
-			vector<map<string,string> > old_var_replace = var_replace;
-			var_replace.clear();
-
-			for(string constant : sorts[var.second]){
-				for (map<string,string> old : old_var_replace){
-					old[var.first] = constant; // add new variable binding
-					var_replace.push_back(old);
-				}
-			}
+		if (debugMode == 2) {
+			print_n_spaces(1+2*level);
+			if (f->type == FORALL) cout << color(COLOR_PURPLE,"FORALL") << endl;
+			else                   cout << color(COLOR_PURPLE,"EXISTS") << endl;
 		}
-
-		// call for all subtypes
-		bool ok = f->type == FORALL;
-		for (auto new_assignments : var_replace){
-			bool sub_result = evaluateFormulaOnState(f->subformulae[0],state,new_assignments,ignore_state);
-			if (f->type == FORALL) ok &= sub_result;
-			else ok |= sub_result;
-		}
-		return ok;
+		
+		int instance_counter = 0;
+		return evaluateFormulaOnStateQuantified(f->type, f->qvariables, 0, instance_counter, f->subformulae[0], state, variable_assignment, ignore_state, debugMode, level+1);
 	}
 
 	// things that are not allowed in preconditions
@@ -128,7 +294,7 @@ bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, ma
 
 
 // takes both the old and the new state, as conditional effects must be evaluated on the old state...
-void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state, set<ground_literal> & add, set<ground_literal> & del, map<string,string> & variable_assignment){
+void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state, set<ground_literal> & add, set<ground_literal> & del, map<string,string> & variable_assignment, int debugMode, int level){
 	if (f->type == EMPTY) return;
 	
 	if (f->type == EQUAL || f->type == NOTEQUAL || f->type == OFSORT || f->type == NOTOFSORT) {
@@ -162,11 +328,11 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 
 	if (f->type == AND){
 		for (auto sub : f->subformulae)
-			executeFormulaOnState(sub,old_state, add, del, variable_assignment);
+			executeFormulaOnState(sub,old_state, add, del, variable_assignment, debugMode, level+1);
 		return;
 	}
 
-	if (f->type == FORALL || f->type == EXISTS){
+	if (f->type == FORALL){
 		// compute all instantiations of the quantified variables
 		vector<map<string,string> > var_replace;
 		var_replace.push_back(variable_assignment);
@@ -183,13 +349,13 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 		}
 		
 		for (auto new_assignments : var_replace)
-			executeFormulaOnState(f->subformulae[0],old_state, add, del, new_assignments);
+			executeFormulaOnState(f->subformulae[0],old_state, add, del, new_assignments, debugMode, level+1);
 		return;
 	}
 
 	if (f->type == WHEN){
-		if (evaluateFormulaOnState(f->subformulae[0], old_state, variable_assignment,false))
-			executeFormulaOnState(f->subformulae[1], old_state, add, del, variable_assignment);
+		if (evaluateFormulaOnState(f->subformulae[0], old_state, variable_assignment,false, debugMode, level+1))
+			executeFormulaOnState(f->subformulae[1], old_state, add, del, variable_assignment, debugMode, level+1);
 		
 		return;
 	}
@@ -204,11 +370,11 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 }
 
 
-void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state, set<ground_literal> & new_state, map<string,string> & variable_assignment){
+void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state, set<ground_literal> & new_state, map<string,string> & variable_assignment, int debugMode, int level){
 	set<ground_literal> add;
 	set<ground_literal> del;
 
-	executeFormulaOnState(f,old_state,add,del,variable_assignment);
+	executeFormulaOnState(f,old_state,add,del,variable_assignment, debugMode, level);
 
 	// add effects take precedence over delete effects
 	for (ground_literal gl : del)
@@ -223,9 +389,16 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_method & m, map<int,instantiated_plan_step> & tasks,
 							set<string> doneIDs, vector<int> & subtasks, int curpos,
 							map<string,string> variableAssignment,
-							map<string,int> matching){
+							map<string,int> matching,
+							int debugMode){
 	vector<pair<map<string,int>,map<string,string>>> ret;
 	if (doneIDs.size() == subtasks.size()){
+		if (debugMode) {
+			print_n_spaces(1 + 2*curpos);
+			cout << color(COLOR_GREEN,"Found compatible linearisation.") << endl;
+			print_n_spaces(1 + 2*curpos + 1);
+			cout << "Checking constraints on variables ... " << endl;
+		}
 		vector<pair<string,string>> varDecls;
 		// check whether the variable assignment is ok
 		for (pair<string,string> varDecl : m.vars->vars) varDecls.push_back(varDecl);
@@ -235,27 +408,50 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 				varDecls.push_back(implicit_variable);
 		for (pair<string,string> varDecl : m.newVarForAT) varDecls.push_back(varDecl);
 		
+		if (debugMode) {
+			print_n_spaces(1 + 2*curpos + 1);
+			cout << "Checking constants are in variable type ... " << endl;
+		}
 		for (pair<string,string> varDecl : varDecls){
 			string sort = varDecl.second;
 			if (!variableAssignment.count(varDecl.first)){
-				cout << "unassigned variable " << varDecl.first << endl;
-				continue;
+				// this should not happen
+				cout << color(COLOR_RED,"Unassigned variable ") << varDecl.first << endl;
+				exit(2);
 			}
 
 			string param = variableAssignment[varDecl.first];
-			if (!sorts[sort].count(param)) return ret; // parameter is not consistent with declared sort
+			if (!sorts[sort].count(param)){
+				if (debugMode){
+					print_n_spaces(1 + 2*curpos + 1);
+					cout << color(COLOR_RED,"Variable " + varDecl.first + "=" + param + " is not in sort " + sort) << endl;
+				}
+				return ret; // parameter is not consistent with declared sort
+			}
 		}
 	
 		set<ground_literal> empty_state;
 
+		if (debugMode){
+			print_n_spaces(1 + 2*curpos + 1);
+			cout << "Checking method's constraint formula ... " << endl;
+		}
 		// check explicit constraints of the task network (==, !=, ofsort, notofsort)
-		if (!evaluateFormulaOnState(m.tn->constraint,empty_state,variableAssignment,true))
+		if (!evaluateFormulaOnState(m.tn->constraint,empty_state,variableAssignment,true, debugMode, curpos+1))
 			return ret;
 
+		if (debugMode) {
+			print_n_spaces(1 + 2*curpos + 1);
+			cout << "Checking variable constraints in method's precondition ... " << endl;
+		}
 		// check constraints hiding in the method precondition		
-		if (!evaluateFormulaOnState(m.prec,empty_state,variableAssignment,true))
+		if (!evaluateFormulaOnState(m.prec,empty_state,variableAssignment,true, debugMode, curpos+1))
 			return ret;
 
+		if (debugMode) {
+			print_n_spaces(1 + 2*curpos + 1);
+			cout << color(COLOR_GREEN,"Matching is ok.") << endl;
+		}
 		// found a full matching
 		ret.push_back(make_pair(matching, variableAssignment));
 		return ret;
@@ -274,14 +470,35 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		allIDs.erase(order->second); // has a predecessor
 	}
 
+	// now we try to map source to subtasks[curpos]
+	instantiated_plan_step & ps = tasks[subtasks[curpos]];
+
+	if (debugMode){
+		print_n_spaces(1 + 2*curpos);
+		cout << color(COLOR_PURPLE,"Matching Task",MODE_UNDERLINE) << " " << subtasks[curpos];
+		cout << " Curpos=" << curpos << " #sources=" << allIDs.size() << endl;
+		print_n_spaces(1 + 2*curpos);
+		cout << "Task is: " << ps.name;
+		for (string arg : ps.arguments)
+			cout << " " << arg;
+		cout << endl;
+	}
+
 	// allIDs now contains sources
 	for (string source : allIDs){
-		// now we try to map source to subtasks[curpos]
-		instantiated_plan_step & ps = tasks[subtasks[curpos]];
-		// check whether this task is ok
+		if (debugMode){
+			print_n_spaces(1 + 2*curpos); cout << color(COLOR_PURPLE,"Attempting matching with source " + source) << endl;
+		}
+		
+		// check whether this source is ok
 
 		//1. has to be the same task type as declared
-		if (subtasksAccess[source]->task != ps.name) continue;
+		if (subtasksAccess[source]->task != ps.name) {
+			if (debugMode){
+				print_n_spaces(1 + 2*curpos + 1); cout << "Source has task " << color(COLOR_YELLOW,subtasksAccess[source]->task) << " but next task in line has " << color(COLOR_YELLOW,ps.name) << endl;
+			}
+			continue;
+		}
 
 		// check that the variable assignment is compatible
 		map<string,string> newVariableAssignment = variableAssignment;
@@ -290,10 +507,19 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 			string methodVar = subtasksAccess[source]->arguments->vars[i];
 			string taskParam = ps.arguments[i];
 			if (newVariableAssignment.count(methodVar)){
-				if (newVariableAssignment[methodVar] != taskParam)
+				if (newVariableAssignment[methodVar] != taskParam){
+					if (debugMode){
+						print_n_spaces(1 + 2*curpos + 1);
+						cout << "Variable " << methodVar << " has value " << newVariableAssignment[methodVar] << " but must be assigned to " << taskParam << endl;
+					}
 					assignmentOk = false; 
+				}
 			}
 			newVariableAssignment[methodVar] = taskParam;
+			if (debugMode){
+				print_n_spaces(1 + 2*curpos + 1);
+				cout << color(COLOR_CYAN,"Setting ") << methodVar << " = " << taskParam << endl;
+			}
 		}
 		if (!assignmentOk) continue; // if the assignment is not ok then don't continue on it
 		set<string> newDone = doneIDs; newDone.insert(source);
@@ -302,7 +528,7 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		
 		auto recursive = generateAssignmentsDFS(m, tasks, newDone,
 							   subtasks, curpos + 1,
-							   newVariableAssignment, newMatching);
+							   newVariableAssignment, newMatching,debugMode);
 
 		for (auto r : recursive) ret.push_back(r);
 	}
@@ -330,7 +556,9 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 		// task instantiation
 		map<int,map<string,string>> & task_variable_values,
 		map<int,parsed_task> & taskIDToParsedTask,
-		bool uniqLinearisation){
+		bool uniqLinearisation,
+		int debugMode,
+		int level){
 	vector<int> sources;
 	// try all sources
 	bool foundNonSource = false;
@@ -340,9 +568,28 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 		sources.push_back(node.first);
 	}
 
+	if (debugMode){
+		print_n_spaces(1+2*level);
+		cout << color(COLOR_BLUE,"Executing plan",MODE_BOLD) << " time=" << level << " #sources=" << sources.size() << endl;
+	}
+
 	if (!foundNonSource && sources.size() == 0){
+		if (debugMode){
+			print_n_spaces(1+2*level);
+			cout << "Executed the whole plan ... checking whether we reached the goal state." << endl;
+
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_BLUE,"The current state is:") << endl;
+			for (ground_literal literal : current_state){
+				print_n_spaces(1+2*level+1);
+				cout << "  " << literal.predicate;
+				for (string arg : literal.args)	cout << " " << arg;
+				cout << endl;
+			}
+		}
+
 		map<string,string> no_variables_declared;
-		bool goal_reached = goal_formula == NULL || evaluateFormulaOnState(goal_formula,current_state,no_variables_declared,false);
+		bool goal_reached = goal_formula == NULL || evaluateFormulaOnState(goal_formula,current_state,no_variables_declared,false, debugMode, level+1);
 		if (uniqLinearisation && ! goal_reached){
 			cout << color(COLOR_RED,"Primitive plan does not reach the goal state .... ") << endl;
 			cout << color(COLOR_RED,"The current state is:") << endl;
@@ -369,38 +616,93 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 	vector<int> non_applicable_sources;
 
 	for (int source : sources){
+		if (debugMode){
+			print_n_spaces(1+2*level+1);
+			cout << "Source " << source;
+		}
 		// if the source is a dummy, just progress through it
 		bool non_branching_source = source < 0; // more reasons to follow;
 
 		// if it is something (primitive for abstract/method) without an effect, check whether it is applicable
 		if (!non_branching_source){
 			if (parsedMethodForTask.count(source)){
+				if (debugMode) cout << " is the begin of an abstract task." << endl;
 				// this is an abstract task, check whether it has a method effect
 				parsed_method m = parsedMethodForTask[source];
 				// check its precondition
-				if (evaluateFormulaOnState(m.prec,current_state,method_variable_values[source],false)){
-					if (m.eff->isEmpty()) non_branching_source = true;
-					else branching_sources.push_back(source);
-				} else non_applicable_sources.push_back(source);
+				if (debugMode){
+					print_n_spaces(1+2*level+1);
+					cout << "Evaluating the method precondition" << endl;
+				}
+				if (evaluateFormulaOnState(m.prec,current_state,method_variable_values[source],false,debugMode, level+1)){
+					if (m.eff->isEmpty()){
+						if (debugMode){
+							print_n_spaces(1+2*level+1);
+							cout << "Method has no effect." << endl;
+						}
+						non_branching_source = true;
+					} else {
+						if (debugMode){
+							print_n_spaces(1+2*level+1);
+							cout << "Method has an effect." << endl;
+						}
+						branching_sources.push_back(source);
+					}
+				} else {
+					if (debugMode){
+						print_n_spaces(1+2*level+1);
+						cout << "Method precondition not satisfied" << endl;
+					}
+					non_applicable_sources.push_back(source);
+				}
 			} else {
+				if (debugMode) cout << " is a primitive action." << endl;
 				parsed_task t = taskIDToParsedTask[source];
 				// evaluate the tasks preconditions
-				if (evaluateFormulaOnState(t.prec,current_state,task_variable_values[source],false)){
-					if (t.eff->isEmpty()) non_branching_source = true;
-					else branching_sources.push_back(source);
-				} else non_applicable_sources.push_back(source);
+				if (evaluateFormulaOnState(t.prec,current_state,task_variable_values[source],false,debugMode, level+1)){
+					if (t.eff->isEmpty()) {
+						if (debugMode){
+							print_n_spaces(1+2*level+1);
+							cout << "Action has no effect." << endl;
+						}
+						non_branching_source = true;
+					} else {
+						if (debugMode){
+							print_n_spaces(1+2*level+1);
+							cout << "Action has an effect." << endl;
+						}
+						branching_sources.push_back(source);
+					}
+				} else {
+					if (debugMode){
+						print_n_spaces(1+2*level+1);
+						cout << "Action precondition not satisfied" << endl;
+					}
+					non_applicable_sources.push_back(source);
+				}
 			}
+		} else {
+			if (debugMode) cout << " is a dummy for the end of a task." << endl;
 		}
 		
 		if (non_branching_source){
+			if (debugMode){
+				print_n_spaces(1+2*level+1);
+				cout << "I can greedily take this source without making any mistake." << endl;
+			}
 			num_prec[source]--; // set to -1
 			for (int succ : successors[source]) num_prec[succ]--;
-			return executeDAG(num_prec,successors,current_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation);
+			return executeDAG(num_prec,successors,current_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation,debugMode,level);
 		}
 	}
 	 
 	// do this only after everything upon which we don't have to branch has been done
 	if (sources.size() > 1) uniqLinearisation = false;
+	if (debugMode) {
+		print_n_spaces(1+2*level+1);
+		cout << color(COLOR_PURPLE,"Performed all sources that can be taken greedily.");
+		cout << " " << sources.size() << " sources remain. unique=" << uniqLinearisation << endl;
+	}
 
 	// error cases
 	if (uniqLinearisation){
@@ -424,21 +726,52 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 	
 	// try all sources
 	for (int source : branching_sources){
+		if (debugMode) {
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_PURPLE, "Attempting to progress through source " + to_string(source)) << endl;
+			instantiated_plan_step & ps = tasks[source];
+			print_n_spaces(1+2*level+1);
+			cout << "Task is: " << ps.name;
+			for (string arg : ps.arguments)
+				cout << " " << arg;
+			cout << endl;
+		}
+
 		num_prec[source]--; // set to -1
 		for (int succ : successors[source]) num_prec[succ]--;
 
+		if (debugMode) {
+			print_n_spaces(1+2*level+1);
+			cout << "Applying effects ";
+		}
 		// applicability of the action was checked before, now we only have to apply it
 		set<ground_literal> new_state = current_state;
 		if (parsedMethodForTask.count(source)){
+			if (debugMode) {
+				cout << "of the method." << endl;
+			}
 			// this is an abstract task
 			parsed_method m = parsedMethodForTask[source];
-			executeFormulaOnState(m.eff,current_state,new_state,method_variable_values[source]);
+			executeFormulaOnState(m.eff,current_state,new_state,method_variable_values[source], debugMode, level+1);
 		} else {
+			if (debugMode) {
+				cout << "of the action." << endl;
+			}
 			parsed_task t = taskIDToParsedTask[source];
-			executeFormulaOnState(t.eff,current_state,new_state,task_variable_values[source]);
+			executeFormulaOnState(t.eff,current_state,new_state,task_variable_values[source], debugMode, level+1);
+		}
+		if (debugMode){
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_BLUE,"The new state is:") << endl;
+			for (ground_literal literal : current_state){
+				print_n_spaces(1+2*level+1);
+				cout << "  " << literal.predicate;
+				for (string arg : literal.args)	cout << " " << arg;
+				cout << endl;
+			}
 		}
 
-		if (executeDAG(num_prec,successors,new_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation)) return true;
+		if (executeDAG(num_prec,successors,new_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation,debugMode,level+(uniqLinearisation?0:1))) return true;
 				
 		for (int succ : successors[source]) num_prec[succ]++;
 		num_prec[source]++; // set back to 0
@@ -464,8 +797,14 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		// chosen method instantiations
 		map<int,map<string,string>> & chosen_method_matchings,
 		bool uniqueMatching,
-		bool rootTask){
+		bool rootTask,
+		int debugMode,
+		int level){
 	if (tasks[currentTask].declaredPrimitive) {
+		if (debugMode){
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_GREEN,"Primitive Task id=" + to_string(currentTask)) << endl;
+		}
 		vector<pair<int,int>> edge;
 		edge.push_back(make_pair(currentTask, -currentTask-1)); // from start to end
 		return make_pair(make_pair(true,true),edge); // order is ok
@@ -473,6 +812,10 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 
 	// update whether I have a unique matching, if not I can't make sensible output
 	uniqueMatching &= (matchings[currentTask].size() == 1);
+	if (debugMode){
+		print_n_spaces(1+2*level);
+		cout << color(COLOR_GREEN,"Abstract Task id=" + to_string(currentTask)) << " matching still unique: " << uniqueMatching << " (" << matchings[currentTask].size() << ")"<< endl;
+	}
 		
 	// determine all primitive actions below the stated subtasks of this method application.
 	// this is done on the IDs provided by the plan.
@@ -487,6 +830,10 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 
 	// now try all orderings
 	for (auto & matching : matchings[currentTask]){
+		if (debugMode){
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_PURPLE,"Attempting matching") << endl;
+		}
 		// check all orderings
 		bool badOrdering = false;
 		for (auto ordering : parsedMethodForTask[currentTask].tn->ordering){
@@ -496,7 +843,8 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			// check whether this ordering is adhered to for all
 			for (int before : allBefore) for (int after : allAfter){
 				bool primitiveBad = pos_in_primitive_plan[before] > pos_in_primitive_plan[after];
-				if (primitiveBad && uniqueMatching){
+				if (primitiveBad && (uniqueMatching || debugMode)){
+					if (debugMode) print_n_spaces(1+2*level+1);
 					cout << color(COLOR_RED,"Task with id="+to_string(currentTask)+" has two children: " +
 					to_string(matching.first[ordering->first]) + " (" + ordering->first + ") and "  +
 					to_string(matching.first[ordering->second]) + " (" + ordering->second + ") who will be decomposed into primitive tasks: " + to_string(before) + " and " + to_string(after) + ". The method enforces " + to_string(before) + " < " + to_string(after) + " but the plan is ordered the other way around.") << endl;
@@ -505,12 +853,16 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				badOrdering |= primitiveBad;
 			}
 		}
+		if (debugMode && badOrdering){
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_RED,"Bad ordering.") << endl;
+		}
 		if (badOrdering) continue;
 		// check recursively
 		bool subtasksOk = true;
 		vector<pair<int,int>> recursiveEdges;
 		for (int st : subtasksForTask[currentTask]){
-			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,uniqueMatching,false);
+			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,uniqueMatching,false,debugMode,level+1);
 			// add all edges to result
 			recursiveEdges.insert(recursiveEdges.end(),linearisation.second.begin(), linearisation.second.end());
 			subtasksOk &= linearisation.first.first;
@@ -545,6 +897,10 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 
 		// if I am at the root level, I have to check the linearisation now, i.e. we have to test whether it is executable.
 		if (rootTask){
+			if (debugMode){
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_YELLOW,"Root Task, checking primitive executability ...",MODE_UNDERLINE) << endl;
+			}
 			// add the total order of the primitive plan
 			for (int i = 0; i < int(pos_in_primitive_plan.size())-1; i++)
 				recursiveEdges.push_back(make_pair(-i-1, i+1)); // edge from the end of i to the beginning if i+1
@@ -563,10 +919,36 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			// if this DAG cannot be executed, just continue ...
 			set<ground_literal> init_set;
 			init_set.insert(init.begin(), init.end());
-			if (!executeDAG(num_prec, successors, init_set, parsedMethodForTask, tasks, chosen_method_matchings, task_variable_values, taskIDToParsedTask, uniqueMatching))
+			if (debugMode){
+				print_n_spaces(1+2*level+1);
+				cout << "Running exponential top-sort." << endl;
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_BLUE,"The current state is:") << endl;
+				for (ground_literal literal : init_set){
+					print_n_spaces(1+2*level+2);
+					cout << "  " << literal.predicate;
+					for (string arg : literal.args)	cout << " " << arg;
+						cout << endl;
+				}
+			}
+
+			if (!executeDAG(num_prec, successors, init_set, parsedMethodForTask, tasks, chosen_method_matchings, task_variable_values, taskIDToParsedTask, uniqueMatching,debugMode,level+1)){
+				if (debugMode){
+					print_n_spaces(1+2*level+1);
+					cout << color(COLOR_RED,"Cannot find executable linearisation.") << endl;
+				}
 				continue;
+			}
+			if (debugMode){
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_GREEN,"Executable linearisation found.") << endl;
+			}
 		}
 		
+		if (debugMode){
+			print_n_spaces(1+2*level+1);
+			cout << color(COLOR_GREEN,"Ordering OK.") << endl;
+		}
 		return make_pair(make_pair(true,true),recursiveEdges);
 	}
 
@@ -574,7 +956,8 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 }
 
 
-instantiated_plan_step parse_plan_step_from_string(string input){
+instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
+	if (debugMode) cout << "Parse instantiated task from \"" << input << "\"" << endl;
 	istringstream ss (input);
 	bool first = true;
 	instantiated_plan_step ps;
@@ -593,7 +976,7 @@ instantiated_plan_step parse_plan_step_from_string(string input){
 }
 
 
-bool verify_plan(istream & plan){
+bool verify_plan(istream & plan, int debugMode){
 	// parse everything until marker
 	string s = "";
 	while (s != "==>") plan >> s;
@@ -616,7 +999,7 @@ bool verify_plan(istream & plan){
 			exit(1);
 		}
 		string rest_of_line; getline(plan,rest_of_line);
-		instantiated_plan_step ps = parse_plan_step_from_string(rest_of_line);		
+		instantiated_plan_step ps = parse_plan_step_from_string(rest_of_line, debugMode);		
 		ps.declaredPrimitive = true;
 		primitive_plan.push_back(id);
 		pos_in_primitive_plan[id] = primitive_plan.size() - 1;
@@ -633,7 +1016,7 @@ bool verify_plan(istream & plan){
 
 	cout << "Size of primitive plan: " << primitive_plan.size() << endl;
 	string root_line; getline(plan,root_line);
-	vector<int> parsed_root_tasks = parse_list_of_integers(root_line);
+	vector<int> parsed_root_tasks = parse_list_of_integers(root_line, debugMode);
 	cout << "Root tasks (" << parsed_root_tasks .size() << "):";
 	for (int & rt : parsed_root_tasks) cout << " " << rt;
 	cout << endl;
@@ -644,6 +1027,10 @@ bool verify_plan(istream & plan){
 		string line;
 		getline(plan,line);
 		if (plan.eof()) break;
+	    size_t first = line.find_first_not_of(' ');
+    	size_t last = line.find_last_not_of(' ');
+	    line = line.substr(first, (last-first+1));
+		
 		istringstream ss (line);
 		int id; ss >> id; 
 		if (id < 0){
@@ -656,7 +1043,7 @@ bool verify_plan(istream & plan){
 			task += " " + s;
 			ss >> s;
 		} while (s != "->");
-		instantiated_plan_step at = parse_plan_step_from_string(task);
+		instantiated_plan_step at = parse_plan_step_from_string(task, debugMode);
 		at.declaredPrimitive = false;
 		// add this task to the map
 		if (tasks.count(id)){
@@ -671,7 +1058,7 @@ bool verify_plan(istream & plan){
 		// read the actual content of the method
 		string methodName; ss >> methodName;
 		// read subtask IDs
-		vector<int> subtasks = parse_list_of_integers(ss);
+		vector<int> subtasks = parse_list_of_integers(ss, debugMode);
 		
 		// id cannot be contained in the maps as it was possible to insert the id into the tasks map
 		appliedMethod[id] = methodName;
@@ -705,7 +1092,28 @@ bool verify_plan(istream & plan){
 	// now that we successfully got the input, we can start to run the checker
 	//=========================================================================================================================
 	cout << endl << "Checking the given plan ..." << endl;
-	
+	bool overallResult = true;
+	//=========================================
+	// check whether the subtask ids given by the user actually exist
+	bool subtasksExist = true;
+	for(auto subtasks : subtasksForTask){
+		for (int subtask : subtasks.second){
+			if (subtask == subtasks.first){
+				cout << color(COLOR_RED,"Task id="+to_string(subtasks.first)+" has itself as a subtask.") << endl;
+				subtasksExist = false;
+			}
+
+			if (!tasks.count(subtask)){
+				cout << color(COLOR_RED,"Task id="+to_string(subtasks.first)+" has the subtask id="+to_string(subtask)+" which does not exist.") << endl;
+				subtasksExist = false;
+			}
+		}
+	}
+	cout << "IDs of subtasks used in the plan exist: ";
+	if (subtasksExist) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
+	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+	overallResult &= subtasksExist;
+
 	//=========================================
 	// check whether the individual tasks exist, and comply with their argument restrictions
 	bool wrongTaskDeclarations = false;
@@ -762,6 +1170,7 @@ bool verify_plan(istream & plan){
 	cout << "Tasks declared in plan actually exist and can be instantiated as given: ";
 	if (!wrongTaskDeclarations) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+	overallResult &= !wrongTaskDeclarations;
 
 
 
@@ -783,7 +1192,8 @@ bool verify_plan(istream & plan){
 	cout << "Methods don't contain duplicate subtasks: ";
 	if (!methodsContainDuplicates) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
-	
+	overallResult &= !methodsContainDuplicates;
+
 	//=========================================
 	// check for orphanded tasks, i.e.\ those that do not occur in methods
 	bool orphanedTasks = false;
@@ -796,6 +1206,7 @@ bool verify_plan(istream & plan){
 	cout << "Methods don't contain orphaned tasks: ";
 	if (!orphanedTasks) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+	overallResult &= !orphanedTasks;
 	
 
 	//=========================================
@@ -839,12 +1250,17 @@ bool verify_plan(istream & plan){
 		// generate all compatible assignment of given subtasks to subtasks declared in the method
 		set<string> done;
 		map<string,int> __matching;
+		if (debugMode) cout << color(COLOR_YELLOW,"Generating Matchings for task with id="+to_string(entry.first),MODE_UNDERLINE) << endl;
 		auto matchings = generateAssignmentsDFS(m, tasks, done,
 							   subtasksForTask[atID], 0,
-							   methodParamers, __matching);
+							   methodParamers, __matching,debugMode);
+		if (debugMode) cout << "Found " << matchings.size() << " matchings for task with id=" << entry.first << endl;
 
 		if (matchings.size() == 0){
-			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has no matchings for its subtasks.") << endl;
+			if (entry.first != root_task)
+				cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has no matchings for its subtasks.") << endl;
+			else
+				cout << color(COLOR_RED,"Root tasks have no matchings for the initial plan.") << endl;
 			wrongMethodApplication = true;
 		} else if (matchings.size() > 1){
 			cout << color(COLOR_YELLOW,"Task with id="+to_string(entry.first)+" has multiple valid matchings. This might be due to the domain, but it disables detailed output for checking the ordering") << endl;
@@ -856,13 +1272,20 @@ bool verify_plan(istream & plan){
 	cout << "Methods can be instantiated: ";
 	if (!wrongMethodApplication) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+	overallResult &= !wrongMethodApplication;
 
 	//==============================================
 	// check whether the applied methods lead to the ordering enforced by the methods
 	bool orderingIsConsistent = true;
 
 	map<int,map<string,string>> chosen_method_matchings;
-	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,true,true);
+	if (debugMode){
+		cout << color(COLOR_YELLOW,"Check whether primitive plan is a linearisation of the orderings resulting from applied decomposition methods.", MODE_UNDERLINE) << endl;
+	}
+	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,true,true,debugMode,0);
+	if (debugMode){
+		cout << "Result " << linearisation.first.first << " " << linearisation.first.second << endl;
+	}
 	
 	if (!linearisation.first.first){
 		cout << color(COLOR_RED,"Order of applied methods is under no matching compatible with given primitive plan.") << endl;
@@ -872,6 +1295,7 @@ bool verify_plan(istream & plan){
 	cout << "Order induced by methods is present in plan: ";
 	if (orderingIsConsistent) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
+	overallResult &= orderingIsConsistent;
 
 
 
@@ -888,10 +1312,9 @@ bool verify_plan(istream & plan){
 		else cout << color(COLOR_YELLOW,"unknown",MODE_BOLD);
 	}
 	if (!orderingIsConsistent) cout << color(COLOR_YELLOW,"unknown",MODE_BOLD);
-   
 	cout << endl;
 
-
-	return true;
+	overallResult &= orderingIsConsistent && linearisation.first.second;
+	return overallResult;
 }
 
