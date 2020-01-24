@@ -390,6 +390,7 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 							set<string> doneIDs, vector<int> & subtasks, int curpos,
 							map<string,string> variableAssignment,
 							map<string,int> matching,
+							bool useOrderInformation,
 							int debugMode){
 	vector<pair<map<string,int>,map<string,string>>> ret;
 	if (doneIDs.size() == subtasks.size()){
@@ -463,12 +464,14 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 	map<string,sub_task*> subtasksAccess;
 	for (sub_task* st : m.tn->tasks) allIDs.insert(st->id), subtasksAccess[st->id] = st;
 	for (string id : doneIDs) allIDs.erase(id);
-	for (auto & order : m.tn->ordering){
-		// this order is completely dealt with
-		if (doneIDs.count(order->first)) continue;
-		if (doneIDs.count(order->second)) continue;
-		allIDs.erase(order->second); // has a predecessor
-	}
+	
+	if (useOrderInformation)
+		for (auto & order : m.tn->ordering){
+			// this order is completely dealt with
+			if (doneIDs.count(order->first)) continue;
+			if (doneIDs.count(order->second)) continue;
+			allIDs.erase(order->second); // has a predecessor
+		}
 
 	// now we try to map source to subtasks[curpos]
 	instantiated_plan_step & ps = tasks[subtasks[curpos]];
@@ -528,7 +531,7 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		
 		auto recursive = generateAssignmentsDFS(m, tasks, newDone,
 							   subtasks, curpos + 1,
-							   newVariableAssignment, newMatching,debugMode);
+							   newVariableAssignment, newMatching,useOrderInformation, debugMode);
 
 		for (auto r : recursive) ret.push_back(r);
 	}
@@ -976,7 +979,7 @@ instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
 }
 
 
-bool verify_plan(istream & plan, int debugMode){
+bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 	// parse everything until marker
 	string s = "";
 	while (s != "==>") plan >> s;
@@ -1253,7 +1256,7 @@ bool verify_plan(istream & plan, int debugMode){
 		if (debugMode) cout << color(COLOR_YELLOW,"Generating Matchings for task with id="+to_string(entry.first),MODE_UNDERLINE) << endl;
 		auto matchings = generateAssignmentsDFS(m, tasks, done,
 							   subtasksForTask[atID], 0,
-							   methodParamers, __matching,debugMode);
+							   methodParamers, __matching,useOrderInformation, debugMode);
 		if (debugMode) cout << "Found " << matchings.size() << " matchings for task with id=" << entry.first << endl;
 
 		if (matchings.size() == 0){
