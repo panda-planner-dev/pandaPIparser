@@ -12,6 +12,7 @@ void create_typeof(){
 	for (auto s : sorts) for (string e : s.second){
 		ground_literal l;
 		l.predicate = "typeOf";
+		l.positive = true;
 		l.args.push_back(e);
 		l.args.push_back(s.first);
 		init.push_back(l);
