@@ -1,6 +1,8 @@
 # Plan Verification
-pandaPIparser contains a plan verifier for HTN planning problems formulated in HDDL.
-In order to run it, you have to provide pandaPIparser the domain and problem instance as well as the plan you want to verify.
+
+pandaPIparser contains a plan verifier for HTN planning problems formulated in HDDL (technically, the syntax to formulate solution plans is not part of the HDDL standard, but we extended it accordingly).
+
+In order to run the verifier you have to provide pandaPIparser with the domain and problem instance as well as the plan you want to verify.
 You must provide them as three separate text files.
 To run the verifier, invoke pandaPIparser as follows
 
@@ -9,19 +11,19 @@ To run the verifier, invoke pandaPIparser as follows
 ```
 
 Instead of `-verify` you may specify `-vverify` (verbose verification) or `-vvverify` (very verbose verification) to get a more detailed output.
-Please note that this output may be very large, even for simple planning problems.
+Please note that this output may be *very* large, even for simple planning problems.
 However the output might be helpful if pandaPIparser rejects the plan.
 
 
 ## Overview of the Plan Format
-pandaPIparser is intended to read the full output of a planner an extract the plan from it.
-To do so, it assumes, that the planner will output the plan it found as its last output.
+
+pandaPIparser is intended to read the full output of a planner and extract the plan from it.
+To do so it assumes that the planner will output the plan it found as its last output.
 No output may be produced after the plan.
 To indicate the start of the plan, pandaPIparser searches for the string `==>` in the input.
 Everything before that string will be ignored.
 You may not output any non-whitespace character after `==>` until the line ends.
-It is preferred that put a line break immediately after `==>`.
-
+It is preferred that you put a line break immediately after `==>`.
 
 After `==>`, pandaPIparser will interpret the rest of the planner's output line-based.
 The lines directly after `==>` will describe the derived primitive plan.
@@ -29,7 +31,7 @@ You have to provide the actions of the plan in the order they are executed in.
 This section of the plan ends with a line starting (except for preceding whitespace characters) with `root`.
 
 
-Each line describing a primitive action consists of three elements, which are separated by spaces (or more or other whitespace characters).
+Each line describing a primitive action consists of three elements, which are separated by spaces (or more or other whitespace characters). ***PASCAL SAYS:*** Ich verstehe die Klammer nicht. Steht da ÜBERHAUPT etwas? Die kann man doch einfach löschen und da steht immer noch exakt dasselbe, oder? (man beachte die mehrdeutigkeit von "spaceS". es ist unklar, ob sich der plural darauf bezieht, dass es mehrere lücken gibt oder darauf, dass in jeder lücke auch mehr als ein white space stehen darf)
 
 1. the action's ID
 2. the action's name
@@ -65,7 +67,7 @@ As an example, the beginning of a valid plan in the `transport` domain may look 
 After the plan has specified the primitive actions it contains, the plan must also specify the decompositions that were applied in order to obtain these primitive actions.
 This section starts with a line declaring the root tasks.
 It contains the string `root` followed by a non-empty list of IDs separated by whitespace characters.
-We will describe the semantics of these IDs below
+We will describe the semantics of these IDs below.
 
 
 Afterwards follow lines describing the applied decompositions.
@@ -84,10 +86,10 @@ For each of these IDs, there must be a task in the input that has this ID.
 You have to specify as many IDs as the method has subtasks declared in the input.
 Each of the IDs will correspond to one of the subtasks of the method.
 
-If the method is totally-ordered, the ith ID will be that of the ith subtask.
+If the method is totally-ordered, the *i*th ID will be that of the *i*th subtask.
 If the method is partially-ordered, you may output the IDs of the subtasks in any topological order of the subtasks.
 pandaPIparser will check any mapping of IDs to subtasks declared by the method as long as it is compatible with the declared task names and arguments.
-Note that this is necessary, as there is no means to unique determine an ordering of the subtasks of a partially-ordered methods.
+Note that this is necessary, as there is no means to uniquely determine an ordering of the subtasks of partially ordered methods.
 Not all input formats that HDDL can be compiled into allow for labels for the subtasks and some languages require a different order of appearance of the tasks in the domain.
 Thus pandaPIparser is as lax as possible.
 If the mapping is still unique (using task types and parameter values), it will be able to provide more helpful output.
@@ -95,12 +97,12 @@ If not, you may have to refer to the verbose output if the plan is not correctly
 
 
 At the beginning of the decomposition section, you have to specify the root tasks.
-These are the IDs of the tasks that occur in the problems initial plan.
-You may provide them in any topological ordering that is compatible with the order imposed on the tasks in the initial plan.
+These are the IDs of the tasks that occur in the problem's initial task network.
+You may provide them in any topological ordering that is compatible with the order imposed on the tasks in the initial task network.
 
-Instead of providing the IDs of the tasks in the initial plan, you may also add an artificial 'root' tasks and provide its ID as the root ID.
+Instead of providing the IDs of the tasks in the initial task network, you may also add an artificial 'root' tasks and provide its ID as the root ID.
 It must be named `__top`.
-Its decomposition method must be named `__top_method` and is decomposed into the tasks of the initial plan, in any topological ordering.
+Its decomposition method must be named `__top_method` and is decomposed into the tasks of the initial task network, in any topological ordering.
 
 
 As an example for specifying the decomposition of a plan, consider the following part of a solution to a `transport` problem.
@@ -121,8 +123,9 @@ root 15 14
 
 
 ## Known Issues
+
 For some specifically modelled domains, verification may be very slow.
 This issue arises if the domain contains an action (or method) that has an existentially quantified precondition with several variables.
-Since the plan does not contain any information on the values of these variables used by the planner in the plan, pandaPIparser must try determine this value itself.
-In order to perform as little transformation as possible on the input -- pandaPIparser has no hint on which values to try and thus has to instantiate all combinations of variables.
+Since the plan does not contain any information on the values of these variables used by the planner in the plan, pandaPIparser must try to determine this value itself.
+In order to perform as little transformation as possible on the input pandaPIparser has no hint on which values to try and thus has to instantiate all combinations of variables.
 If thus number is high, verification will take time, but will succeed.
