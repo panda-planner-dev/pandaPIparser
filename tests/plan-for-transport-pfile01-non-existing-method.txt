@@ -1,0 +1,21 @@
+==>
+0 drive truck-0 city-loc-2 city-loc-1 
+1 pick-up truck-0 city-loc-1 package-1 capacity-0 capacity-1 
+2 drive truck-0 city-loc-1 city-loc-2 
+3 drop truck-0 city-loc-2 package-1 capacity-0 capacity-1 
+4 drive truck-0 city-loc-2 city-loc-1 
+5 pick-up truck-0 city-loc-1 package-0 capacity-0 capacity-1 
+6 drive truck-0 city-loc-1 city-loc-0 
+7 drop truck-0 city-loc-0 package-0 capacity-0 capacity-1 
+root 8
+8 __top -> __top_method 13 16
+9 get-to truck-0 city-loc-1  -> m-drive 0
+10 load truck-0 city-loc-1 package-0  -> m-load 5
+11 unload truck-0 city-loc-0 package-0  -> m-unload 7
+12 load truck-0 city-loc-1 package-1  -> m-load 1
+13 deliver package-0 city-loc-0  -> m-deliver 15 10 17 11
+14 get-to truck-0 city-loc-2  -> m-drive-to 2
+15 get-to truck-0 city-loc-1  -> m-drive-to 4
+16 deliver package-1 city-loc-2  -> m-deliver 9 12 14 18
+17 get-to truck-0 city-loc-0  -> m-drive-to 6
+18 unload truck-0 city-loc-2 package-1  -> m-unload 3
