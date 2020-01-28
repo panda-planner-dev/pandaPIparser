@@ -51,7 +51,7 @@ void split_independent_parameters(){
 			at.name = ops.task + "_splitted_" + to_string(++i);
 			// create a new method for the splitted task
 			method sm;
-			sm.name = "splitting_method_" + at.name;
+			sm.name = "_splitting_method_" + at.name; // must start with an underscore s.t. this method will be removed by the solution compiler
 			sm.at = at.name;
 			set<string> smVars; // for duplicate check
 			

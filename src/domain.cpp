@@ -58,7 +58,7 @@ void flatten_tasks(){
 				t.name += "_instance_" + to_string(i);
 				// we have to create a new decomposition method at this point
 				method m;
-				m.name = "method_for_multiple_expansions_of_" + t.name;
+				m.name = "_method_for_multiple_expansions_of_" + t.name; // must start with an underscore s.t. this method is applied by the solution compiler
 				m.at = a.name;
 				for(auto v : a.arguments->vars) m.atargs.push_back(v.first);
 				m.vars = t.vars;
