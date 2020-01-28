@@ -10,7 +10,7 @@ LINKERFLAG=-O3 -lm -flto
 
 .PHONY = parser clean
 
-pandaPIparser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/verify.o
+pandaPIparser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/plan.o src/verify.o
 	${CC} ${LINKERFLAG} $^ -o pandaPIparser 
 
 %.o: %.cpp %.hpp src/hddl.hpp
