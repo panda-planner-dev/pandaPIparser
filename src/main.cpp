@@ -18,6 +18,7 @@
 #include "shopWriter.hpp"
 #include "hpdlWriter.hpp"
 #include "verify.hpp"
+#include "plan.hpp"
 
 using namespace std;
 
@@ -46,10 +47,6 @@ map<string, task> task_name_map;
 int main(int argc, char** argv) {
 	cin.sync_with_stdio(false);
 	cout.sync_with_stdio(false);
-	if (argc < 2){
-		cout << "You need to provide a domain and problem file as input." << endl;
-		return 1;
-	}
 	int dfile = -1;
 	int pfile = -1;
 	int doutfile = -1;
@@ -60,6 +57,7 @@ int main(int argc, char** argv) {
 	bool verboseOutput = false;
 	bool verifyPlan = false;
 	bool useOrderInPlanVerification = true;
+	bool convertPlan = false;
 	int verifyPlanVerbosity = 0;
 	
 	int level = 0;
@@ -71,6 +69,7 @@ int main(int argc, char** argv) {
 			shop_1_compatability_mode = true;
 		}
 		else if (strcmp(argv[i], "-hpdl") == 0) hpdlOutput = true;
+		else if ((strcmp(argv[i], "-pc") == 0) || (strcmp(argv[i], "-convert") == 0)) convertPlan = true;
 		else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
 		else if (strcmp(argv[i], "-vverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 1; }
 		else if (strcmp(argv[i], "-vvverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 2; }
@@ -95,6 +94,36 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	if (dfile == -1){
+		if (convertPlan)
+			cout << "You need to provide a plan as input." << endl;
+		else
+			cout << "You need to provide a domain and problem file as input." << endl;
+		return 1;
+	}
+
+	// if we want to simplify a plan, just parse nothing
+	if (convertPlan){
+		ifstream * plan   = new ifstream(argv[dfile]);
+		ostream * outplan = &cout;
+		if (pfile != -1){
+			ofstream * of  = new ofstream(argv[pfile]);
+			if (!of->is_open()){
+				cout << "I can't open " << argv[pfile] << "!" << endl;
+				return 2;
+			}
+			outplan = of;
+		}
+		
+		
+		convert_plan(*plan, *outplan);
+		return 0;
+	}
+
+	if (pfile == -1 && !convertPlan){
+		cout << "You need to provide a domain and problem file as input." << endl;
+		return 1;
+	}
 
 	// open c-style file handle 
 	FILE *domain_file = fopen(argv[dfile], "r");

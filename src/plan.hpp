@@ -25,4 +25,6 @@ struct parsed_plan{
 
 parsed_plan parse_plan(istream & plan, int debugMode);
 
+void convert_plan(istream & plan, ostream & pout);
+
 #endif
