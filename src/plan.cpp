@@ -204,6 +204,7 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 		pos_in_block_1++;
 	}
 	string argument_string = blocks[1].substr(pos_in_block_1+1,blocks[1].size()-pos_in_block_1 - 2);
+	replace(argument_string.begin(), argument_string.end(), ',', ' ');
 	vector<string> decomposed_task_arguments = parse_list_of_strings(argument_string,0);
 
 	string applied_method = blocks[2];
@@ -253,12 +254,52 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 	return plan;
 }
 
+parsed_plan compress_artificial_method(parsed_plan plan, int expanded_task){
+	vector<int> subtasks_of_expanded = plan.subtasksForTask[expanded_task];
+
+	// find the rule where expanded is contained
+	int contained_in_task = -1; // -1 will mean it is contained in root
+	for (auto sub : plan.subtasksForTask){
+		for (int subtask : sub.second)
+			if (expanded_task == subtask){
+				contained_in_task = sub.first;
+				break;
+			}
+		if (contained_in_task != -1) break;
+	}
+
+	vector<int> current_ids;
+	if (contained_in_task == -1) current_ids = plan.root_tasks;
+	else current_ids = plan.subtasksForTask[contained_in_task];
+
+	// put the ids of the task we have to expand back to the place where it stems from
+	vector<int> new_ids;
+	for (int id : current_ids){
+		if (id == expanded_task){
+			for (int st : subtasks_of_expanded)
+				new_ids.push_back(st);
+		} else
+			new_ids.push_back(id);
+	}
+
+	if (contained_in_task == -1) plan.root_tasks = new_ids;
+	else plan.subtasksForTask[contained_in_task] = new_ids;
+
+	plan.tasks.erase(expanded_task);
+	plan.appliedMethod.erase(expanded_task);
+	plan.subtasksForTask.erase(expanded_task);
+
+	return plan;
+}
+
 parsed_plan convert_plan(parsed_plan plan){
 	// look for things that are not ok ..
 
 	for (auto method : plan.appliedMethod){
 		if (method.second[0] == '<')
 			return convert_plan(expand_compressed_method(plan,method.first));
+		if (method.second[0] == '_')
+			return convert_plan(compress_artificial_method(plan,method.first));
 	}	
 
 	// if not, return

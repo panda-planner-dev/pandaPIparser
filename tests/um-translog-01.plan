@@ -1,0 +1,39 @@
+
+#1 "40 sat:90:solved"="true";"30 problem:05:number of primitive actions"="22";"30 problem:01:number of constants"="0";"30 problem:04:number of abstract actions"="9";"02 properties:04:tail recursive"="true";"00 global:80:peak memory"="158099552";"40 sat:20:state formula"="13455";"40 sat:01:number of variables"="6397";"40 sat:14:K offset"="0";"40 sat:30:number of paths"="26";"40 sat:00:plan length"="-1";"40 sat:50:number of ordering clauses"="8476";"02 properties:02:mostly acyclic"="true";"30 problem:06:number of methods"="9";"30 problem:07:number of primitive shop actions"="0";"02 properties:05:totally ordered"="true";"02 properties:06:last task in all methods"="true";"30 problem:03:number of actions"="31";"30 problem:08:number of primitive non-shop actions"="22";"30 problem:02:number of predicates"="23";"40 sat:03:number of horn"="11697";"40 sat:15:K chosen value"="2";"30 problem:10:average method size"="3";"02 properties:03:regular"="true";"30 problem:09:size of largest method"="26";"40 sat:03:average size of clauses"="3.2286301269352116";"40 sat:02:number of clauses"="13629";"40 sat:50:number of state clauses"="4979";"40 sat:03:number of assert"="11";"40 sat:22:method children clauses"="0";"00 global:90:planner result"="SOLUTION";"02 properties:01:acyclic"="true";"40 sat:50:number of decomposition clauses"="174";"00 global:02:randomseed"="42";"40 sat:91:timeout"="false";"01 parsing:01:file parser"="555";"01 parsing:08:flatten formula"="173";"40 sat:00:total"="594";"40 sat:16:generate state formula"="474";"40 sat:20:transform to DIMACS"="43";"40 sat:11:generate path decomposition tree"="85";"02 preprocessing:07:compile methods with identical tasks"="73";"01 parsing:07:strip domain of hybridity"="2";"02 preprocessing:08:removing unnecessary predicates"="37";"01 parsing:03:closed world assumption"="66";"02 preprocessing:11:lifted reachabiltiy analysis"="297";"01 parsing:02:sort expansion"="528";"40 sat:12:normalise path decomposition tree"="17";"40 sat:40:SAT solver"="10";"01 parsing:00:total"="1460";"40 sat:10:generate formula"="479";"01 parsing:04:inherit preconditions"="0";"40 sat:41:SAT solver for K=0002"="10";"02 preprocessing:01:compile negative preconditions"="148";"00 total:00:total"="4520";"40 sat:13:sog optimisation"="34";"02 preprocessing:12:grounded planning graph analysis"="445";"02 preprocessing:02:compile unit methods"="0";"02 preprocessing:23:grounded task decomposition graph analysis"="221";"02 preprocessing:04:split parameter"="42";"01 parsing:05:shop methods"="3";"01 parsing:06:eliminate identical variables"="133";"40 sat:15:translate path decomposition tree to clauses"="111";"02 preprocessing:05:expand choiceless abstract tasks"="189";"02 preprocessing:00:total"="1582";"02 preprocessing:99:create artificial top task"="1";"02 preprocessing:84:grounding"="95"
+==>
+0 collect_fees Drucker
+1 attach_conveyor_ramp FlugzeugLufthansa Plane_RampStuttgart FlughafenStuttgart
+2 open_door FlugzeugLufthansa
+3 load_package Drucker FlugzeugLufthansa FlughafenStuttgart
+4 close_door FlugzeugLufthansa
+5 detach_conveyor_ramp FlugzeugLufthansa Plane_RampStuttgart FlughafenStuttgart
+6 move_vehicle_no_traincar FlugzeugLufthansa FlughafenStuttgart Stuttgart_Paris_Air_Route FlughafenParis
+7 attach_conveyor_ramp FlugzeugLufthansa Plane_RampParis FlughafenParis
+8 open_door FlugzeugLufthansa
+9 unload_package Drucker FlugzeugLufthansa FlughafenParis
+10 close_door FlugzeugLufthansa
+11 detach_conveyor_ramp FlugzeugLufthansa Plane_RampParis FlughafenParis
+12 go_through_two_tcenters_via_hub_not_hazardous FlughafenStuttgart HeathrowAirport Stuttgart London BadenWuerttemberg LondonRegion FlughafenParis
+13 attach_conveyor_ramp FlugzeugAirFrance Plane_RampParis FlughafenParis
+14 open_door FlugzeugAirFrance
+15 load_package Drucker FlugzeugAirFrance FlughafenParis
+16 close_door FlugzeugAirFrance
+17 detach_conveyor_ramp FlugzeugAirFrance Plane_RampParis FlughafenParis
+18 move_vehicle_no_traincar FlugzeugAirFrance FlughafenParis Paris_London_Air_Route HeathrowAirport
+19 attach_conveyor_ramp FlugzeugAirFrance Plane_RampHeathrow HeathrowAirport
+20 open_door FlugzeugAirFrance
+21 unload_package Drucker FlugzeugAirFrance HeathrowAirport
+22 close_door FlugzeugAirFrance
+23 detach_conveyor_ramp FlugzeugAirFrance Plane_RampHeathrow HeathrowAirport
+24 go_through_two_tcenters_tt FlughafenStuttgart HeathrowAirport Stuttgart London
+25 deliver_p Drucker
+root 30
+26 close_door FlugzeugLufthansa -> __UNIQUE-replacement_6 4
+27 open_door FlugzeugAirFrance -> __UNIQUE-replacement_3 20
+28 close_door FlugzeugLufthansa -> __UNIQUE-replacement_7 10
+29 close_door FlugzeugAirFrance -> __UNIQUE-replacement_0 16
+30 transport Drucker FlughafenStuttgart HeathrowAirport -> <<<<<<<<<<<<<<<<<<<<method_transport_pi_ca_de;carry[Drucker,FlughafenStuttgart,HeathrowAirport];method_carry_cvh;1;0,-1,2>;pickup[Drucker];method_pickup_normal;0;-1,1,2>;deliver[Drucker];method_deliver_dp;2;0,1,-1>;helper_carry_tt[Drucker,FlughafenStuttgart,Stuttgart,HeathrowAirport,London];method_helper_carry_cvh;1;0,-1,-2,2>;carry_via_hub[Drucker,FlughafenStuttgart,HeathrowAirport];method_carry_via_hub_not_hazardous;1;0,-1,2,3>;helper_carry_via_hub_not_hazardous[Drucker,FlughafenStuttgart,Stuttgart,BadenWuerttemberg,FlughafenParis,HeathrowAirport,London,LondonRegion];method_helper_carry_via_hub_not_hazardous;1;0,-1,-2,-3,2,3>;carry_direct[Drucker,FlughafenParis,HeathrowAirport];method_carry_direct;3;0,1,2,-1,4,5>;carry_direct[Drucker,FlughafenStuttgart,FlughafenParis];method_carry_direct;1;0,-1,2,3,4,5>;helper_carry_direct[FlugzeugAirFrance,Drucker,FlughafenParis,HeathrowAirport];method_helper_carry_direct_noMoveFirst;3;0,1,2,-1,-2,-3,4,5>;helper_carry_direct[FlugzeugLufthansa,Drucker,FlughafenStuttgart,FlughafenParis];method_helper_carry_direct_noMoveFirst;1;0,-1,-2,-3,2,3,4,5,6,7>;load_top[Drucker,FlugzeugAirFrance,FlughafenParis];method_load_top_normal;5;0,1,2,3,4,-1,6,7,8,9>;unload_top[Drucker,FlugzeugAirFrance,HeathrowAirport];method_unload_top_normal;7;0,1,2,3,4,5,6,-1,8,9>;move[FlugzeugAirFrance,FlughafenParis,HeathrowAirport];method_move_no_traincar;6;0,1,2,3,4,5,-1,7,8,9>;load_top[Drucker,FlugzeugLufthansa,FlughafenStuttgart];method_load_top_normal;1;0,-1,2,3,4,5,6,7,8,9>;unload_top[Drucker,FlugzeugLufthansa,FlughafenParis];method_unload_top_normal;3;0,1,2,-1,4,5,6,7,8,9>;move[FlugzeugLufthansa,FlughafenStuttgart,FlughafenParis];method_move_no_traincar;2;0,1,-1,3,4,5,6,7,8,9>;load[Drucker,FlugzeugAirFrance,FlughafenParis];method_load_airplane;5;0,1,2,3,4,-1,-2,-3,-4,-5,6,7,8,9>;unload[Drucker,FlugzeugAirFrance,HeathrowAirport];method_unload_airplane;11;0,1,2,3,4,5,6,7,8,9,10,-1,-2,-3,-4,-5,12,13>;load[Drucker,FlugzeugLufthansa,FlughafenStuttgart];method_load_airplane;1;0,-1,-2,-3,-4,-5,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17>;unload[Drucker,FlugzeugLufthansa,FlughafenParis];method_unload_airplane;7;0,1,2,3,4,5,6,-1,-2,-3,-4,-5,8,9,10,11,12,13,14,15,16,17,18,19,20,21> 0 1 34 3 26 5 6 7 32 9 28 11 12 13 33 15 29 17 18 19 27 21 31 23 24 25
+31 close_door FlugzeugAirFrance -> __UNIQUE-replacement_1 22
+32 open_door FlugzeugLufthansa -> __UNIQUE-replacement_5 8
+33 open_door FlugzeugAirFrance -> __UNIQUE-replacement_2 14
+34 open_door FlugzeugLufthansa -> __UNIQUE-replacement_4 2

@@ -1,0 +1,27 @@
+#1 "40 sat:90:solved"="true";"30 problem:05:number of primitive actions"="89";"30 problem:01:number of constants"="0";"30 problem:04:number of abstract actions"="54";"02 properties:04:tail recursive"="true";"00 global:80:peak memory"="112142104";"40 sat:20:state formula"="21766";"40 sat:01:number of variables"="8765";"40 sat:14:K offset"="0";"40 sat:30:number of paths"="12";"40 sat:00:plan length"="-1";"40 sat:50:number of ordering clauses"="7857";"02 properties:02:mostly acyclic"="true";"30 problem:06:number of methods"="199";"30 problem:07:number of primitive shop actions"="0";"02 properties:05:totally ordered"="false";"02 properties:06:last task in all methods"="false";"30 problem:03:number of actions"="143";"30 problem:08:number of primitive non-shop actions"="89";"30 problem:02:number of predicates"="25";"40 sat:03:number of horn"="22050";"40 sat:15:K chosen value"="6";"30 problem:10:average method size"="1";"02 properties:03:regular"="false";"30 problem:09:size of largest method"="3";"40 sat:03:average size of clauses"="3.0031768012055555";"40 sat:02:number of clauses"="24553";"40 sat:50:number of state clauses"="13909";"40 sat:03:number of assert"="12";"40 sat:22:method children clauses"="0";"00 global:90:planner result"="SOLUTION";"02 properties:01:acyclic"="true";"40 sat:50:number of decomposition clauses"="2787";"00 global:02:randomseed"="42";"40 sat:91:timeout"="false";"01 parsing:01:file parser"="373";"01 parsing:08:flatten formula"="47";"40 sat:41:SAT solver for K=0004"="0";"40 sat:00:total"="726";"40 sat:16:generate state formula"="523";"40 sat:20:transform to DIMACS"="70";"40 sat:11:generate path decomposition tree"="169";"02 preprocessing:07:compile methods with identical tasks"="5";"01 parsing:07:strip domain of hybridity"="120";"02 preprocessing:08:removing unnecessary predicates"="114";"01 parsing:03:closed world assumption"="71";"02 preprocessing:11:lifted reachabiltiy analysis"="96";"01 parsing:02:sort expansion"="215";"40 sat:12:normalise path decomposition tree"="36";"40 sat:40:SAT solver"="20";"01 parsing:00:total"="905";"40 sat:10:generate formula"="531";"40 sat:41:SAT solver for K=0005"="10";"01 parsing:04:inherit preconditions"="0";"02 preprocessing:01:compile negative preconditions"="42";"00 total:00:total"="4519";"40 sat:13:sog optimisation"="63";"02 preprocessing:12:grounded planning graph analysis"="558";"02 preprocessing:02:compile unit methods"="0";"02 preprocessing:23:grounded task decomposition graph analysis"="448";"40 sat:41:SAT solver for K=0006"="10";"02 preprocessing:04:split parameter"="75";"01 parsing:05:shop methods"="3";"01 parsing:06:eliminate identical variables"="72";"40 sat:15:translate path decomposition tree to clauses"="150";"02 preprocessing:05:expand choiceless abstract tasks"="258";"02 preprocessing:00:total"="1767";"02 preprocessing:99:create artificial top task"="6";"02 preprocessing:84:grounding"="147"
+==>
+0 do_plane p2 verysmooth natural varnished
+1 do_grind_untreated p2 grinder0 smooth natural
+2 do_saw_medium b0 p1 pine rough s3 s2 s1
+3 do_plane p0 smooth red varnished
+4 do_plane p1 rough natural untreated
+5 do_spray_varnish p2 spray_varnisher0 red verysmooth
+6 do_glaze p0 glazer0 red
+7 do_spray_varnish p1 spray_varnisher0 red smooth
+root 15
+8 process___top_0_sip_3 p2 red -> ___top_0_3 13
+9 do_colour p2 red spray_varnisher0 -> method1 5
+10 grindNplane_method16_sip_4 p2 verysmooth untreated -> <_method16_4;grindNplane[p2,verysmooth,natural,varnished,smooth,natural,untreated];method7;0;-1> 0
+11 do_grind_untreated_method16_sip_2 p2 grinder0 -> _method16_2 1
+12 process___top_0_sip_2 p1 red smooth -> ___top_0_2 14
+13 process p2 red verysmooth verysmooth -> method16 10 11 16
+14 process p1 red rough smooth -> <<<method14;cut_and_saw_method14_sip_2[b0,p1,rough];_method14_2;0;-1,1,2>;cut_and_saw[b0,p1,pine,rough];method10;0;-1,1,2>;do_saw[b0,p1,pine,rough];method8;0;-1,1,2> 2 21 18
+15 __MakeMethodSubTasksUniqueCompilation__top_4 -> __top_4 19
+16 do_colour_method16_sip_3 red -> _method16_3 9
+17 grindNplane p1 rough natural untreated smooth natural untreated -> method7 4
+18 do_colour_method14_sip_4 p1 red -> <_method14_4;do_colour[p1,red,spray_varnisher0];method1;0;-1> 7
+19 __choicelessATCompilation__top_1 -> __top_1 8 12 23
+20 do_colour_method12_sip_3 p0 red -> <_method12_3;do_colour[p0,red,glazer0];method2;0;-1> 6
+21 grindNplane_method14_sip_3 p1 rough smooth untreated -> _method14_3 17
+22 grindNplane_method12_sip_2 p0 smooth smooth untreated -> <_method12_2;grindNplane[p0,smooth,red,varnished,smooth,natural,untreated];method7;0;-1> 3
+23 process___top_0_sip_4 p0 red -> <___top_0_4;process[p0,red,smooth,smooth];method12;0;-1,-2> 22 20
