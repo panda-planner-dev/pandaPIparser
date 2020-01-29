@@ -24,9 +24,6 @@ void split_independent_parameters(){
 		
 		if (ps_only_variables.size() == 0 || m.ps.size() == 1) { methods.push_back(m); continue; } // nothing to do here
 		
-		//cout << "HOHO " << m.name << endl;
-		//for (auto e : ps_only_variables) for (string v : e.second) cout << "\t" << e.first << " " << v << endl;
-
 		map<string,string> variables_to_remove;
 		for (auto x : ps_only_variables) for (string v : x.second) variables_to_remove[v].size(); // insert into map
 

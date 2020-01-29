@@ -100,7 +100,9 @@ void parsed_method_to_data_structures(){
 		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > precs = pm.prec->expand();
 		for (auto prec : precs){
 			method m; i++;
-			m.name = pm.name; if (precs.size() > 1) m.name += "_" + to_string(i);
+			m.name = pm.name;
+			// method names may not be changed for verification
+			//if (precs.size() > 1) m.name += "_" + to_string(i);
 			// collect all the variable
 			m.vars = pm.vars->vars;
 
@@ -134,6 +136,7 @@ void parsed_method_to_data_structures(){
 				ps.id = st->id;
 				ps.task = st->task;
 				map<string,string> arg_replace;
+				// add new variables for artificial variables of the subtask
 				for (auto av : st->arguments->newVar){
 					arg_replace[av.first] = av.first + "_" + to_string(i++);
 					m.vars.push_back(make_pair(arg_replace[av.first],av.second));
