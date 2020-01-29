@@ -794,6 +794,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		map<int,vector<int>> & subtasksForTask,
 		map<int,vector<pair<map<string,int>,map<string,string>>>> & matchings,
 		map<int,int> pos_in_primitive_plan,
+		vector<int> primitive_plan,
 		// task instantiation
 		map<int,map<string,string>> & task_variable_values,
 		map<int,parsed_task> & taskIDToParsedTask,
@@ -865,7 +866,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		bool subtasksOk = true;
 		vector<pair<int,int>> recursiveEdges;
 		for (int st : subtasksForTask[currentTask]){
-			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,uniqueMatching,false,debugMode,level+1);
+			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,uniqueMatching,false,debugMode,level+1);
 			// add all edges to result
 			recursiveEdges.insert(recursiveEdges.end(),linearisation.second.begin(), linearisation.second.end());
 			subtasksOk &= linearisation.first.first;
@@ -881,6 +882,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		for (auto ordering : parsedMethodForTask[currentTask].tn->ordering){
 			int before = matching.first[ordering->first];
 			int after = matching.first[ordering->second];
+			
 			recursiveEdges.push_back(make_pair(-before-1,after)); // minus is the "end" of this 
 		}
 
@@ -905,8 +907,10 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				cout << color(COLOR_YELLOW,"Root Task, checking primitive executability ...",MODE_UNDERLINE) << endl;
 			}
 			// add the total order of the primitive plan
-			for (int i = 0; i < int(pos_in_primitive_plan.size())-1; i++)
-				recursiveEdges.push_back(make_pair(-i-1, i+1)); // edge from the end of i to the beginning if i+1
+			for (size_t i = 0; i < primitive_plan.size()-1; i++){
+				// edge from the end of i to the beginning if i+1
+				recursiveEdges.push_back(make_pair(-primitive_plan[i]-1, primitive_plan[i+1]));
+			}
 
 			// build helper structures for quadratic(!!) topsort. Since we have to try potentially every linearisation, this is not soo bad. Except when we are totally-ordered
 			map<int,vector<int>> successors;
@@ -915,6 +919,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			for (auto & task : tasks) num_prec[task.first] = 0;
 
 			for (auto edge : recursiveEdges){
+				cout << "EDGE " << edge.first << " " << edge.second << endl;
 				successors[edge.first].push_back(edge.second);
 				num_prec[edge.second]++;
 			}
@@ -932,6 +937,17 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 					cout << "  " << literal.predicate;
 					for (string arg : literal.args)	cout << " " << arg;
 						cout << endl;
+				}
+			}
+
+			if (debugMode == 2){
+				print_n_spaces(1+2*level+1);
+				cout << "Graph contains the following edges:" << endl;
+				for (auto adj : successors){
+					print_n_spaces(1+2*level+1);
+					cout << adj.first << ":";
+					for (int n : adj.second) cout << " " << n;
+					cout << endl;
 				}
 			}
 
@@ -1181,7 +1197,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 	if (debugMode){
 		cout << color(COLOR_YELLOW,"Check whether primitive plan is a linearisation of the orderings resulting from applied decomposition methods.", MODE_UNDERLINE) << endl;
 	}
-	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,true,true,debugMode,0);
+	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,true,true,debugMode,0);
 	if (debugMode){
 		cout << "Result " << linearisation.first.first << " " << linearisation.first.second << endl;
 	}
