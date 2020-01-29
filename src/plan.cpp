@@ -198,14 +198,17 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 
 	string main_method = blocks[0];
 	string decomposed_task = "";
-	int pos_in_block_1 = 0;
-	while (blocks[1][pos_in_block_1] != '['){
+	size_t pos_in_block_1 = 0;
+	while (pos_in_block_1 < blocks[1].size() && blocks[1][pos_in_block_1] != '['){
    		decomposed_task += blocks[1][pos_in_block_1];
 		pos_in_block_1++;
 	}
-	string argument_string = blocks[1].substr(pos_in_block_1+1,blocks[1].size()-pos_in_block_1 - 2);
-	replace(argument_string.begin(), argument_string.end(), ',', ' ');
-	vector<string> decomposed_task_arguments = parse_list_of_strings(argument_string,0);
+	vector<string> decomposed_task_arguments;
+   	if (pos_in_block_1 != blocks[1].size()){
+		string argument_string = blocks[1].substr(pos_in_block_1+1,blocks[1].size()-pos_in_block_1 - 2);
+		replace(argument_string.begin(), argument_string.end(), ',', ' ');
+		decomposed_task_arguments = parse_list_of_strings(argument_string,0);
+	} // else there are none
 
 	string applied_method = blocks[2];
 	int decomposed_id = stoi(blocks[3]);
