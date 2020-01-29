@@ -255,7 +255,30 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 }
 
 parsed_plan compress_artificial_method(parsed_plan plan, int expanded_task){
-	vector<int> subtasks_of_expanded = plan.subtasksForTask[expanded_task];
+	vector<int> subtasks_of_expanded;
+   	if (plan.tasks[expanded_task].declaredPrimitive){
+		// remove the primitive task from the plan
+		int pos_of_prim = -1;
+		for(size_t i = 0; i < plan.primitive_plan.size(); i++){
+			if (plan.primitive_plan[i] == expanded_task){
+				pos_of_prim = i;
+			} else if (pos_of_prim != -1){
+				// removed a task before this one
+				plan.pos_in_primitive_plan[plan.primitive_plan[i]]--;
+			}
+		}
+		if (pos_of_prim == -1){
+			cout << color(COLOR_RED,"Declared primitive " + to_string(expanded_task)
+				   	+ " not contained in primitive plan.") << endl;
+			exit(1);
+		}
+
+		// erase the task from the plan
+		plan.primitive_plan.erase(plan.primitive_plan.begin() + pos_of_prim);
+
+	} else {
+		subtasks_of_expanded = plan.subtasksForTask[expanded_task];
+	}
 
 	// find the rule where expanded is contained
 	int contained_in_task = -1; // -1 will mean it is contained in root
@@ -301,6 +324,10 @@ parsed_plan convert_plan(parsed_plan plan){
 		if (method.second[0] == '_')
 			return convert_plan(compress_artificial_method(plan,method.first));
 	}	
+	for (auto task : plan.tasks){
+		if (task.second.name[0] == '_')
+			return convert_plan(compress_artificial_method(plan,task.first));
+	}
 
 	// if not, return
 	return plan;
