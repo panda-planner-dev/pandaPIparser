@@ -919,7 +919,6 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			for (auto & task : tasks) num_prec[task.first] = 0;
 
 			for (auto edge : recursiveEdges){
-				cout << "EDGE " << edge.first << " " << edge.second << endl;
 				successors[edge.first].push_back(edge.second);
 				num_prec[edge.second]++;
 			}
