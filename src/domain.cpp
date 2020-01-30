@@ -41,6 +41,7 @@ void flatten_tasks(){
 
 			// add declared vars
 			t.vars = a.arguments->vars;
+			t.number_of_original_vars = t.vars.size(); // the parsed variables were the original ones
 			// gather the additional variables
 			additional_variables addVars = p.second;
 			for (auto elem : e.second) addVars.insert(elem);
@@ -55,7 +56,7 @@ void flatten_tasks(){
 			}
 			
 			if (plist.size() > 1 || elist.size() > 1) {
-				t.name += "_instance_" + to_string(i);
+				t.name += "|instance_" + to_string(i);
 				// we have to create a new decomposition method at this point
 				method m;
 				m.name = "_method_for_multiple_expansions_of_" + t.name; // must start with an underscore s.t. this method is applied by the solution compiler
@@ -74,6 +75,7 @@ void flatten_tasks(){
 					task at;
 					at.name = a.name;
 					at.vars = a.arguments->vars;
+					at.number_of_original_vars = at.vars.size();
 					abstract_tasks.push_back(at);
 				}
 			}
@@ -87,6 +89,8 @@ void flatten_tasks(){
 		task at;
 		at.name = a.name;
 		at.vars = a.arguments->vars;
+		at.number_of_original_vars = at.vars.size();
+		// abstract tasks cannot have additional variables (e.g. for constants): these cannot be declared in the input
 		abstract_tasks.push_back(at);
 	}
 	for(task t : primitive_tasks) task_name_map[t.name] = t;
@@ -184,6 +188,7 @@ void parsed_method_to_data_structures(){
 					if (mprec_additional_vars.count(v)) accessV = mprec_additional_vars[v];
 					t.vars.push_back(make_pair(v,sorts_of_vars[accessV]));
 				}
+				t.number_of_original_vars = t.vars.size(); // does not really matter as this action will get removed by the output formatter
 				// add t as a new primitive task
 				t.check_integrity();
 				primitive_tasks.push_back(t);
