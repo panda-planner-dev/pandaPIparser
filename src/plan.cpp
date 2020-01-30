@@ -332,6 +332,15 @@ parsed_plan convert_plan(parsed_plan plan){
 			return convert_plan(compress_artificial_method(plan,task.first));
 	}
 
+
+	// sanitise task names
+	for (auto & task : plan.tasks){
+		auto it = task.second.name.find('|');
+		if (it == string::npos) continue;
+		// remove everything after the |  -- this is stuff that was added by compilers
+		task.second.name.erase(task.second.name.begin() + it,task.second.name.end());
+	}
+
 	// if not, return
 	return plan;
 }
