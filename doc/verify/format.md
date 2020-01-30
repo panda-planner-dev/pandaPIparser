@@ -49,6 +49,12 @@ For each parameter variable of the action, you have to specify the value it is a
 You have to provide these values in the order in which the variables appear in the action's parameter list.
 You may not add additional arguments or leave an argument blank.
 
+
+Alternatively, you can provide the actions name and parameters in one of the following formats:
+
+1. ``(NAME ARG1 ARG2 .. ARGN)``
+2. ``NAME [ARG1,ARG2,..,ARGN]``
+
 As an example, the beginning of a valid plan in the `transport` domain may look as follows:
 
 ```
