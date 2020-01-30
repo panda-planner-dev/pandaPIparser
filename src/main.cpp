@@ -1,24 +1,26 @@
-#include <cstdio>
-#include <iostream>
-#include <fstream>
 #include <algorithm>
-#include <vector>
-#include <map>
 #include <cassert>
+#include <cstdio>
 #include <cstring>
-#include "parsetree.hpp"
-#include "hddl.hpp"
-#include "domain.hpp"
-#include "sortexpansion.hpp"
-#include "parametersplitting.hpp"
+#include <fstream>
+#include <getopt.h>
+#include <iostream>
+#include <map>
+#include <vector>
+
 #include "cwa.hpp"
+#include "domain.hpp"
+#include "hddl.hpp"
+#include "hpdlWriter.hpp"
+#include "output.hpp"
+#include "parametersplitting.hpp"
+#include "parsetree.hpp"
+#include "plan.hpp"
+#include "shopWriter.hpp"
+#include "sortexpansion.hpp"
 #include "typeof.hpp"
 #include "util.hpp"
-#include "output.hpp"
-#include "shopWriter.hpp"
-#include "hpdlWriter.hpp"
 #include "verify.hpp"
-#include "plan.hpp"
 
 using namespace std;
 
@@ -58,40 +60,65 @@ int main(int argc, char** argv) {
 	bool verifyPlan = false;
 	bool useOrderInPlanVerification = true;
 	bool convertPlan = false;
-	int verifyPlanVerbosity = 0;
+	int verbosity = 0;
 	
-	int level = 0;
-	for (int i = 1; i < argc; i++){
-		if (strcmp(argv[i], "-no-split-parameters") == 0) splitParameters = false;
-		else if (strcmp(argv[i], "-shop") == 0 || strcmp(argv[i], "-shop2") == 0 || strcmp(argv[i], "-shop1") == 0){
-		   	shopOutput = true;
-			if (strcmp(argv[i], "-shop1") == 0)
-			shop_1_compatability_mode = true;
+	struct option options[] = {
+		{"no-split-parameters", no_argument,       NULL,   's'},
+		{"shop"               , no_argument,       NULL,   'S'},
+		{"shop2"              , no_argument,       NULL,   'S'},
+		{"shop1"              , no_argument,       NULL,   '1'},
+		{"hpdl"               , no_argument,       NULL,   'H'},
+		
+		{"panda-converter"    , no_argument,       NULL,   'c'},
+		{"verify"             , optional_argument, NULL,   'v'},
+		{"vverify"            , no_argument,       NULL,   'V'},
+		{"vvverify"           , no_argument,       NULL,   'W'},
+		{"verify-no-order"    , no_argument,       NULL,   'o'},
+		
+		{"no-color"           , no_argument,       NULL,   'C'},
+		{"debug"              , optional_argument, NULL,   'd'},
+		
+		{NULL,                            0,              NULL,   0},
+	};
+
+	bool optionsValid = true;
+	while (true) {
+		int c = getopt_long_only (argc, argv, "sSHcvVWoCd", options, NULL);
+		if (c == -1)
+			break;
+		if (c == '?' || c == ':'){
+			// Invalid option; getopt_long () will print an error message
+			optionsValid = false;
+			continue;
 		}
-		else if (strcmp(argv[i], "-hpdl") == 0) hpdlOutput = true;
-		else if ((strcmp(argv[i], "-pc") == 0) || (strcmp(argv[i], "-convert") == 0)) convertPlan = true;
-		else if (strcmp(argv[i], "-verify") == 0) verifyPlan = true;
-		else if (strcmp(argv[i], "-vverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 1; }
-		else if (strcmp(argv[i], "-vvverify") == 0) { verifyPlan = true; verifyPlanVerbosity = 2; }
-		else if (strcmp(argv[i], "-verify-no-order") == 0) { verifyPlan = true, useOrderInPlanVerification = false; }
-		else if (strcmp(argv[i], "-nocolor") == 0) no_colors_in_output = true;
-		else if (strcmp(argv[i], "-debug") == 0){
+
+		if (c == 's') splitParameters = false;
+		else if (c == 'S') shopOutput = true;
+		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
+	   	else if (c == 'H') hpdlOutput = true;
+		else if (c == 'c') convertPlan = true;
+		else if (c == 'v') {
+			verifyPlan = true;
+			if (optarg) verbosity = atoi(optarg);
+		} else if (c == 'V') { verifyPlan = true; verbosity = 1; }
+		else if (c == 'W') { verifyPlan = true; verbosity = 2; }
+		else if (c == 'o') { verifyPlan = true; useOrderInPlanVerification = false; }
+		else if (c == 'C') no_colors_in_output = true;
+		else if (c == 'd') {
 		   	verboseOutput = true;
-			if (i+1 == argc) continue;
-			string s(argv[i+1]);
-			if (all_of(s.begin(), s.end(), ::isdigit)){
-				i++;
-				level = atoi(argv[i]);
-			}
+			if (optarg) verbosity = atoi(optarg);
 		}
-		else if (dfile == -1) dfile = i;
+	}
+	if (!optionsValid) {
+		cout << "Invalid options. Exiting." << endl;
+		return 1;
+	}
+
+	for (int i = optind; i < argc; i++) {
+		if (dfile == -1) dfile = i;
 		else if (pfile == -1) pfile = i;
 		else if (doutfile == -1) doutfile = i;
 		else if (poutfile == -1) poutfile = i;
-		else {
-			cout << "Don't know what you meant with \"" << argv[i] <<"\"." << endl;
-			return 1;
-		}
 	}
 
 	if (dfile == -1){
@@ -156,7 +183,7 @@ int main(int argc, char** argv) {
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(argv[doutfile]);
-		bool result = verify_plan(*plan, useOrderInPlanVerification, verifyPlanVerbosity);
+		bool result = verify_plan(*plan, useOrderInPlanVerification, verbosity);
 		cout << "Plan verification result: ";
 		if (result) cout << color(COLOR_GREEN,"true",MODE_BOLD);
 		else cout << color(COLOR_RED,"false",MODE_BOLD);
@@ -209,7 +236,7 @@ int main(int argc, char** argv) {
 	remove_unnecessary_predicates();
 
 	// write to output
-	if (verboseOutput) verbose_output(level);
+	if (verboseOutput) verbose_output(verbosity);
 	else {
 		ostream * dout = &cout;
 		if (doutfile != -1){
