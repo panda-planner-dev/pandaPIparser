@@ -43,8 +43,32 @@ vector<int> parse_list_of_integers(string & line, int debugMode){
 	return parse_list_of_integers(ss,debugMode);
 }
 
+pair<string,vector<string>> parse_task_with_arguments_from_braced_expression(string str){
+	string task = "";
+	size_t pos= 0;
+	while (pos < str.size() && str[pos] != '['){
+   		task += str[pos];
+		pos++;
+	}
+	
+	vector<string> task_arguments;
+
+   	if (pos != str.size()){
+		string argument_string = str.substr(pos+1,str.size() - pos - 2);
+		replace(argument_string.begin(), argument_string.end(), ',', ' ');
+		task_arguments = parse_list_of_strings(argument_string,0);
+	} // else there are none
+
+	return make_pair(task,task_arguments);
+}
+
 instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
 	if (debugMode) cout << "Parse instantiated task from \"" << input << "\"" << endl;
+	
+	// removed braces for convenience
+	replace(input.begin(), input.end(), '(', ' ');
+	replace(input.begin(), input.end(), ')', ' ');
+
 	istringstream ss (input);
 	bool first = true;
 	instantiated_plan_step ps;
@@ -54,13 +78,17 @@ instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
 		if (s == "") break;
 		if (first) {
 			first = false;
-			ps.name = s;
+			// allow for braced arguments of tasks
+			auto [name,braced_arguments] = parse_task_with_arguments_from_braced_expression(s);
+			ps.name = name;
+			ps.arguments = braced_arguments;
 		} else {
 			ps.arguments.push_back(s);
 		}
 	}
 	return ps;
 }
+
 
 
 parsed_plan parse_plan(istream & plan, int debugMode){
@@ -120,13 +148,25 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 	while (1){
 		string line;
 		getline(plan,line);
-		if (plan.eof()) break;
+		if (plan.eof()) {
+			if (debugMode) cout << "Reached end of input." << endl;
+			break;
+		}
 	    size_t first = line.find_first_not_of(' ');
     	size_t last = line.find_last_not_of(' ');
-	    line = line.substr(first, (last-first+1));
+		if (first == string::npos){
+			if (debugMode) cout << " ... empty line." << endl;
+			continue;
+		}
+		line = line.substr(first, (last-first+1));
 		
 		istringstream ss (line);
-		int id; ss >> id; 
+		int id; ss >> id;
+		if (ss.fail()){
+			if (debugMode) cout << "Reached end of plan." << endl;
+			break;
+		}
+
 		if (id < 0){
 			cout << color(COLOR_RED,"Negative id: ") << color(COLOR_RED,to_string(id)) << endl;
 			exit(1);
@@ -197,19 +237,7 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 	}
 
 	string main_method = blocks[0];
-	string decomposed_task = "";
-	size_t pos_in_block_1 = 0;
-	while (pos_in_block_1 < blocks[1].size() && blocks[1][pos_in_block_1] != '['){
-   		decomposed_task += blocks[1][pos_in_block_1];
-		pos_in_block_1++;
-	}
-	vector<string> decomposed_task_arguments;
-   	if (pos_in_block_1 != blocks[1].size()){
-		string argument_string = blocks[1].substr(pos_in_block_1+1,blocks[1].size()-pos_in_block_1 - 2);
-		replace(argument_string.begin(), argument_string.end(), ',', ' ');
-		decomposed_task_arguments = parse_list_of_strings(argument_string,0);
-	} // else there are none
-
+	auto [decomposed_task, decomposed_task_arguments] = parse_task_with_arguments_from_braced_expression(blocks[1]);
 	string applied_method = blocks[2];
 	int decomposed_id = stoi(blocks[3]);
 	replace(blocks[4].begin(), blocks[4].end(), ',', ' ');
