@@ -256,8 +256,24 @@ void reduce_constraints(){
 		vector<literal> oldC = nm.constraints;
 		nm.constraints.clear();
 
+		bool removeMethod = false;
 		map<string,string> vSort; for (auto x : m.vars) vSort[x.first] = x.second;
 		for (literal l : oldC){
+			if (l.arguments[1][0] == '?' && l.arguments[0][0] != '?'){
+				// ensure that the constant is always the second
+				swap(l.arguments[0],l.arguments[1]);
+			}
+
+			if (l.arguments[1][0] != '?' && l.arguments[0][0] != '?'){
+				// comparing two constants ... well this is a bit stupid, but heck
+				if (l.positive == (l.arguments[0][0] != l.arguments[1][0])){
+					// constraint cannot be satisfied
+					removeMethod = true;
+				}
+				continue;
+			}
+			
+				
 			if (l.arguments[1][0] == '?'){
 				nm.constraints.push_back(l);
 				continue;
@@ -286,7 +302,7 @@ void reduce_constraints(){
 		vector<pair<string,string>>	nvar;
 		for (auto x : nm.vars) nvar.push_back(make_pair(x.first,vSort[x.first]));
 		nm.vars = nvar;
-		methods.push_back(nm);
+		if (!removeMethod) methods.push_back(nm);
 	}
 	
 	vector<task> oldt = primitive_tasks;
@@ -296,8 +312,22 @@ void reduce_constraints(){
 		vector<literal> oldC = t.constraints;
 		nt.constraints.clear();
 
+		bool removeTask = false;
 		map<string,string> vSort; for (auto x : t.vars) vSort[x.first] = x.second;
 		for (literal l : oldC){
+			if (l.arguments[1][0] == '?' && l.arguments[0][0] != '?'){
+				// ensure that the constant is always the second
+				swap(l.arguments[0],l.arguments[1]);
+			}
+
+			if (l.arguments[1][0] != '?' && l.arguments[0][0] != '?'){
+				// comparing two constants ... well this is a bit stupid, but heck
+				if (l.positive == (l.arguments[0][0] != l.arguments[1][0])){
+					// constraint cannot be satisfied
+					removeTask  = true;
+				}
+				continue;
+			}
 			if (l.arguments[1][0] == '?'){
 				nt.constraints.push_back(l);
 				continue;
@@ -326,7 +356,7 @@ void reduce_constraints(){
 		vector<pair<string,string>>	nvar;
 		for (auto x : nt.vars) nvar.push_back(make_pair(x.first,vSort[x.first]));
 		nt.vars = nvar;
-		primitive_tasks.push_back(nt);
+		if (!removeTask) primitive_tasks.push_back(nt);
 	}
 }
 

@@ -262,11 +262,12 @@ void simple_hddl_output(ostream & dout){
 				dout << endl;
 			}
 	
-			dout << "#variable_constaints_first_number_then_individual_constraints" << endl;
+			dout << "#variable_constraints_first_number_then_individual_constraints" << endl;
 			dout << t.constraints.size() << endl;
 			for (literal l : t.constraints){
 				if (!l.positive) dout << "!";
 				dout << "= " << v_id[l.arguments[0]] << " " << v_id[l.arguments[1]] << endl;
+				assert(l.arguments[0][0] == '?'); // cannot be a constant
 				assert(l.arguments[1][0] == '?'); // cannot be a constant
 			}
 		}
