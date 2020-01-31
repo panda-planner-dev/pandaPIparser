@@ -50,7 +50,7 @@ You have to provide these values in the order in which the variables appear in t
 You may not add additional arguments or leave an argument blank.
 
 
-Alternatively, you can provide the actions name and parameters in one of the following formats:
+Alternatively, you can provide the action's name and parameters in one of the following formats:
 
 1. ``(NAME ARG1 ARG2 .. ARGN)``
 2. ``NAME [ARG1,ARG2,..,ARGN]``
@@ -70,6 +70,7 @@ As an example, the beginning of a valid plan in the `transport` domain may look 
 ```
 
 ## Decomposition
+
 After the plan has specified the primitive actions it contains, the plan must also specify the decompositions that were applied in order to obtain these primitive actions.
 This section starts with a line declaring the root tasks.
 It contains the string `root` followed by a non-empty list of IDs separated by whitespace characters.
@@ -79,7 +80,7 @@ We will describe the semantics of these IDs below.
 Afterwards follow lines describing the applied decompositions.
 These first specify an abstract task that was decomposed, then the method applied to decompose it and lastly the tasks that resulted from applying the method.
 The first part of each such line -- describing an abstract task -- has exactly the same format as a line describing a primitive action.
-I.e. you may treat the abstract task for outputting it as if it were primitive.
+I.e. you may treat the abstract task for outputting it as if it was primitive.
 The IDs for abstract tasks must be distinct from those of the primitive actions.
 
 To signal the end of the argument list of the abstract task, you have to output the string `->` separated with whitespace characters.
@@ -106,7 +107,7 @@ At the beginning of the decomposition section, you have to specify the root task
 These are the IDs of the tasks that occur in the problem's initial task network.
 You may provide them in any topological ordering that is compatible with the order imposed on the tasks in the initial task network.
 
-Instead of providing the IDs of the tasks in the initial task network, you may also add an artificial 'root' tasks and provide its ID as the root ID.
+Instead of providing the IDs of the tasks in the initial task network, you may also add an artificial 'root' task and provide its ID as the root ID.
 It must be named `__top`.
 Its decomposition method must be named `__top_method` and is decomposed into the tasks of the initial task network, in any topological ordering.
 
@@ -134,4 +135,4 @@ For some specifically modelled domains, verification may be very slow.
 This issue arises if the domain contains an action (or method) that has an existentially quantified precondition with several variables.
 Since the plan does not contain any information on the values of these variables used by the planner in the plan, pandaPIparser must try to determine this value itself.
 In order to perform as little transformation as possible on the input pandaPIparser has no hint on which values to try and thus has to instantiate all combinations of variables.
-If thus number is high, verification will take time, but will succeed.
+If this number is high, verification will take time, but will succeed.
