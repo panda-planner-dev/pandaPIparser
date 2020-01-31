@@ -1,3 +1,7 @@
+---
+geometry: "left=1.5cm,right=1.5cm,top=1.5cm,bottom=1.5cm"
+--- 
+
 # Plan Verification
 
 pandaPIparser contains a plan verifier for HTN planning problems formulated in HDDL (technically, the syntax to formulate solution plans is not part of the HDDL standard, but we extended it accordingly).
@@ -31,7 +35,7 @@ You have to provide the actions of the plan in the order they are executed in.
 This section of the plan ends with a line starting (except for preceding whitespace characters) with `root`.
 
 
-Each line describing a primitive action consists of three elements, which are separated by spaces (or more or other whitespace characters). ***PASCAL SAYS:*** Ich verstehe die Klammer nicht. Steht da ÜBERHAUPT etwas? Die kann man doch einfach löschen und da steht immer noch exakt dasselbe, oder? (man beachte die mehrdeutigkeit von "spaceS". es ist unklar, ob sich der plural darauf bezieht, dass es mehrere lücken gibt oder darauf, dass in jeder lücke auch mehr als ein white space stehen darf)
+Each line describing a primitive action consists of three elements, which are separated by spaces (or more or other whitespace characters). 
 
 1. the action's ID
 2. the action's name
