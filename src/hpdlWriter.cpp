@@ -536,7 +536,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 				// writesubtasks
 				declareVariables = false;
 				write_hpdl_order_decomposition((top_task?pout:dout),order,subtasks_for_id,variable_declaration, 1);
-			}
+			} else dout << "()" << endl;
 			if (!top_task) dout << "    )" << endl;
 		}
 
