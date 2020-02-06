@@ -31,7 +31,7 @@ With `-shop` you may specify up to four files as command line arguments: the inp
 As an example consider
 
 ```
-./pandaPIParser -shop transport.hddl pfile01.hddl shop-transport.lisp shop-pfile01.lisp
+./pandaPIParser --shop transport.hddl pfile01.hddl shop-transport.lisp shop-pfile01.lisp
 ```
 
 Note that
@@ -43,11 +43,11 @@ Note that
 
 ### Usage for Compilation to (J)SHOP1
 pandaPIparser also supports (J)SHOP1's output. This is essentially the same as the output for (J)SHOP2 with the only difference that underscores will be replaced by minuses and leading minuses are prepended with an `x`.
-To call the translator in this compatibility mode, use `-shop1` instead of `-shop` as the command line argument.
+To call the translator in this compatibility mode, use `--shop1` instead of `--shop` as the command line argument.
 
 ### Usage for Compilation to HPDL
-pandaPIparser also offers to option to write the output to HPDL. In order to do so add `-hpdl` as one of the command line arguments (the position does not matter).
-Parameter-wise `-hpdl` works exactly as `-shop`
+pandaPIparser also offers to option to write the output to HPDL. In order to do so add `--hpdl` as one of the command line arguments (the position does not matter).
+Parameter-wise `--hpdl` works exactly as `--shop`
 
 ## Contact
 If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:gregor.behnke@uni-ulm.de).
