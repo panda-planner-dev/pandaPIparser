@@ -151,6 +151,18 @@ void simple_hddl_output(ostream & dout){
 	// determine whether the instance actually has action costs. If not, we insert in the output that every action has cost 1
 	bool instance_has_action_costs = metric_target != dummy_function_type;
 
+
+	bool instance_is_classical = true;
+	for (task t : abstract_tasks)
+		if (t.name == "__top") instance_is_classical = false;
+
+	// if we are in a classical domain remove everything HTNy
+	if (instance_is_classical){
+		abstract_tasks.clear();
+		methods.clear();
+	}
+	
+
 	map<string,int> task_id;
 	vector<pair<task,bool>> task_out;
 	for (task t : primitive_tasks){
@@ -192,6 +204,7 @@ void simple_hddl_output(ostream & dout){
 		for(string s : f.argument_sorts) assert(sort_id.count(s)), dout << " " << sort_id[s];
 		dout << endl;
 	}
+	
 	dout << "#number_primitive_tasks_and_number_abstract_tasks" << endl;
 	dout << primitive_tasks.size() << " " << abstract_tasks.size() << endl;
 
@@ -344,6 +357,8 @@ void simple_hddl_output(ostream & dout){
 	dout << function_lines.size() << endl;
 	for (string l : function_lines)
 		dout << l << endl;
+
 	dout << "#initial_task" << endl;
-	dout << task_id["__top"] << endl;
+	if (instance_is_classical) dout << "-1" << endl;
+	else dout << task_id["__top"] << endl;
 }

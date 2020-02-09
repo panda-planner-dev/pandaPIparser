@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sSHcvVWoCd", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCd", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
