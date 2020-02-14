@@ -546,9 +546,9 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 	for (parsed_task prim : parsed_primitive){
 		map<string,string> varsForConst;
-		auto simple_variable_output = variable_output_closure(varsForConst);
 		add_var_for_const_to_map(prim.prec->variables_for_constants(),varsForConst);
 		add_var_for_const_to_map(prim.eff->variables_for_constants(),varsForConst);
+		auto simple_variable_output = variable_output_closure(varsForConst);
 
 		// Adding prefix "_primitive" to each primitive
 		dout << "  (:action " << prim.name << "_primitive" << endl;
