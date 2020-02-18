@@ -374,6 +374,34 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 							int debugMode){
 	vector<pair<map<string,int>,map<string,string>>> ret;
 	if (doneIDs.size() == subtasks.size()){
+		for (pair<string,string> varDecl : varDecls){
+			string sort = varDecl.second;
+			if (!variableAssignment.count(varDecl.first)){
+				// Domain may contain free variable ...
+				print_n_spaces(1 + 2*curpos);
+				cout << color(COLOR_RED,"Unassigned variable ") << varDecl.first << endl;
+				
+				for (string varVal : sorts[sort]){
+					map<string,string> newVariableAssignment = variableAssignment;
+					newVariableAssignment[varDecl.first] = varVal;
+					if (debugMode){
+						print_n_spaces(1 + 2*curpos+1);
+						cout << color(COLOR_PURPLE,"Assigning variable ") << varDecl.first << " to " << varVal << endl;
+					}
+
+					auto recursive = generateAssignmentsDFS(m, tasks, doneIDs,
+										   subtasks, curpos + 1,
+										   newVariableAssignment, matching,
+										   varDecls, useOrderInformation, debugMode);
+		
+					for (auto r : recursive) ret.push_back(r);
+				}
+				// expanded all possible values for variable
+				return ret;
+			}
+		}
+
+
 		if (debugMode) {
 			print_n_spaces(1 + 2*curpos);
 			cout << color(COLOR_GREEN,"Found compatible linearisation.") << endl;
@@ -382,12 +410,6 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		}
 		for (pair<string,string> varDecl : varDecls){
 			string sort = varDecl.second;
-			if (!variableAssignment.count(varDecl.first)){
-				// this should not happen
-				cout << color(COLOR_RED,"Unassigned variable ") << varDecl.first << endl;
-				exit(2);
-			}
-
 			string param = variableAssignment[varDecl.first];
 			if (!sorts[sort].count(param)){
 				if (debugMode){
