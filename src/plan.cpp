@@ -30,7 +30,14 @@ vector<int> parse_list_of_integers(istringstream & ss, int debugMode){
 	vector<int> ints;
 	while (true){
 		if (ss.eof()) break;
-		int x; ss >> x;
+		string xx; ss >> xx;
+		char* cstring;
+		long x = strtol(xx.c_str(),&cstring,10);
+		if (*cstring) {
+			if (debugMode)
+				cerr << "Expected integer but found \""	<< xx << "\" .. I'm going to try to ignore" << endl;
+			continue;
+		}
 		ints.push_back(x);
 	}
 
@@ -63,7 +70,7 @@ pair<string,vector<string>> parse_task_with_arguments_from_braced_expression(str
 }
 
 instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
-	if (debugMode) cout << "Parse instantiated task from \"" << input << "\"" << endl;
+	if (debugMode) cout << "Parse instantiated task from \"" << input << "\" ... ";
 	
 	// removed braces for convenience
 	replace(input.begin(), input.end(), '(', ' ');
@@ -86,6 +93,7 @@ instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
 			ps.arguments.push_back(s);
 		}
 	}
+	if (debugMode) cout << "done" << endl;
 	return ps;
 }
 
@@ -161,7 +169,13 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 		line = line.substr(first, (last-first+1));
 		
 		istringstream ss (line);
-		int id; ss >> id;
+		string id_string; ss >> id_string;
+		if (id_string == "<=="){
+			if (debugMode) cout << "Reached end of plan (marked)." << endl;
+			break;
+		}
+
+		int id = stoi(id_string);
 		if (ss.fail()){
 			if (debugMode) cout << "Reached end of plan." << endl;
 			break;
@@ -188,11 +202,16 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 		if (debugMode) {
 			cout << "Parsed abstract task id=" << id << " " << at.name;
 			for(string arg : at.arguments) cout << " " << arg;
+			cout << endl;
 		}
 		
 
 		// read the actual content of the method
 		string methodName; ss >> methodName;
+		if (debugMode) {
+			cout << "Parsed method name: " << methodName << endl;
+			cout << endl;
+		}
 		// read subtask IDs
 		vector<int> subtasks = parse_list_of_integers(ss, debugMode);
 		
@@ -201,7 +220,7 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 		pplan.subtasksForTask[id] = subtasks;
 
 		if (debugMode) {
-			cout << " and is decomposed into";
+			cout << "Subtasks:";
 			for(int st : subtasks) cout << " " << st;
 			cout << endl;
 		}
