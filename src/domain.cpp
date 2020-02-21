@@ -7,23 +7,25 @@
 
 using namespace std;
 
-void flatten_tasks(){
+void flatten_tasks(bool compileConditionalEffects){
 	for(parsed_task a : parsed_primitive){
 		// expand the effects first, as they will contain only one element
-		vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > elist = a.eff->expand();
+		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > elist = a.eff->expand(compileConditionalEffects);
 		
-		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > plist = a.prec->expand();
+		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > plist = a.prec->expand(false); // precondition cannot contain conditional effects
 		int i = 0;
 		for(auto e : elist) for(auto p : plist){
 			assert(p.first.second.size() == 0); // precondition cannot contain conditional effects
 			task t; i++;
 			t.name = a.name;
 			// sort out the constraints
-			for(literal pl : p.first.first)
-				if (pl.predicate == dummy_equal_literal)
-					t.constraints.push_back(pl);
+			for(variant<literal,conditional_effect> pl : p.first.first){
+				if (!holds_alternative<literal>(pl)) assert(false); // precondition cannot have conditional effects in it
+				if (get<literal>(pl).predicate == dummy_equal_literal)
+					t.constraints.push_back(get<literal>(pl));
 				else
-					t.prec.push_back(pl);
+					t.prec.push_back(get<literal>(pl));
+			}
 
 			// add preconditions for conditional effects
 			for(literal ep : e.first.second){
@@ -33,10 +35,17 @@ void flatten_tasks(){
 
 			// set effects
 			for (auto eff : e.first.first){
-				if (eff.isCostChangeExpression)
-					t.costExpression.push_back(eff);
-				else
-					t.eff.push_back(eff);
+				if (holds_alternative<literal>(eff)){
+					if (get<literal>(eff).isCostChangeExpression)
+						t.costExpression.push_back(get<literal>(eff));
+					else
+						t.eff.push_back(get<literal>(eff));
+				} else {
+					if (get<conditional_effect>(eff).effect.isCostChangeExpression)
+						assert(false); // TODO state dependent action costs. This is very complicated. Ask Robert Mattmüller how to do it.
+					// conditional effect
+					t.ceff.push_back(get<conditional_effect>(eff));
+				}
 			}
 
 			// add declared vars
@@ -154,7 +163,8 @@ void parsed_method_to_data_structures(){
 		}
 	
 		// compute flattening of method precondition
-		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > precs = pm.prec->expand();
+		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > precs = pm.prec->expand(false); // precondition cannot contain conditional effect
+		// TODO method effect!
 
 		bool addPreconditionTask = false;
 		task preconditionTask;
@@ -170,10 +180,14 @@ void parsed_method_to_data_structures(){
 
 			// add a subtask for the method precondition
 			vector<literal> mPrec;
-			for (literal l : prec.first.first)
-				if (l.predicate == dummy_equal_literal || l.predicate == dummy_ofsort_literal)
-					m.constraints.push_back(l);
-				else mPrec.push_back(l);
+			for (variant<literal,conditional_effect> l : prec.first.first){
+				if (holds_alternative<conditional_effect>(l))
+					assert(false); // precondition
+
+				if (get<literal>(l).predicate == dummy_equal_literal || get<literal>(l).predicate == dummy_ofsort_literal)
+					m.constraints.push_back(get<literal>(l));
+				else mPrec.push_back(get<literal>(l));
+			}
 
 			map<string,string> sorts_of_vars; for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
 
@@ -203,7 +217,11 @@ void parsed_method_to_data_structures(){
 
 			// that AT must have all variables as parameters that are also parameters of the method
 			set<string> args;
-			for (auto prec : precs)	for (literal l : prec.first.first) for (string a : l.arguments) if (mVarSet.count(a)) args.insert(a);
+			for (auto prec : precs)	for (variant<literal,conditional_effect> l : prec.first.first) {
+				if (holds_alternative<conditional_effect>(l))
+					assert(false); // precondition
+				for (string a : get<literal>(l).arguments) if (mVarSet.count(a)) args.insert(a);
+			}
 			
 			map<string,string> sorts_of_vars;
 			for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
@@ -238,10 +256,13 @@ void parsed_method_to_data_structures(){
 
 				// add a subtask for the method precondition
 				vector<literal> mPrec;
-				for (literal l : prec.first.first)
-					if (l.predicate == dummy_equal_literal || l.predicate == dummy_ofsort_literal)
-						precM.constraints.push_back(l);
-					else mPrec.push_back(l);
+				for (variant<literal,conditional_effect> l : prec.first.first){
+					if (holds_alternative<conditional_effect>(l))
+						assert(false); // method precondition
+					if (get<literal>(l).predicate == dummy_equal_literal || get<literal>(l).predicate == dummy_ofsort_literal)
+						precM.constraints.push_back(get<literal>(l));
+					else mPrec.push_back(get<literal>(l));
+				}
 
 				map<string,string> sorts_of_vars; for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
 
@@ -303,11 +324,15 @@ void parsed_method_to_data_structures(){
 		for(auto o : pm.tn->ordering) m.ordering.push_back(*o);
 
 		// constraints
-		vector<pair<pair<vector<literal>, vector<literal> >, additional_variables> > exconstraints = pm.tn->constraint->expand();
+		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > exconstraints = pm.tn->constraint->expand(false); // constraints cannot contain conditional effects
 		assert(exconstraints.size() == 1);
 		assert(exconstraints[0].second.size() == 0); // no additional vars due to constraints
 		assert(exconstraints[0].first.second.size() == 0); // no conditional effects
-		for(literal l : exconstraints[0].first.first) m.constraints.push_back(l);
+		for(variant<literal,conditional_effect> l : exconstraints[0].first.first) 
+			if (holds_alternative<literal>(l))
+				m.constraints.push_back(get<literal>(l));
+			else
+				assert(false); // constraints cannot contain conditional effects
 
 
 		m.check_integrity();

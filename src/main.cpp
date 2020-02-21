@@ -54,8 +54,10 @@ int main(int argc, char** argv) {
 	int doutfile = -1;
 	int poutfile = -1;
 	bool splitParameters = true;
+	bool compileConditionalEffects = true;
 	bool shopOutput = false;
 	bool hpdlOutput = false;
+	bool hddlOutput = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
 	bool useOrderInPlanVerification = true;
@@ -63,27 +65,30 @@ int main(int argc, char** argv) {
 	int verbosity = 0;
 	
 	struct option options[] = {
-		{"no-split-parameters", no_argument,       NULL,   's'},
-		{"shop"               , no_argument,       NULL,   'S'},
-		{"shop2"              , no_argument,       NULL,   'S'},
-		{"shop1"              , no_argument,       NULL,   '1'},
-		{"hpdl"               , no_argument,       NULL,   'H'},
+		{"no-split-parameters"     , no_argument,       NULL,   's'},
+		{"keep-conditional-effects", no_argument,       NULL,   'k'},
 		
-		{"panda-converter"    , no_argument,       NULL,   'c'},
-		{"verify"             , optional_argument, NULL,   'v'},
-		{"vverify"            , no_argument,       NULL,   'V'},
-		{"vvverify"           , no_argument,       NULL,   'W'},
-		{"verify-no-order"    , no_argument,       NULL,   'o'},
+		{"shop"                    , no_argument,       NULL,   'S'},
+		{"shop2"                   , no_argument,       NULL,   'S'},
+		{"shop1"                   , no_argument,       NULL,   '1'},
+		{"hpdl"                    , no_argument,       NULL,   'H'},
+		{"hddl"                    , no_argument,       NULL,   'h'},
 		
-		{"no-color"           , no_argument,       NULL,   'C'},
-		{"debug"              , optional_argument, NULL,   'd'},
+		{"panda-converter"         , no_argument,       NULL,   'c'},
+		{"verify"                  , optional_argument, NULL,   'v'},
+		{"vverify"                 , no_argument,       NULL,   'V'},
+		{"vvverify"                , no_argument,       NULL,   'W'},
+		{"verify-no-order"         , no_argument,       NULL,   'o'},
 		
-		{NULL,                            0,              NULL,   0},
+		{"no-color"                , no_argument,       NULL,   'C'},
+		{"debug"                   , optional_argument, NULL,   'd'},
+		
+		{NULL                      , 0,                 NULL,   0},
 	};
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCd", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkh", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -93,9 +98,11 @@ int main(int argc, char** argv) {
 		}
 
 		if (c == 's') splitParameters = false;
+		else if (c == 'k') compileConditionalEffects = false;
 		else if (c == 'S') shopOutput = true;
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
+	   	else if (c == 'h') hddlOutput = true;
 		else if (c == 'c') convertPlan = true;
 		else if (c == 'v') {
 			verifyPlan = true;
@@ -193,7 +200,7 @@ int main(int argc, char** argv) {
 
 	if (!hpdlOutput) {
 		// flatten all primitive tasks
-		flatten_tasks();
+		flatten_tasks(compileConditionalEffects);
 		// .. and the goal
 		flatten_goal();
 		// create appropriate methods and expand method preconditions

@@ -23,7 +23,7 @@ bool operator< (const ground_literal& lhs, const ground_literal& rhs){
 
 void flatten_goal(){
 	if (goal_formula == NULL) return;
-	vector<pair<pair<vector<literal>,vector<literal> >, additional_variables> > ex = goal_formula->expand();
+	vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > ex = goal_formula->expand(false);
 	assert(ex.size() == 1);
 	assert(ex[0].first.second.size() == 0);
 	map<string,string> access;
@@ -33,11 +33,14 @@ void flatten_goal(){
 		access[x.first] = *sorts[sort].begin();
 	}
 
-	for (literal l : ex[0].first.first){
+	for (variant<literal,conditional_effect> l : ex[0].first.first){
+		if (holds_alternative<conditional_effect>(l))
+			assert(false); // goal may not contain conditional effects
+
 		ground_literal gl;
-		gl.predicate = l.predicate;
-		gl.positive = l.positive;
-		for (string v : l.arguments) gl.args.push_back(access[v]);
+		gl.predicate = get<literal>(l).predicate;
+		gl.positive = get<literal>(l).positive;
+		for (string v : get<literal>(l).arguments) gl.args.push_back(access[v]);
 		goal.push_back(gl);
 	}
 }
