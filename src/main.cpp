@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
 		// .. and the goal
 		flatten_goal();
 		// create appropriate methods and expand method preconditions
-		parsed_method_to_data_structures();
+		parsed_method_to_data_structures(compileConditionalEffects);
 	}
 
 	if (shopOutput || hpdlOutput){
