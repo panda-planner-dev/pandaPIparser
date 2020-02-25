@@ -85,11 +85,18 @@ void compute_cwa(){
 	// find predicates occurring negatively in preconditions and their types
 	map<string,set<vector<string>>> neg_predicates_with_arg_sorts;
 	
-	for (task t : primitive_tasks) for (literal l : t.prec) if (!l.positive) {
-		vector<string> argSorts;
-		for (string v : l.arguments) for (auto x : t.vars) if (x.first == v) argSorts.push_back(x.second);
-		assert(argSorts.size() == l.arguments.size());
-		neg_predicates_with_arg_sorts[l.predicate].insert(argSorts);
+	for (task t : primitive_tasks) {
+		vector<literal> literals = t.prec;
+		for (conditional_effect ceff : t.ceff)
+			for (literal l : ceff.condition)
+				literals.push_back(l);
+		
+		for (literal l : literals) if (!l.positive) {
+			vector<string> argSorts;
+			for (string v : l.arguments) for (auto x : t.vars) if (x.first == v) argSorts.push_back(x.second);
+			assert(argSorts.size() == l.arguments.size());
+			neg_predicates_with_arg_sorts[l.predicate].insert(argSorts);
+		}
 	}
 	
 	// predicates negative in goal

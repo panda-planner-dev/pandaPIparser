@@ -557,15 +557,22 @@ void clean_up_sorts(){
 }
 
 void remove_unnecessary_predicates(){
+	// TODO don't remove predicates in conditional effects and conditional effect conditions
 	set<string> occuring_preds;
 	for (task t : primitive_tasks) for (literal l : t.prec) occuring_preds.insert(l.predicate);
+	// conditions of conditional effects also occur
+	for (task t : primitive_tasks) 
+		for (conditional_effect ceff : t.ceff)
+			for (literal l : ceff.condition)
+				occuring_preds.insert(l.predicate);
+
 	for (ground_literal gl : goal) occuring_preds.insert(gl.predicate);
 
 	vector<predicate_definition> old = predicate_definitions;
 	predicate_definitions.clear();
 
 
-	// find predicates that occur only in effects
+	// find predicates that do not occur in preconditions
 	set<string> removed_predicates;
 	for (predicate_definition p : old){
 		if (occuring_preds.count(p.name)){
@@ -662,3 +669,10 @@ void method::check_integrity(){
 		}
 	}
 }
+
+conditional_effect::conditional_effect(vector<literal> cond, literal eff){
+	condition = cond;
+	effect = eff;
+}
+
+

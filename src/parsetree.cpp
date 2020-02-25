@@ -232,6 +232,8 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	}
 
 	if (this->type == WHEN) {
+		// condition might be a disjunction ..
+		// effect might have multiple expansions (i.e. be disjunctive) we here assume that this means angelic non-determinism
 		for (auto expanded_condition : subresults[0]) for (auto expanded_effect : subresults[1]){
 			vector<variant<literal,conditional_effect>> eff = expanded_effect.first.first;
 			vector<literal> cond = expanded_effect.first.second;
@@ -244,19 +246,43 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 			
 			additional_variables avs = expanded_effect.second;
 			avs.insert(expanded_condition.second.begin(), expanded_condition.second.end());
-			ret.push_back(make_pair(make_pair(eff,cond),avs));
-		}
 
-		general_formula cond = *(this->subformulae[0]);
-		cond.negate();
-		for (auto expanded_condition : cond.expand(false)){ // condition cannot contain conditional effect!
-			expanded_condition.first.second.clear();
-			for (variant<literal,conditional_effect> x : expanded_condition.first.first)
-				if (holds_alternative<literal>(x)){
-					expanded_condition.first.second.push_back(get<literal>(x));
-				} else assert(false); // conditional effect inside condition
-			expanded_condition.first.first.clear();
-			ret.push_back(expanded_condition);
+			if (compileConditionalEffects)
+				ret.push_back(make_pair(make_pair(eff,cond),avs));
+			else {
+				// we have to build the conditional effects
+				vector<variant<literal,conditional_effect>> newEff;
+				for (variant<literal,conditional_effect> & e : eff){
+					if (holds_alternative<literal>(e)){
+						newEff.push_back(conditional_effect(cond,get<literal>(e)));
+					} else {
+						// nested conditional effect
+						vector<literal> innercond = get<conditional_effect>(e).condition;
+						literal innerE = get<conditional_effect>(e).effect;
+						innercond.insert(innercond.end(), cond.begin(),cond.end());
+						
+						newEff.push_back(conditional_effect(innercond,innerE));
+					}
+				}
+				vector<literal> empty;
+				ret.push_back(make_pair(make_pair(newEff,empty),avs));
+			}
+		}
+			
+			
+		if (compileConditionalEffects){
+			// remove conditional effects by compiling them into multiple actions ...
+			general_formula cond = *(this->subformulae[0]);
+			cond.negate();
+			for (auto expanded_condition : cond.expand(false)){ // condition cannot contain conditional effect!
+				expanded_condition.first.second.clear();
+				for (variant<literal,conditional_effect> x : expanded_condition.first.first)
+					if (holds_alternative<literal>(x)){
+						expanded_condition.first.second.push_back(get<literal>(x));
+					} else assert(false); // conditional effect inside condition
+				expanded_condition.first.first.clear();
+				ret.push_back(expanded_condition);
+			}
 		}
 	}
 

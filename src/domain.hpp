@@ -29,6 +29,8 @@ struct literal{
 struct conditional_effect{
 	vector<literal> condition;
 	literal effect;
+
+	conditional_effect(vector<literal> cond, literal eff);
 };
 
 struct task{
