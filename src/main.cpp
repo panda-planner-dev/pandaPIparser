@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 		cout << "I can't open " << argv[pfile] << "!" << endl;
 		return 2;
 	}
-	if (!shopOutput && !hpdlOutput && poutfile != -1){
+	if (!shopOutput && !hpdlOutput && !hddlOutput && poutfile != -1){
 		cout << "For ordinary pandaPI output, you may only specify one output file, but you specified two: " << argv[doutfile] << " and " << argv[poutfile] << endl;
 	}
 	
@@ -244,7 +244,28 @@ int main(int argc, char** argv) {
 
 	// write to output
 	if (verboseOutput) verbose_output(verbosity);
-	else {
+	else if (hddlOutput) {
+		// produce streams for output
+		ostream * dout = &cout;
+		ostream * pout = &cout;
+		if (doutfile != -1){
+			ofstream * df  = new ofstream(argv[doutfile]);
+			if (!df->is_open()){
+				cout << "I can't open " << argv[doutfile] << "!" << endl;
+				return 2;
+			}
+			dout = df;
+		}
+		if (poutfile != -1){
+			ofstream * pf  = new ofstream(argv[poutfile]);
+			if (!pf->is_open()){
+				cout << "I can't open " << argv[poutfile] << "!" << endl;
+				return 2;
+			}
+			pout = pf;
+		}
+		hddl_output(*dout,*pout);
+	} else {
 		ostream * dout = &cout;
 		if (doutfile != -1){
 			ofstream * df  = new ofstream(argv[doutfile]);
