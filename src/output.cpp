@@ -459,6 +459,21 @@ void hddl_output(ostream & dout, ostream & pout){
 
 	dout << endl;
 
+	bool hasActionCosts = metric_target != dummy_function_type;
+
+	// functions (for cost expressions)
+	if (parsed_functions.size() && hasActionCosts){
+		dout << "  (:functions" << endl;
+		for(auto f : parsed_functions){
+			dout << "    (" << f.first.name;
+			for (size_t arg = 0; arg < f.first.argument_sorts.size(); arg++)
+				dout << " ?var" << arg << " - " << f.first.argument_sorts[arg]; 
+			dout << ") - " << f.second << endl;
+		}
+		dout << "  )" << endl;
+	}
+	dout << endl;
+
 	// abstract tasks
 	for (task t : abstract_tasks){
 		dout << "  (:task ";
@@ -571,8 +586,10 @@ void hddl_output(ostream & dout, ostream & pout){
 			}
 			dout << "    )" << endl;
 		}
+
 		
-		if (t.eff.size() || t.ceff.size()){
+		if (t.eff.size() || t.ceff.size() || 
+				(hasActionCosts && t.costExpression.size())){
 			// effect
 			dout << "    :effect (and" << endl;
 
@@ -613,6 +630,21 @@ void hddl_output(ostream & dout, ostream & pout){
 					}
 				}
 			}
+			
+			if (hasActionCosts){
+				for (auto c : t.costExpression){
+					dout << "      (increase (" << metric_target << ") ";
+					if (c.isConstantCostExpression)
+						 dout << c.costValue << ")" << endl;
+					else {
+						dout << "(" << c.predicate;
+						for (string v : c.arguments) dout << " " << v;
+						dout << ")";
+					}
+					dout << ")" << endl;
+				}
+			}
+	
 			dout << "    )" << endl;
 		}
 	
@@ -643,6 +675,15 @@ void hddl_output(ostream & dout, ostream & pout){
 		for (string c : gl.args) pout << " " << c;
 		pout << ")" << endl;
 	}
+
+	// metric 
+	if (hasActionCosts)
+		for (auto f : init_functions){
+			pout << "    (= (" << f.first.predicate;
+			for (auto c : f.first.args) pout << " " + c;
+			pout << ") " << f.second << ")" << endl;
+		}
+
 	pout << "  )" << endl;
 
 	if (goal.size()){
@@ -654,6 +695,10 @@ void hddl_output(ostream & dout, ostream & pout){
 		}
 		pout << "  )" << endl;
 	}
+
+	if (hasActionCosts)
+		pout << "  (:metric minimize (" << metric_target << "))" << endl;
+
 
 	pout << ")" << endl;
 
