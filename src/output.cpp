@@ -167,10 +167,12 @@ void simple_hddl_output(ostream & dout){
 	map<string,int> task_id;
 	vector<pair<task,bool>> task_out;
 	for (task t : primitive_tasks){
+		assert(task_id.count(t.name) == 0);
 		task_id[t.name] = task_id.size();
 		task_out.push_back(make_pair(t,true));
 	}
 	for (task t : abstract_tasks){
+		assert(task_id.count(t.name) == 0);
 		task_id[t.name] = task_id.size();
 		task_out.push_back(make_pair(t,false));
 	}
