@@ -264,7 +264,7 @@ void parsed_method_to_data_structures(){
 					else mPrec.push_back(get<literal>(l));
 				}
 
-				map<string,string> sorts_of_vars; for(auto pp : m.vars) sorts_of_vars[pp.first] = pp.second;
+				map<string,string> sorts_of_vars; for(auto pp : precM.vars) sorts_of_vars[pp.first] = pp.second;
 
 				// if we actually have method precondition, then create a task carrying the precondition
 				if (mPrec.size()){
@@ -277,6 +277,7 @@ void parsed_method_to_data_structures(){
 					for (string v : args) {
 						string accessV = v;
 						if (mprec_additional_vars.count(v)) accessV = mprec_additional_vars[v];
+						assert(sorts_of_vars.count(accessV));
 						primitivePrec.vars.push_back(make_pair(v,sorts_of_vars[accessV]));
 					}
 					primitivePrec.number_of_original_vars = primitivePrec.vars.size(); // does not really matter as this action will get removed by the output formatter
