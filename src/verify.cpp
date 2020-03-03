@@ -1480,7 +1480,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 	map<int,map<string,string>> chosen_method_matchings;
 	vector<pair<int,int>> chosen_non_unique_matchings;
 	set<vector<pair<int,int>>> forbidden_matchings;
-	bool irrelevant;
+	bool irrelevant = false;
 	if (debugMode){
 		cout << color(COLOR_YELLOW,"Check whether primitive plan is a linearisation of the orderings resulting from applied decomposition methods.", MODE_UNDERLINE) << endl;
 	}
