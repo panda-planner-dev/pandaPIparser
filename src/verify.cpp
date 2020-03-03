@@ -32,6 +32,57 @@ string get_const(string varOrConst, map<string,string> & variableAssignment, add
 	return varOrConst; // a constant
 }
 
+bool doesFormulaContainVariable(general_formula * f, string variable, int debugMode, int level){
+	if (f->type == EMPTY) return false;
+	if (f->type == EQUAL || f->type == NOTEQUAL) {
+		return (f->arg1 == variable) || (f->arg2 == variable);
+	}
+	if (f->type == OFSORT || f->type == NOTOFSORT) {
+		return f->arg1 == variable;
+	}
+
+	if (f->type == AND || f->type == OR){
+		for (auto sub : f->subformulae)
+			if (doesFormulaContainVariable(sub,variable,debugMode,level+1)) return true;
+		return false;
+	}
+
+	if (f->type == ATOM || f->type == NOTATOM){
+		for (string v : f->arguments.vars){
+			if (v == variable) return true;
+		}
+		return false;
+	}
+
+	if (f->type == FORALL || f->type == EXISTS){
+		for (pair<string,string> qvar : f->qvariables.vars)
+			if (qvar.first == variable){
+				print_n_spaces(1+2*level+1);
+				cout << color(COLOR_RED,"Quantifiying over variable that is a method parameter: ") << variable << endl;
+				exit(2);
+			}
+		return doesFormulaContainVariable(f->subformulae[0], variable, debugMode, level+1);
+	}
+
+	if (f->type == WHEN){
+		return doesFormulaContainVariable(f->subformulae[0],variable,debugMode,level+1) || doesFormulaContainVariable(f->subformulae[1],variable,debugMode,level+1);
+	}
+
+	if (f->type == VALUE || f->type == COST || f->type == COST_CHANGE){
+		print_n_spaces(1+2*level+1);
+		cout << color(COLOR_RED,"Found action cost in method ...") << endl;
+		exit(2);
+	}
+
+	print_n_spaces(1+2*level+1);
+	cout << color(COLOR_RED,"Unknown formula type .." + to_string(f->type)) << endl;
+	exit(2);
+	return false;	
+}
+
+
+
+
 // FORWARD DECLARATION -- the recursion of the next two function is intertwined
 bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state, int debugMode, int level);
 
@@ -106,6 +157,7 @@ bool evaluateFormulaOnStateQuantified(formula_type type, var_declaration & qvari
 		cout << color(COLOR_PURPLE,"Checked every instantiation.") << " Formula is now: ";
 		if (type == FORALL) cout << color(COLOR_GREEN,"true");
 		else cout << color(COLOR_RED,"false");
+		cout << endl;
 	}
 
 	variable_assignment.erase(var.first);
@@ -256,18 +308,63 @@ bool evaluateFormulaOnState(general_formula * f, set<ground_literal> & state, ma
 
 	// things that are not allowed in preconditions
 	if (f->type == WHEN){
+		print_n_spaces(1+2*level+1);
 		cout << color(COLOR_RED,"Found conditional effect in precondition ...") << endl;
 		exit(2);
 	}
 
 	if (f->type == VALUE || f->type == COST || f->type == COST_CHANGE){
+		print_n_spaces(1+2*level+1);
 		cout << color(COLOR_RED,"Found action cost in precondition ...") << endl;
 		exit(2);
 	}
 
+	print_n_spaces(1+2*level+1);
 	cout << color(COLOR_RED,"Unknown formula type .." + to_string(f->type)) << endl;
 	exit(2);
 	return false;	
+}
+
+bool evaluateFormulaOnStateWithMissingAssignments(var_declaration * vars, general_formula * f, set<ground_literal> & state, map<string,string> & variable_assignment, bool ignore_state, int debugMode, int level){
+	for (pair<string,string> varDecl : vars->vars){
+		string sort = varDecl.second;
+		if (!variable_assignment.count(varDecl.first)){
+			// Domain may contain free variable ...
+			if (debugMode){
+				print_n_spaces(1 + 2*level);
+				cout << color(COLOR_YELLOW,"Unassigned variable ") << varDecl.first << endl;
+			}
+
+
+			// check if the variable occrus in a method precondition, if not it is wholly irrelevant
+			bool mprecontains = doesFormulaContainVariable(f,varDecl.first,debugMode,level);
+			
+			if (debugMode){
+				// only needed for debugging
+				print_n_spaces(1 + 2*level);
+				cout << color(COLOR_YELLOW,"Contained in method precondition: ") << mprecontains << endl;
+			}
+
+			// we have already checked that there is at least one object in the sort
+			if (!mprecontains) continue;
+
+			for (string varVal : sorts[sort]){
+				map<string,string> newVariableAssignment = variable_assignment;
+				newVariableAssignment[varDecl.first] = varVal;
+				if (debugMode){
+					print_n_spaces(1 + 2*level+1);
+					cout << color(COLOR_PURPLE,"Assigning variable ") << varDecl.first << " to " << varVal << endl;
+				}
+
+				bool recursive = evaluateFormulaOnStateWithMissingAssignments(vars, f, state, newVariableAssignment, ignore_state, debugMode, level+1);
+
+				if (recursive) return true;
+			}
+			// no satisfying assignement has been found
+			return false;
+		}
+	}
+	return evaluateFormulaOnState(f, state, variable_assignment, ignore_state, debugMode, level);
 }
 
 
@@ -343,9 +440,11 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 		return;
 	}
 
+	print_n_spaces(1+2*level+1);
 	cout << color(COLOR_RED,"Unknown formula type .." + to_string(f->type)) << endl;
 	exit(2);
 }
+
 
 
 void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state, set<ground_literal> & new_state, map<string,string> & variable_assignment, int debugMode, int level){
@@ -378,26 +477,50 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 			string sort = varDecl.second;
 			if (!variableAssignment.count(varDecl.first)){
 				// Domain may contain free variable ...
-				print_n_spaces(1 + 2*curpos);
-				cout << color(COLOR_RED,"Unassigned variable ") << varDecl.first << endl;
-				
-				for (string varVal : sorts[sort]){
-					map<string,string> newVariableAssignment = variableAssignment;
-					newVariableAssignment[varDecl.first] = varVal;
-					if (debugMode){
-						print_n_spaces(1 + 2*curpos+1);
-						cout << color(COLOR_PURPLE,"Assigning variable ") << varDecl.first << " to " << varVal << endl;
-					}
-
-					auto recursive = generateAssignmentsDFS(m, tasks, doneIDs,
-										   subtasks, curpos + 1,
-										   newVariableAssignment, matching,
-										   varDecls, useOrderInformation, debugMode);
-		
-					for (auto r : recursive) ret.push_back(r);
+				if (debugMode){
+					print_n_spaces(1 + 2*curpos);
+					cout << color(COLOR_RED,"Unassigned variable ") << varDecl.first << endl;
 				}
-				// expanded all possible values for variable
-				return ret;
+
+
+				// checking where this variable occurs. It cannot be part of the methods subtasks, so it can only occur in method preconditions and effects 
+				bool mconstraintscontains = doesFormulaContainVariable(m.tn->constraint,varDecl.first,debugMode,curpos);
+				bool meffcontains = doesFormulaContainVariable(m.eff,varDecl.first,debugMode,curpos);
+				if (debugMode){
+					// only needed for debugging
+					bool mprecontains = doesFormulaContainVariable(m.prec,varDecl.first,debugMode,curpos);
+					print_n_spaces(1 + 2*curpos);
+					cout << color(COLOR_YELLOW,"Contained in method precondition: ") << mprecontains << endl;
+					print_n_spaces(1 + 2*curpos);
+					cout << color(COLOR_YELLOW,"Contained in method effect: ") << meffcontains << endl;
+					print_n_spaces(1 + 2*curpos);
+					cout << color(COLOR_YELLOW,"Contained in method constraints: ") << mconstraintscontains << endl;
+				}
+
+				// this variables does not have to be assigned, we can do this later on
+				if (!meffcontains && !mconstraintscontains) {
+					// if there is no constant for the variable ..
+					if (!sorts[sort].size()) return ret;
+					continue;
+				} else {
+					for (string varVal : sorts[sort]){
+						map<string,string> newVariableAssignment = variableAssignment;
+						newVariableAssignment[varDecl.first] = varVal;
+						if (debugMode){
+							print_n_spaces(1 + 2*curpos+1);
+							cout << color(COLOR_PURPLE,"Assigning variable ") << varDecl.first << " to " << varVal << endl;
+						}
+
+						auto recursive = generateAssignmentsDFS(m, tasks, doneIDs,
+											   subtasks, curpos + 1,
+											   newVariableAssignment, matching,
+											   varDecls, useOrderInformation, debugMode);
+		
+						for (auto r : recursive) ret.push_back(r);
+					}
+					// expanded all possible values for variable
+					return ret;
+				}
 			}
 		}
 
@@ -410,6 +533,7 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 		}
 		for (pair<string,string> varDecl : varDecls){
 			string sort = varDecl.second;
+			if (!variableAssignment.count(varDecl.first)) continue; // this variables does not need to be assigned yet.
 			string param = variableAssignment[varDecl.first];
 			if (!sorts[sort].count(param)){
 				if (debugMode){
@@ -659,7 +783,7 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 					print_n_spaces(1+2*level+1);
 					cout << "Evaluating the method precondition" << endl;
 				}
-				if (evaluateFormulaOnState(m.prec,current_state,method_variable_values[source],false,debugMode, level+1)){
+				if (evaluateFormulaOnStateWithMissingAssignments(m.vars,m.prec,current_state,method_variable_values[source],false,debugMode, level+1)){
 					if (m.eff->isEmpty()){
 						if (debugMode){
 							print_n_spaces(1+2*level+1);
@@ -824,7 +948,8 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		map<int,map<string,string>> & chosen_method_matchings,
 		// chosen non-unique matching positions
 		vector<pair<int,int>> & chosen_non_unique_matchings,
-		map<int,set<int>> & forbidden_matchings,
+		set<vector<pair<int,int>>> & forbidden_matchings,
+		bool & backtrackForbidden,
 		bool uniqueMatching,
 		bool rootTask,
 		int debugMode,
@@ -856,6 +981,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 	}
 	
 	bool foundMatching = false;
+	bool allMatchingsAreForbidden = true;
 
 	// now try all orderings
 	for (size_t matchingNr = 0; matchingNr < matchings[currentTask].size(); matchingNr++){
@@ -865,14 +991,19 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			print_n_spaces(1+2*level+1);
 			cout << color(COLOR_PURPLE,"Attempting matching") << endl;
 		}
+		
+		if (matchings[currentTask].size() > 1) chosen_non_unique_matchings.push_back(make_pair(currentTask,matchingNr));
 
-		if (forbidden_matchings[currentTask].count(matchingNr)){
+		if (forbidden_matchings.count(chosen_non_unique_matchings)){
 			if (debugMode){
 				print_n_spaces(1+2*level+1);
 				cout << color(COLOR_RED,"Matching is forbidden due to previous unsuccessful attempt.") << endl;
 			}
+			if (matchings[currentTask].size() > 1) chosen_non_unique_matchings.pop_back();
 			continue;
 		}
+
+		allMatchingsAreForbidden = false;
 
 
 		// check all orderings
@@ -898,15 +1029,17 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			print_n_spaces(1+2*level+1);
 			cout << color(COLOR_RED,"Bad ordering.") << endl;
 		}
-		if (badOrdering) continue;
+		if (badOrdering) {
+			if (matchings[currentTask].size() > 1) chosen_non_unique_matchings.pop_back();
+			continue;
+		}
 
-		if (matchings[currentTask].size() > 1) chosen_non_unique_matchings.push_back(make_pair(currentTask,matchingNr));
 
 		// check recursively
 		bool subtasksOk = true;
 		vector<pair<int,int>> recursiveEdges;
 		for (int st : subtasksForTask[currentTask]){
-			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings, uniqueMatching,false,debugMode,level+1);
+			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings, backtrackForbidden, uniqueMatching,false,debugMode,level+1);
 			// add all edges to result
 			recursiveEdges.insert(recursiveEdges.end(),linearisation.second.begin(), linearisation.second.end());
 			subtasksOk &= linearisation.first.first;
@@ -914,7 +1047,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		
 		// if any subtask is not possible, just try the next one
 		if (!subtasksOk) {
-			chosen_non_unique_matchings.pop_back();
+			if (matchings[currentTask].size() > 1) chosen_non_unique_matchings.pop_back();
 			continue;
 		}
 
@@ -993,7 +1126,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				}
 			}
 
-			if (!executeDAG(num_prec, successors, init_set, parsedMethodForTask, tasks, chosen_method_matchings, task_variable_values, taskIDToParsedTask, uniqueMatching,debugMode,level+1)){
+			if (backtrackForbidden || !executeDAG(num_prec, successors, init_set, parsedMethodForTask, tasks, chosen_method_matchings, task_variable_values, taskIDToParsedTask, uniqueMatching,debugMode,level+1)){
 				if (debugMode){
 					print_n_spaces(1+2*level+1);
 					cout << color(COLOR_RED,"Cannot find executable linearisation.") << endl;
@@ -1010,15 +1143,18 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				} else {
 					if (debugMode){
 						print_n_spaces(1+2*level-1);
-						cout << endl << color(COLOR_RED,"Forbidding deepest matching: ") << chosen_non_unique_matchings.back().first << 
-							" -> " << chosen_non_unique_matchings.back().second << endl;
+						cout << endl << color(COLOR_RED,"Forbidding deepest matching:");
+						for (auto pp : chosen_non_unique_matchings)
+							cout << " " << pp.first << "->" << pp.second;
+						cout << endl;
 					}
 
-					forbidden_matchings[chosen_non_unique_matchings.back().first].insert(chosen_non_unique_matchings.back().second);
+					forbidden_matchings.insert(chosen_non_unique_matchings);
 					chosen_non_unique_matchings.clear();
 					chosen_method_matchings.clear();
 				
-					return findLinearisation(currentTask,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings,true,true,debugMode,0);
+					backtrackForbidden = false;
+					return findLinearisation(currentTask,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings,backtrackForbidden, true,true,debugMode,0);
 				}
 			}
 			if (debugMode){
@@ -1032,6 +1168,19 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			cout << color(COLOR_GREEN,"Ordering OK.") << endl;
 		}
 		return make_pair(make_pair(true,true),recursiveEdges);
+	}
+
+	if (allMatchingsAreForbidden && matchings[currentTask].size() > 1){
+		
+		for (size_t matchingNr = 0; matchingNr < matchings[currentTask].size(); matchingNr++){
+			// remove all matching pertaining to the current situation
+			chosen_non_unique_matchings.push_back(make_pair(currentTask,matchingNr));
+			forbidden_matchings.erase(chosen_non_unique_matchings);
+			chosen_non_unique_matchings.pop_back();
+		}
+
+		backtrackForbidden = true;
+		return make_pair(make_pair(true,true),vector<pair<int,int>>());
 	}
 
 	return make_pair(make_pair(foundMatching, false),vector<pair<int,int>>()); // no good matching found
@@ -1330,11 +1479,12 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 
 	map<int,map<string,string>> chosen_method_matchings;
 	vector<pair<int,int>> chosen_non_unique_matchings;
-	map<int,set<int>> forbidden_matchings;
+	set<vector<pair<int,int>>> forbidden_matchings;
+	bool irrelevant;
 	if (debugMode){
 		cout << color(COLOR_YELLOW,"Check whether primitive plan is a linearisation of the orderings resulting from applied decomposition methods.", MODE_UNDERLINE) << endl;
 	}
-	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings,true,true,debugMode,0);
+	pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(root_task,parsedMethodForTask,tasks,subtasksForTask,possibleMethodInstantiations,pos_in_primitive_plan,primitive_plan,taskVariableValues,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings,irrelevant,true,true,debugMode,0);
 	if (debugMode){
 		cout << "Result " << linearisation.first.first << " " << linearisation.first.second << endl;
 	}
