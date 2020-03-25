@@ -126,6 +126,7 @@ void simple_hddl_output(ostream & dout){
 
 	map<string,int> predicates;
 	vector<pair<string,predicate_definition>> predicate_out;
+	vector<pair<string,string>> mutexPredicates;
 	for (auto p : predicate_definitions){
 		predicates["+" + p.name] = predicates.size();
 		predicate_out.push_back(make_pair("+" + p.name, p));
@@ -133,6 +134,9 @@ void simple_hddl_output(ostream & dout){
 		if (neg_pred.count(p.name)){
 			predicates["-" + p.name] = predicates.size();
 			predicate_out.push_back(make_pair("-" + p.name, p));
+
+			// + and - predicates are known mutexes ...
+			mutexPredicates.push_back(make_pair("+" + p.name, "-" + p.name));
 		}
 	}
 
@@ -199,6 +203,15 @@ void simple_hddl_output(ostream & dout){
 		dout << endl;
 	}
 	dout << "#end_predicates" << endl;
+	
+	dout << "#begin_predicate_mutexes" << endl;
+	dout << mutexPredicates.size() << endl;
+	for (auto [one, two] : mutexPredicates){
+		dout << predicates[one] << " " << predicates[two] << endl; 
+	}
+	dout << "#end_predicate_mutexes" << endl;
+	
+	
 	dout << "#number_of_functions" << endl;
 	dout << function_declarations.size() << endl;
 	dout << "#function_declarations_with_number_of_arguments_and_argument_sorts" << endl;
@@ -324,7 +337,7 @@ void simple_hddl_output(ostream & dout){
 				}
 
 				// effect
-				string p = (ceff.effect.positive ? "+" : "-") + ceff.effect.predicate;
+				string p = (ceff.effect.positive ? "-" : "+") + ceff.effect.predicate;
 				dout << "  "  << predicates[p]; // two spaces for better human readability
 				for (string v : ceff.effect.arguments) dout << " " << v_id[v];
 

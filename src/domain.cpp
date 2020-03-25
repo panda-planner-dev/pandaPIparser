@@ -59,6 +59,11 @@ void flatten_tasks(bool compileConditionalEffects){
 				bool contained = false;
 				for (auto pre : t.prec) for (auto arg : pre.arguments) contained |= v.first == arg;
 				for (auto eff : t.eff) for (auto arg : eff.arguments) contained |= v.first == arg;
+				for (auto ceff : t.ceff) {
+					for (auto arg : ceff.effect.arguments) contained |= v.first == arg;
+					for (auto cond : ceff.condition)
+						for (auto arg : cond.arguments) contained |= v.first == arg;
+				}
 
 				if (!contained) continue;
 				t.vars.push_back(v);
