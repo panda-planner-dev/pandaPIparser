@@ -47,6 +47,7 @@ vector<int> parse_list_of_integers(istringstream & ss, int debugMode){
 
 vector<int> parse_list_of_integers(string & line, int debugMode){
 	if (debugMode) cout << "Reading list of integers from \"" << line << "\"" << endl;
+	if (!line.size()) return vector<int>();
 	istringstream ss (line);
 	return parse_list_of_integers(ss,debugMode);
 }
@@ -117,9 +118,14 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 	
 
 	if (debugMode) cout << "Reading plan given as input" << endl;
+	bool planAlreadyEnded = false;
 	while (1){
 		string head; plan >> head;
 		if (head == "root") break;
+		if (head == "<=="){
+			planAlreadyEnded = true;
+			break;
+		}
 		int id = atoi(head.c_str());
 		if (id < 0){
 			cout << color(COLOR_RED,"Negative id: ") << color(COLOR_RED,to_string(id)) << endl;
@@ -144,7 +150,7 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 
 
 	if (debugMode) cout << "Size of primitive plan: " << pplan.primitive_plan.size() << endl;
-	string root_line; getline(plan,root_line);
+	string root_line = ""; if (!planAlreadyEnded) getline(plan,root_line);
 	pplan.root_tasks = parse_list_of_integers(root_line, debugMode);
 	if (debugMode) {
 		cout << "Root tasks (" << pplan.root_tasks .size() << "):";
@@ -154,7 +160,7 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 
 
 	if (debugMode) cout << "Reading plan given as input" << endl;
-	while (1){
+	if (!planAlreadyEnded) while (1){
 		string line;
 		getline(plan,line);
 		if (plan.eof()) {
