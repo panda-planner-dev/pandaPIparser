@@ -454,11 +454,27 @@ void executeFormulaOnState(general_formula * f, set<ground_literal> & old_state,
 	executeFormulaOnState(f,old_state,add,del,variable_assignment, debugMode, level);
 
 	// add effects take precedence over delete effects
-	for (ground_literal gl : del)
+	for (ground_literal gl : del){
+		if (debugMode) {
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_CYAN,"Removing fact from state: ");
+			cout << gl.predicate;
+			for (string a : gl.args) cout << " " << a;
+			cout << endl;
+		}
 		new_state.erase(gl);
+	}
 	
-	for (ground_literal gl : add)
+	for (ground_literal gl : add){
+		if (debugMode) {
+			print_n_spaces(1+2*level);
+			cout << color(COLOR_CYAN,"Adding fact to state: ");
+			cout << gl.predicate;
+			for (string a : gl.args) cout << " " << a;
+			cout << endl;
+		}
 		new_state.insert(gl);
+	}
 }
 
 
@@ -1213,7 +1229,7 @@ bool check_executability_of_primitive_plan(parsed_plan & plan, map<int,parsed_ta
 		if (debugMode){
 			print_n_spaces(1);
 			cout << color(COLOR_BLUE,"The new state is:") << endl;
-			for (ground_literal literal : current_state){
+			for (ground_literal literal : new_state){
 				print_n_spaces(1);
 				cout << "  " << literal.predicate;
 				for (string arg : literal.args)	cout << " " << arg;
@@ -1254,12 +1270,12 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 
 	parsed_plan pplan = parse_plan(plan,debugMode);
 
-	map<int,instantiated_plan_step> tasks = pplan.tasks;
-	vector<int> primitive_plan = pplan.primitive_plan;
-	map<int,int> pos_in_primitive_plan = pplan.pos_in_primitive_plan;
-	map<int,string> appliedMethod = pplan.appliedMethod;
-	map<int,vector<int>> subtasksForTask = pplan.subtasksForTask;
-	vector<int> parsed_root_tasks = pplan.root_tasks;
+	map<int,instantiated_plan_step> & tasks = pplan.tasks;
+	vector<int> & primitive_plan = pplan.primitive_plan;
+	map<int,int> & pos_in_primitive_plan = pplan.pos_in_primitive_plan;
+	map<int,string> & appliedMethod = pplan.appliedMethod;
+	map<int,vector<int>> & subtasksForTask = pplan.subtasksForTask;
+	vector<int> & parsed_root_tasks = pplan.root_tasks;
 	
 	// if the input does not use the __top task, add it so that we can check the initial plan uniformly
 	int root_task;
@@ -1276,6 +1292,8 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 		tasks[root_task] = top;
 		appliedMethod[root_task] = "__top_method";
 		subtasksForTask[root_task] = parsed_root_tasks;
+	} else if (parsed_root_tasks.size() == 0){
+		root_task = -1;
 	} else {
 		root_task = parsed_root_tasks[0];
 	}
@@ -1325,8 +1343,32 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 
 		if (domain_task.name == "__none_found"){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" and task name \"" + ps.name + "\" is not declared in the domain.") << endl;
-			wrongTaskDeclarations = true;
-			continue;
+			
+			// trying lower casing ...
+			for (parsed_task prim : parsed_primitive){
+				string lower_c = prim.name;
+				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
+				
+				if (lower_c == ps.name)
+					domain_task = prim;
+			}
+		
+			for (parsed_task & abstr : parsed_abstract){
+				string lower_c = abstr.name;
+				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
+				
+				if (lower_c == ps.name)
+					domain_task = abstr, foundInPrimitive = false;
+			}
+
+			
+			if (domain_task.name == "__none_found"){
+				cout << color(COLOR_RED, "Also did not find it as lower case.") << endl;
+				wrongTaskDeclarations = true;
+				continue;
+			} else {
+				cout << color(COLOR_GREEN, "Found task " + domain_task.name + " for which the given task is a lower case variant.") << endl;
+			}
 		}
 		
 		taskIDToParsedTask[entry.first] = domain_task;
@@ -1352,8 +1394,42 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 			// check that the parameter is part of the variable's sort
 			if (sorts[argumentSort].count(param) == 0){
 				cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has the parameter " + param + " assigned to variable " + domain_task.arguments->vars[arg].first + " of sort " + argumentSort + " - but the parameter is not a member of this sort.") << endl;
-				wrongTaskDeclarations = true;
-				continue;
+
+
+				// maybe someone used lower case?
+				// try to find a constant for which this one is an lower case version ...
+				string alternative_constant = "";
+				for (const auto & s : sorts){
+					for (const string c : s.second){
+						string lower_c = c;
+						transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
+
+						if (lower_c == param){
+							cout << color(COLOR_YELLOW, "Found constant " + c + " for which the parameter " +  param + " is a lower case version. I'm using this one.") << endl;
+							alternative_constant = c;
+							break;
+						}
+					}
+					if (alternative_constant.size()) break; // found constant
+				}
+				
+				bool replacement_ok = false;
+
+				if (alternative_constant.size()){
+					if (sorts[argumentSort].count(alternative_constant)){
+						cout << color(COLOR_GREEN, "New constant is fine.") << endl;
+						replacement_ok = true;
+						ps.arguments[arg] = alternative_constant;
+						param = alternative_constant; // for taskVariableValues
+					} else {
+						cout << color(COLOR_RED, "New constant does also not work.") << endl;
+					}
+				}
+
+				if (!replacement_ok) {
+					wrongTaskDeclarations = true;
+					continue;
+				}
 			}
 			taskVariableValues[entry.first][domain_task.arguments->vars[arg].first] = param;
 		}
