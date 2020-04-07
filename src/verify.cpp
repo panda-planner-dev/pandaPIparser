@@ -1349,8 +1349,10 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 				string lower_c = prim.name;
 				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
 				
-				if (lower_c == ps.name)
+				if (lower_c == ps.name){
 					domain_task = prim;
+					ps.name = prim.name;
+				}
 			}
 		
 			for (parsed_task & abstr : parsed_abstract){
@@ -1358,7 +1360,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
 				
 				if (lower_c == ps.name)
-					domain_task = abstr, foundInPrimitive = false;
+					domain_task = abstr, ps.name = abstr.name, foundInPrimitive = false;
 			}
 
 			
@@ -1407,6 +1409,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 						if (lower_c == param){
 							cout << color(COLOR_YELLOW, "Found constant " + c + " for which the parameter " +  param + " is a lower case version. I'm using this one.") << endl;
 							alternative_constant = c;
+							ps.arguments[arg] = c;
 							break;
 						}
 					}
