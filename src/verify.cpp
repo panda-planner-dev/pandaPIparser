@@ -1346,11 +1346,14 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 			
 			if (lenientMode){
 				// trying lower casing ...
+				string ps_name = ps.name;
+				transform(ps_name.begin(), ps_name.end(), ps_name.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+
 				for (parsed_task prim : parsed_primitive){
 					string lower_c = prim.name;
 					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
 					
-					if (lower_c == ps.name){
+					if (lower_c == ps_name){
 						domain_task = prim;
 						ps.name = prim.name;
 					}
@@ -1360,7 +1363,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 					string lower_c = abstr.name;
 					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
 					
-					if (lower_c == ps.name)
+					if (lower_c == ps_name)
 						domain_task = abstr, ps.name = abstr.name, foundInPrimitive = false;
 				}
 			}
@@ -1406,12 +1409,15 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 				bool replacement_ok = false;
 				
 				if (lenientMode){
+					string lower_param = param;
+					transform(lower_param.begin(), lower_param.end(), lower_param.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+					
 					for (const auto & s : sorts){
 						for (const string c : s.second){
 							string lower_c = c;
 							transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
 
-							if (lower_c == param){
+							if (lower_c == lower_param){
 								cout << color(COLOR_YELLOW, "Found constant " + c + " for which the parameter " +  param + " is a lower case version. I'm using this one.") << endl;
 								alternative_constant = c;
 								ps.arguments[arg] = c;
@@ -1511,12 +1517,15 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" is decomposed with method \"" + entry.second + "\", but there is no such method.") << endl;
 			
 			if (lenientMode) {
+				string entry_second = entry.second;
+				transform(entry_second.begin(), entry_second.end(), entry_second.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+				
 				for (parsed_method & mm : parsed_methods[taskName]) {
 					// translate the model's name to lower case
 					string lower_c = mm.name;
 					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
 					
-					if (lower_c == entry.second){
+					if (lower_c == entry_second){
 						m = mm;
 						entry.second = mm.name;
 					}
