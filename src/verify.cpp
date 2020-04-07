@@ -1266,7 +1266,7 @@ bool check_executability_of_primitive_plan(parsed_plan & plan, map<int,parsed_ta
 
 
 
-bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
+bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int debugMode){
 
 	parsed_plan pplan = parse_plan(plan,debugMode);
 
@@ -1344,28 +1344,30 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 		if (domain_task.name == "__none_found"){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" and task name \"" + ps.name + "\" is not declared in the domain.") << endl;
 			
-			// trying lower casing ...
-			for (parsed_task prim : parsed_primitive){
-				string lower_c = prim.name;
-				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
-				
-				if (lower_c == ps.name){
-					domain_task = prim;
-					ps.name = prim.name;
+			if (lenientMode){
+				// trying lower casing ...
+				for (parsed_task prim : parsed_primitive){
+					string lower_c = prim.name;
+					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+					
+					if (lower_c == ps.name){
+						domain_task = prim;
+						ps.name = prim.name;
+					}
 				}
-			}
 		
-			for (parsed_task & abstr : parsed_abstract){
-				string lower_c = abstr.name;
-				transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
-				
-				if (lower_c == ps.name)
-					domain_task = abstr, ps.name = abstr.name, foundInPrimitive = false;
+				for (parsed_task & abstr : parsed_abstract){
+					string lower_c = abstr.name;
+					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+					
+					if (lower_c == ps.name)
+						domain_task = abstr, ps.name = abstr.name, foundInPrimitive = false;
+				}
 			}
 
 			
 			if (domain_task.name == "__none_found"){
-				cout << color(COLOR_RED, "Also did not find it as lower case.") << endl;
+				if (lenientMode) cout << color(COLOR_RED, "Also did not find it as lower case.") << endl;
 				wrongTaskDeclarations = true;
 				continue;
 			} else {
@@ -1401,31 +1403,33 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 				// maybe someone used lower case?
 				// try to find a constant for which this one is an lower case version ...
 				string alternative_constant = "";
-				for (const auto & s : sorts){
-					for (const string c : s.second){
-						string lower_c = c;
-						transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ return tolower(c); });
-
-						if (lower_c == param){
-							cout << color(COLOR_YELLOW, "Found constant " + c + " for which the parameter " +  param + " is a lower case version. I'm using this one.") << endl;
-							alternative_constant = c;
-							ps.arguments[arg] = c;
-							break;
-						}
-					}
-					if (alternative_constant.size()) break; // found constant
-				}
-				
 				bool replacement_ok = false;
+				
+				if (lenientMode){
+					for (const auto & s : sorts){
+						for (const string c : s.second){
+							string lower_c = c;
+							transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
 
-				if (alternative_constant.size()){
-					if (sorts[argumentSort].count(alternative_constant)){
-						cout << color(COLOR_GREEN, "New constant is fine.") << endl;
-						replacement_ok = true;
-						ps.arguments[arg] = alternative_constant;
-						param = alternative_constant; // for taskVariableValues
-					} else {
-						cout << color(COLOR_RED, "New constant does also not work.") << endl;
+							if (lower_c == param){
+								cout << color(COLOR_YELLOW, "Found constant " + c + " for which the parameter " +  param + " is a lower case version. I'm using this one.") << endl;
+								alternative_constant = c;
+								ps.arguments[arg] = c;
+								break;
+							}
+						}
+						if (alternative_constant.size()) break; // found constant
+					}
+
+					if (alternative_constant.size()){
+						if (sorts[argumentSort].count(alternative_constant)){
+							cout << color(COLOR_GREEN, "New constant is fine.") << endl;
+							replacement_ok = true;
+							ps.arguments[arg] = alternative_constant;
+							param = alternative_constant; // for taskVariableValues
+						} else {
+							cout << color(COLOR_RED, "New constant does also not work.") << endl;
+						}
 					}
 				}
 
@@ -1505,8 +1509,27 @@ bool verify_plan(istream & plan, bool useOrderInformation, int debugMode){
 
 		if (m.name == "__no_method"){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" is decomposed with method \"" + entry.second + "\", but there is no such method.") << endl;
-			wrongMethodApplication  = true;
-			continue;
+			
+			if (lenientMode) {
+				for (parsed_method & mm : parsed_methods[taskName]) {
+					// translate the model's name to lower case
+					string lower_c = mm.name;
+					transform(lower_c.begin(), lower_c.end(), lower_c.begin(), [](unsigned char c){ if (c == '-') return int('_'); return tolower(c); });
+					
+					if (lower_c == entry.second){
+						m = mm;
+						entry.second = mm.name;
+					}
+				}
+			}
+
+			if (m.name != "__no_method"){
+				cout << color(COLOR_GREEN, "Found method " + m.name + " for which the given method is a lower case variant.") << endl;
+			} else {
+				if (lenientMode) cout << color(COLOR_RED, "Also did not find it as lower case.") << endl;
+				wrongMethodApplication = true;
+				continue;
+			}
 		}
 		parsedMethodForTask[atID] = m;
 

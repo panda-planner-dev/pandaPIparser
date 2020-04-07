@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
 	bool shopOutput = false;
 	bool hpdlOutput = false;
 	bool hddlOutput = false;
+	bool lenientVerify = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
 	bool useOrderInPlanVerification = true;
@@ -78,6 +79,7 @@ int main(int argc, char** argv) {
 		{"verify"                  , optional_argument, NULL,   'v'},
 		{"vverify"                 , no_argument,       NULL,   'V'},
 		{"vvverify"                , no_argument,       NULL,   'W'},
+		{"lenient"                 , no_argument,       NULL,   'l'},
 		{"verify-no-order"         , no_argument,       NULL,   'o'},
 		
 		{"no-color"                , no_argument,       NULL,   'C'},
@@ -88,7 +90,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkh", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhl", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -110,6 +112,7 @@ int main(int argc, char** argv) {
 		} else if (c == 'V') { verifyPlan = true; verbosity = 1; }
 		else if (c == 'W') { verifyPlan = true; verbosity = 2; }
 		else if (c == 'o') { verifyPlan = true; useOrderInPlanVerification = false; }
+		else if (c == 'l') { verifyPlan = true; lenientVerify = true; }
 		else if (c == 'C') no_colors_in_output = true;
 		else if (c == 'd') {
 		   	verboseOutput = true;
@@ -190,7 +193,7 @@ int main(int argc, char** argv) {
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(argv[doutfile]);
-		bool result = verify_plan(*plan, useOrderInPlanVerification, verbosity);
+		bool result = verify_plan(*plan, useOrderInPlanVerification, lenientVerify, verbosity);
 		cout << "Plan verification result: ";
 		if (result) cout << color(COLOR_GREEN,"true",MODE_BOLD);
 		else cout << color(COLOR_RED,"false",MODE_BOLD);
