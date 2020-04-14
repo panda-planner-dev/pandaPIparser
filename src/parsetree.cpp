@@ -79,6 +79,9 @@ general_formula* general_formula::copyReplace(map<string,string> & replace){
 	return ret;
 }
 
+
+int global_exists_variable_counter = 0;
+
 // hard expansion of formulae. This can grow up to exponentially, but is currently the only thing we can do about disjunctions.
 // this will also handle forall and exists quantors by expansion
 // sorts must have been parsed and expanded prior to this call
@@ -127,6 +130,34 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	}
 
 
+	// add additional variables for every quantified variable. We have to do this for every possible instance of the precondition below	
+	if (this->type == EXISTS){
+		map<string,string> var_replace;
+		for(pair<string,string> var : this->qvariables.vars){
+			string newName = var.first + "_" + to_string(++global_exists_variable_counter);
+			var_replace[var.first] = newName;
+		}
+		this->subformulae[0] = this->subformulae[0]->copyReplace(var_replace);
+
+
+
+		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > cur = 
+			this->subformulae[0]->expand(compileConditionalEffects);
+		for(pair<string,string> var : this->qvariables.vars){
+			vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > prev = cur;
+			cur.clear();
+			string newName = var.first + "_" + to_string(++global_exists_variable_counter);
+
+			
+			for(auto old : prev){
+				pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >,  additional_variables>	combined = old;
+				combined.second.insert(make_pair(var_replace[var.first],var.second));
+				cur.push_back(combined);
+			}
+		}
+		return cur;
+	}
+
 
 
 	vector<vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > > subresults;
@@ -150,23 +181,6 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 			}
 		}
 		ret = cur;
-	}
-
-	// add additional variables for every quantified variable. We have to do this for every possible instance of the precondition below	
-	if (this->type == EXISTS){
-		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > cur = subresults[0];	
-		for(pair<string,string> var : this->qvariables.vars){
-			vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > prev = cur;
-			cur.clear();
-			for(auto old : prev){
-				pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >,  additional_variables>	combined = old;
-				combined.second.insert(var);
-				cur.push_back(combined);
-			}
-		}
-		ret = cur;
-		// we cannot generate more possible expansions.
-		assert(ret.size() == subresults[0].size());
 	}
 
 
