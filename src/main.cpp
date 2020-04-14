@@ -21,6 +21,7 @@
 #include "typeof.hpp"
 #include "util.hpp"
 #include "verify.hpp"
+#include "properties.hpp"
 
 using namespace std;
 
@@ -63,6 +64,7 @@ int main(int argc, char** argv) {
 	bool verifyPlan = false;
 	bool useOrderInPlanVerification = true;
 	bool convertPlan = false;
+	bool showProperties = false;
 	int verbosity = 0;
 	
 	struct option options[] = {
@@ -85,12 +87,14 @@ int main(int argc, char** argv) {
 		{"no-color"                , no_argument,       NULL,   'C'},
 		{"debug"                   , optional_argument, NULL,   'd'},
 		
+		{"properties"              , optional_argument, NULL,   'p'},
+		
 		{NULL                      , 0,                 NULL,   0},
 	};
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhl", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhlp", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -114,6 +118,7 @@ int main(int argc, char** argv) {
 		else if (c == 'o') { verifyPlan = true; useOrderInPlanVerification = false; }
 		else if (c == 'l') { verifyPlan = true; lenientVerify = true; }
 		else if (c == 'C') no_colors_in_output = true;
+		else if (c == 'p') showProperties = true;
 		else if (c == 'd') {
 		   	verboseOutput = true;
 			if (optarg) verbosity = atoi(optarg);
@@ -184,6 +189,11 @@ int main(int argc, char** argv) {
 	// parse the domain file
 	run_parser_on_file(domain_file, argv[dfile]);
 	run_parser_on_file(problem_file, argv[pfile]);
+
+	if (showProperties){
+		printProperties();
+		return 0;
+	}
 
 	if (!hpdlOutput) expand_sorts(); // add constants to all sorts
 	

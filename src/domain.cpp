@@ -169,6 +169,7 @@ void parsed_method_to_data_structures(bool compileConditionalEffects){
 
 		// compute flattening of method precondition
 		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > precs = pm.prec->expand(false); // precondition cannot contain conditional effect
+		
 		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > effs = pm.eff->expand(compileConditionalEffects); // precondition cannot contain conditional effect
 
 		bool addPreconditionTask = false;
