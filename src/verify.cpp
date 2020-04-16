@@ -1099,10 +1099,11 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				cout << color(COLOR_YELLOW,"Root Task, checking primitive executability ...",MODE_UNDERLINE) << endl;
 			}
 			// add the total order of the primitive plan
-			for (size_t i = 0; i < primitive_plan.size()-1; i++){
-				// edge from the end of i to the beginning if i+1
-				recursiveEdges.push_back(make_pair(-primitive_plan[i]-1, primitive_plan[i+1]));
-			}
+			if (primitive_plan.size())
+				for (size_t i = 0; i < primitive_plan.size()-1; i++){
+					// edge from the end of i to the beginning if i+1
+					recursiveEdges.push_back(make_pair(-primitive_plan[i]-1, primitive_plan[i+1]));
+				}
 
 			// build helper structures for quadratic(!!) topsort. Since we have to try potentially every linearisation, this is not soo bad. Except when we are totally-ordered
 			map<int,vector<int>> successors;
