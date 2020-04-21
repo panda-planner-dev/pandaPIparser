@@ -56,7 +56,7 @@ If you have any issues with pandaPIparser -- or have any question relating to it
 If you would like to cite pandaPIparser, you may do so my referring to the following paper:
 
 ```
-@inproceedings { Behnke2019Grounding,
+@inproceedings { Behnke2020Grounding,
 		Title = {On Succinct Groundings of HTN Planning Problems},
 		Year = {2020},
 		Booktitle = {Proceedings of the 34th {AAAI} Conference on Artificial Intelligence ({AAAI} 2020)},
