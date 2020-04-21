@@ -57,7 +57,7 @@ If you would like to cite pandaPIparser, you may do so my referring to the follo
 
 ```
 @inproceedings { Behnke2020Grounding,
-		Title = {On Succinct Groundings of HTN Planning Problems},
+		Title = {On Succinct Groundings of {HTN} Planning Problems},
 		Year = {2020},
 		Booktitle = {Proceedings of the 34th {AAAI} Conference on Artificial Intelligence ({AAAI} 2020)},
 		Publisher = {{AAAI Press}},
