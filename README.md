@@ -55,6 +55,7 @@ If you have any issues with pandaPIparser -- or have any question relating to it
 ## Reference
 If you would like to cite pandaPIparser, you may do so my referring to the following paper:
 
+{% raw %}
 ```
 @inproceedings { Behnke2020Grounding,
 		Title = {On Succinct Groundings of {HTN} Planning Problems},
@@ -64,3 +65,4 @@ If you would like to cite pandaPIparser, you may do so my referring to the follo
 		Author = {Behnke, Gregor and H{\"o}ller, Daniel and Schmid, Alexander and Bercher, Pascal and Biundo, Susanne}
 }
 ```
+{% endraw %}
