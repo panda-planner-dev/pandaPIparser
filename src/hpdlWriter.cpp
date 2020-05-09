@@ -289,6 +289,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 	dout << "  (:constants" << endl;
 	pout << "  (:objects" << endl;
+	const int MAX_OBJECTS_PER_LINE = 2000;
 	for (auto & s_entry : sorts){
 		// don't write sorts that are artificial
 		if (s_entry.first.rfind("sort_for", 0) == 0) continue;
@@ -305,13 +306,31 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 		
 		if (dconst.size()){
 			dout << "   ";
-			for(string constant : dconst) dout << " " << constant;
-			dout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
+			int counter = 0;
+			for(string constant : dconst) {
+				counter += 1;
+				if (counter >= MAX_OBJECTS_PER_LINE) {
+					counter = 0;
+					dout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
+					dout << "   ";
+				}
+				dout << " " << constant;
+			}
+			if (counter) dout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
 		}
 		if (pconst.size()){
 			pout << "   ";
-			for(string constant : pconst) pout << " " << constant;
-			pout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
+			int counter = 0;
+			for(string constant : pconst) {
+				counter += 1;
+				if (counter >= MAX_OBJECTS_PER_LINE) {
+					counter = 0;
+					pout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
+					pout << "   ";
+				}
+				pout << " " << constant;
+			}
+			if (counter) pout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
 		}
 	}
 	pout << "  )" << endl << endl;
