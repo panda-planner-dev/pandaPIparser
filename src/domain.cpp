@@ -7,12 +7,44 @@
 
 using namespace std;
 
+
+string GUARD_PREDICATE="ce_guard";
+
+void add_to_method_as_last(method & m, plan_step ps){
+	for (auto & ops : m.ps)
+		m.ordering.push_back(make_pair(ops.id, ps.id));
+
+	m.ps.push_back(ps);
+}
+
+
 void flatten_tasks(bool compileConditionalEffects){
+	compileConditionalEffects = false;
+	bool linearConditionalEffectExpansion = true;
+	
+	if (linearConditionalEffectExpansion){
+		predicate_definition guardPredicate;
+		guardPredicate.name = GUARD_PREDICATE;
+		guardPredicate.argument_sorts.clear();
+
+		predicate_definitions.push_back(guardPredicate);
+	}
+
+
 	for(parsed_task a : parsed_primitive){
 		// expand the effects first, as they will contain only one element
 		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > elist = a.eff->expand(compileConditionalEffects);
 
 		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > plist = a.prec->expand(false); // precondition cannot contain conditional effects
+		
+		// determine whether any expansion has a conditional effect
+		bool expansionHasConditionalEffect = false;
+		if (linearConditionalEffectExpansion)
+			for (auto e : elist)
+				for (auto eff : e.first.first)
+					if (holds_alternative<conditional_effect>(eff))
+						expansionHasConditionalEffect = true;
+		
 		int i = 0;
 		for(auto e : elist) for(auto p : plist){
 			assert(p.first.second.size() == 0); // precondition cannot contain conditional effects
@@ -27,7 +59,21 @@ void flatten_tasks(bool compileConditionalEffects){
 					t.prec.push_back(get<literal>(pl));
 			}
 
-			// add preconditions for conditional effects
+			if (linearConditionalEffectExpansion && expansionHasConditionalEffect){
+				// don't do this task if we are in an CE phase
+				literal l;
+				l.positive = false;
+				l.predicate = GUARD_PREDICATE;
+				l.arguments.clear();
+				t.prec.push_back(l);
+
+
+				// also if we do this task, we are in CE mode 
+				l.positive = true;
+				t.eff.push_back(l);
+			}
+
+			// add preconditions for conditional effects (if exponentially compiled)
 			for(literal ep : e.first.second){
 				assert(ep.predicate != dummy_equal_literal);
 				t.prec.push_back(ep);
@@ -69,8 +115,13 @@ void flatten_tasks(bool compileConditionalEffects){
 				t.vars.push_back(v);
 			}
 
-			if (plist.size() > 1 || elist.size() > 1) {
-				t.name += "|instance_" + to_string(i);
+			if (plist.size() > 1 || elist.size() > 1 || expansionHasConditionalEffect) {
+				
+				if (plist.size() > 1 || elist.size() > 1)
+					t.name += "|instance_" + to_string(i);
+				if (expansionHasConditionalEffect)
+					t.name += "|ce_base_action";
+;
 				// we have to create a new decomposition method at this point
 				method m;
 				m.name = "_method_for_multiple_expansions_of_" + t.name; // must start with an underscore s.t. this method is applied by the solution compiler
@@ -82,6 +133,151 @@ void flatten_tasks(bool compileConditionalEffects){
 				ps.id = "id0";
 				for(auto v : m.vars) ps.args.push_back(v.first);
 				m.ps.push_back(ps);
+
+
+				if (linearConditionalEffectExpansion){
+					// construct action applying the conditional effect
+				
+					literal l;
+					l.positive = false;
+					l.predicate = GUARD_PREDICATE;
+					l.arguments.clear();
+
+					int j = 0;
+					for (conditional_effect & ceff : t.ceff){
+						task ce_at;
+						ce_at.name = "__ce_" + to_string(j) + "_" + t.name;
+						ce_at.vars = t.vars;
+						ce_at.number_of_original_vars = t.number_of_original_vars;
+						ce_at.constraints.clear();
+						ce_at.costExpression.clear();
+
+						abstract_tasks.push_back(ce_at);						
+						ps.task = ce_at.name;
+						ps.id = "id_ce_" + to_string(j);
+						ps.args.clear();
+						for(auto v : t.vars) ps.args.push_back(v.first);
+						add_to_method_as_last(m,ps);
+					
+
+						predicate_definition argument_predicate;
+						argument_predicate.name = "pred_" + ce_at.name;
+						literal argument_literal;
+						argument_literal.positive = true;
+						argument_literal.predicate = argument_predicate.name;
+						for(auto v : t.vars){
+							argument_predicate.argument_sorts.push_back(v.second);
+							argument_literal.arguments.push_back(v.first);
+						}
+						predicate_definitions.push_back(argument_predicate);
+
+						t.eff.push_back(argument_literal);
+
+
+						// add methods for this task, first the one that actually apply the CE
+						task ce_yes;
+						ce_yes.name = "__ce_yes_" + to_string(j) + "_" + t.name;
+						ce_yes.vars = t.vars;
+						ce_yes.number_of_original_vars = t.number_of_original_vars;
+						ce_yes.constraints.clear();
+						ce_yes.costExpression.clear();
+						ce_yes.prec = ceff.condition;
+						ce_yes.eff.push_back(ceff.effect);
+						// additional preconditions
+						l.positive = true;
+						ce_yes.prec.push_back(l);
+						argument_literal.positive = true;
+						ce_yes.prec.push_back(argument_literal);
+						argument_literal.positive = false;
+						ce_yes.eff.push_back(argument_literal);
+						primitive_tasks.push_back(ce_yes);
+		
+						method m_ce;
+						m_ce.name = "_method_for_ce_yes_" + ce_at.name;
+						m_ce.at = ce_at.name;
+						m_ce.vars = ce_at.vars;
+						for(auto v : ce_at.vars) m_ce.atargs.push_back(v.first);
+						plan_step ps;
+						ps.task = ce_yes.name;
+						ps.id = "id0";
+						for(auto v : m_ce.vars) ps.args.push_back(v.first);
+						m_ce.ps.push_back(ps);
+						methods.push_back(m_ce);
+
+						// for every condition of the CE add one possible negation
+						int noCount = 0;
+						for (literal precL : ceff.condition){
+							task ce_no;
+							ce_no.name = "__ce_no_nr_" + to_string(noCount) + "_" + to_string(j) + "_" + t.name;
+							ce_no.vars = t.vars;
+							ce_no.number_of_original_vars = t.number_of_original_vars;
+							ce_no.constraints.clear();
+							ce_no.costExpression.clear();
+							precL.positive = ! precL.positive;
+							ce_no.prec.push_back(precL);
+							argument_literal.positive = true;
+							ce_no.prec.push_back(argument_literal);
+							argument_literal.positive = false;
+							ce_no.eff.push_back(argument_literal);
+							// additional preconditions
+							l.positive = true;
+							ce_no.prec.push_back(l);
+							primitive_tasks.push_back(ce_no);
+		
+							method m_ce;
+							m_ce.name = "_method_for_ce_no_" + to_string(noCount++)  + ce_at.name;
+							m_ce.at = ce_at.name;
+							m_ce.vars = ce_at.vars;
+							for(auto v : ce_at.vars) m_ce.atargs.push_back(v.first);
+							plan_step ps;
+							ps.task = ce_no.name;
+							ps.id = "id0";
+							for(auto v : m_ce.vars) ps.args.push_back(v.first);
+							m_ce.ps.push_back(ps);
+							methods.push_back(m_ce);
+	
+						}
+
+
+
+						// increment
+						j++;
+					}
+
+					// remove conditional effects from main task
+					t.ceff.clear();
+
+
+				
+					// lastly, we need an action that ends the CE
+					task end_ce_phase;
+					end_ce_phase.name = "__end_ce_for_" + t.name; 
+					end_ce_phase.vars = t.vars;
+					end_ce_phase.number_of_original_vars = t.number_of_original_vars;
+					end_ce_phase.constraints.clear();
+					end_ce_phase.costExpression.clear();
+				
+					l.positive = false;
+					end_ce_phase.eff.push_back(l);
+					
+					// add as preconditions that all conditional effects have been handled, i.e. no pending ones remain
+					
+					end_ce_phase.check_integrity();
+					primitive_tasks.push_back(end_ce_phase);	
+					
+					ps.task = end_ce_phase.name;
+					ps.id = "id_last";
+					ps.args.clear();
+					for(auto v : m.vars) ps.args.push_back(v.first);
+					add_to_method_as_last(m,ps);
+				}
+
+
+
+
+
+
+
 
 				methods.push_back(m);
 				// for this to be ok, we have to create an abstract task in the first round
