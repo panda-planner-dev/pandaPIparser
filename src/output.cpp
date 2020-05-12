@@ -443,7 +443,7 @@ void hddl_output(ostream & dout, ostream & pout){
 
 
 	dout << "(define (domain d)" << endl;
-	dout << "  (:requirements :typing)" << endl;
+	dout << "  (:requirements :typing :hierarchy)" << endl;
 	
 	dout << endl;
 
