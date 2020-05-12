@@ -713,7 +713,7 @@ void getRecursive(int source, vector<int> & allSub,map<int,vector<int>> & subtas
 
 
 bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors, 
-		set<ground_literal> current_state,
+		set<ground_literal> & current_state,
 		map<int,parsed_method> & parsedMethodForTask,
 		map<int,instantiated_plan_step> & tasks,
 		// method instantiation
@@ -936,6 +936,11 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 			}
 		}
 
+		if (branching_sources.size() == 1){
+			// if source is not branching, it is not needed any more
+			current_state.clear();	
+		}
+
 		if (executeDAG(num_prec,successors,new_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation,debugMode,level+(uniqLinearisation?0:1))) return true;
 				
 		for (int succ : successors[source]) num_prec[succ]++;
@@ -1123,13 +1128,13 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				print_n_spaces(1+2*level+1);
 				cout << "Running exponential top-sort." << endl;
 				print_n_spaces(1+2*level+1);
-				cout << color(COLOR_BLUE,"The current state is:") << endl;
-				for (ground_literal literal : init_set){
-					print_n_spaces(1+2*level+2);
-					cout << "  " << literal.predicate;
-					for (string arg : literal.args)	cout << " " << arg;
-						cout << endl;
-				}
+				//cout << color(COLOR_BLUE,"The current state is:") << endl;
+				//for (ground_literal literal : init_set){
+				//	print_n_spaces(1+2*level+2);
+				//	cout << "  " << literal.predicate;
+				//	for (string arg : literal.args)	cout << " " << arg;
+				//		cout << endl;
+				//}
 			}
 
 			if (debugMode == 2){
@@ -1498,7 +1503,10 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 	if (!orphanedTasks) cout << color(COLOR_GREEN,"true",MODE_BOLD) << endl;
 	else cout << color(COLOR_RED,"false",MODE_BOLD) << endl;
 	overallResult &= !orphanedTasks;
+
 	
+	///// if the task declarations are wrong, we can't continue after this point
+	if (wrongTaskDeclarations) return false;
 
 	//=========================================
 	bool wrongMethodApplication = false;
