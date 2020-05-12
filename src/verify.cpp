@@ -1128,13 +1128,13 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 				print_n_spaces(1+2*level+1);
 				cout << "Running exponential top-sort." << endl;
 				print_n_spaces(1+2*level+1);
-				//cout << color(COLOR_BLUE,"The current state is:") << endl;
-				//for (ground_literal literal : init_set){
-				//	print_n_spaces(1+2*level+2);
-				//	cout << "  " << literal.predicate;
-				//	for (string arg : literal.args)	cout << " " << arg;
-				//		cout << endl;
-				//}
+				cout << color(COLOR_BLUE,"The current state is:") << endl;
+				for (ground_literal literal : init_set){
+					print_n_spaces(1+2*level+2);
+					cout << "  " << literal.predicate;
+					for (string arg : literal.args)	cout << " " << arg;
+						cout << endl;
+				}
 			}
 
 			if (debugMode == 2){
