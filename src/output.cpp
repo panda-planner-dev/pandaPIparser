@@ -459,7 +459,7 @@ void hddl_output(ostream & dout, ostream & pout){
 	for (auto p : predicate_definitions) for (int negative = 0; negative < 2; negative++){
 		if (negative && !neg_pred.count(p.name)) continue;
 		dout << "    (";
-		if (negative) dout << "not-";
+		if (negative) dout << "not_";
 		dout << p.name;
 
 		// arguments
@@ -592,7 +592,7 @@ void hddl_output(ostream & dout, ostream & pout){
 			}
 			
 			for (literal l : t.prec){
-				string p = (l.positive ? "" : "not-") + l.predicate;
+				string p = (l.positive ? "" : "not_") + l.predicate;
 				dout << "      (" << p;
 				for (string v : l.arguments) dout << " " << v;
 				dout << ")" << endl;
@@ -611,7 +611,7 @@ void hddl_output(ostream & dout, ostream & pout){
 					if (neg_pred.count(l.predicate) || (l.positive == positive)){
 						dout << "      (";
 						if (!positive) dout << "not (";
-						dout << ((l.positive == positive) ? "" : "not-") << l.predicate;
+						dout << ((l.positive == positive) ? "" : "not_") << l.predicate;
 						for (string v : l.arguments) dout << " " << v;
 						if (!positive) dout << ")";
 						dout << ")" << endl;
@@ -626,7 +626,7 @@ void hddl_output(ostream & dout, ostream & pout){
 						dout << "      (when (and";
 					
 						for (literal l : ceff.condition){
-							dout << " (" << (l.positive ? "" : "not-") << l.predicate;
+							dout << " (" << (l.positive ? "" : "not_") << l.predicate;
 							for (string v : l.arguments) dout << " " << v;
 							dout << ")";
 						}
@@ -635,7 +635,7 @@ void hddl_output(ostream & dout, ostream & pout){
 
 						// actual effect
 						if (!positive) dout << "not (";
-						dout << ((ceff.effect.positive == positive) ? "" : "not-") << ceff.effect.predicate;
+						dout << ((ceff.effect.positive == positive) ? "" : "not_") << ceff.effect.predicate;
 						for (string v : ceff.effect.arguments) dout << " " << v;
 						if (!positive) dout << ")";
 
@@ -684,7 +684,7 @@ void hddl_output(ostream & dout, ostream & pout){
 
 	pout << "  (:init" << endl;
 	for (auto gl : init){
-		pout << "    (" << (gl.positive ? "" : "not-") + gl.predicate;
+		pout << "    (" << (gl.positive ? "" : "not_") + gl.predicate;
 		for (string c : gl.args) pout << " " << c;
 		pout << ")" << endl;
 	}
@@ -702,7 +702,7 @@ void hddl_output(ostream & dout, ostream & pout){
 	if (goal.size()){
 		pout << "  (:goal (and" << endl;
 		for (auto gl : goal){
-			pout << "    (" << (gl.positive ? "" : "not-") + gl.predicate;
+			pout << "    (" << (gl.positive ? "" : "not_") + gl.predicate;
 			for (string c : gl.args) pout << " " << c;
 			pout << endl;
 		}
