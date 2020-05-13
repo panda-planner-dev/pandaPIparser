@@ -137,31 +137,10 @@ void flatten_tasks(bool compileConditionalEffects){
 
 				if (linearConditionalEffectExpansion){
 					// construct action applying the conditional effect
-				
-					literal l;
-					l.positive = false;
-					l.predicate = GUARD_PREDICATE;
-					l.arguments.clear();
-
-					int j = 0;
-					for (conditional_effect & ceff : t.ceff){
-						task ce_at;
-						ce_at.name = "__ce_" + to_string(j) + "_" + t.name;
-						ce_at.vars = t.vars;
-						ce_at.number_of_original_vars = t.number_of_original_vars;
-						ce_at.constraints.clear();
-						ce_at.costExpression.clear();
-
-						abstract_tasks.push_back(ce_at);						
-						ps.task = ce_at.name;
-						ps.id = "id_ce_" + to_string(j);
-						ps.args.clear();
-						for(auto v : t.vars) ps.args.push_back(v.first);
-						add_to_method_as_last(m,ps);
-					
-
+					auto create_predicate_and_literal = [&](string prefix, task ce_at){
+						// build three predicates, one for telling that something has to be checked still
 						predicate_definition argument_predicate;
-						argument_predicate.name = "pred_" + ce_at.name;
+						argument_predicate.name = "to_check_" + ce_at.name;
 						literal argument_literal;
 						argument_literal.positive = true;
 						argument_literal.predicate = argument_predicate.name;
@@ -170,72 +149,83 @@ void flatten_tasks(bool compileConditionalEffects){
 							argument_literal.arguments.push_back(v.first);
 						}
 						predicate_definitions.push_back(argument_predicate);
+						return make_pair(argument_predicate, argument_literal);
+					};
+					
+					auto create_task = [&](string prefix){
+						task tt;
+						tt.name = prefix + t.name;
+						tt.vars = t.vars;
+						tt.number_of_original_vars = t.number_of_original_vars;
+						tt.constraints.clear();
+						tt.costExpression.clear();
+						return tt;
+					};
 
-						t.eff.push_back(argument_literal);
-
-
-						// add methods for this task, first the one that actually apply the CE
-						task ce_yes;
-						ce_yes.name = "__ce_yes_" + to_string(j) + "_" + t.name;
-						ce_yes.vars = t.vars;
-						ce_yes.number_of_original_vars = t.number_of_original_vars;
-						ce_yes.constraints.clear();
-						ce_yes.costExpression.clear();
-						ce_yes.prec = ceff.condition;
-						ce_yes.eff.push_back(ceff.effect);
-						// additional preconditions
-						l.positive = true;
-						ce_yes.prec.push_back(l);
-						argument_literal.positive = true;
-						ce_yes.prec.push_back(argument_literal);
-						argument_literal.positive = false;
-						ce_yes.eff.push_back(argument_literal);
-						primitive_tasks.push_back(ce_yes);
-		
+					auto create_singleton_method = [&](task at, task sub, string prefix){
 						method m_ce;
-						m_ce.name = "_method_for_ce_yes_" + ce_at.name;
-						m_ce.at = ce_at.name;
-						m_ce.vars = ce_at.vars;
-						for(auto v : ce_at.vars) m_ce.atargs.push_back(v.first);
+						m_ce.name = prefix + at.name;
+						m_ce.at = at.name;
+						m_ce.vars = at.vars;
+						for(auto v : at.vars) m_ce.atargs.push_back(v.first);
 						plan_step ps;
-						ps.task = ce_yes.name;
+						ps.task = sub.name;
 						ps.id = "id0";
 						for(auto v : m_ce.vars) ps.args.push_back(v.first);
 						m_ce.ps.push_back(ps);
 						methods.push_back(m_ce);
+					};
+				
+					literal l;
+					l.positive = false;
+					l.predicate = GUARD_PREDICATE;
+					l.arguments.clear();
 
+					vector<plan_step> steps_with_effects;
+
+					int j = 0;
+					for (conditional_effect & ceff : t.ceff){
+						task ce_at = create_task(ce_at.name = "__ce_" + to_string(j) + "_");
+						abstract_tasks.push_back(ce_at);						
+						
+						ps.task = ce_at.name;
+						ps.id = "id_ce_" + to_string(j);
+						ps.args.clear();
+						for(auto v : t.vars) ps.args.push_back(v.first);
+						add_to_method_as_last(m,ps);
+
+						auto [argument_predicate, argument_literal] = create_predicate_and_literal("to_check_", ce_at);
+						auto [apply_predicate, apply_literal] = create_predicate_and_literal("do_apply_", ce_at);
+						auto [not_apply_predicate, not_apply_literal] = create_predicate_and_literal("not_apply_", ce_at);
+						
+						t.eff.push_back(argument_literal);
+
+						// add methods for this task, first the one that actually apply the CE
+						task ce_yes = create_task("__ce_yes_" + to_string(j) + "_");
+						ce_yes.prec = ceff.condition;
+						ce_yes.eff.push_back(ceff.effect);
+						// additional preconditions
+						l.positive = true;					ce_yes.prec.push_back(l);
+						argument_literal.positive = true;   ce_yes.prec.push_back(argument_literal);
+						argument_literal.positive = false;  ce_yes.eff.push_back(argument_literal);
+						primitive_tasks.push_back(ce_yes);
+		
+						
+						create_singleton_method(ce_at,ce_yes,"_method_for_ce_yes_");
+					
 						// for every condition of the CE add one possible negation
 						int noCount = 0;
 						for (literal precL : ceff.condition){
-							task ce_no;
-							ce_no.name = "__ce_no_nr_" + to_string(noCount) + "_" + to_string(j) + "_" + t.name;
-							ce_no.vars = t.vars;
-							ce_no.number_of_original_vars = t.number_of_original_vars;
-							ce_no.constraints.clear();
-							ce_no.costExpression.clear();
-							precL.positive = ! precL.positive;
-							ce_no.prec.push_back(precL);
-							argument_literal.positive = true;
-							ce_no.prec.push_back(argument_literal);
-							argument_literal.positive = false;
-							ce_no.eff.push_back(argument_literal);
+							task ce_no = create_task("__ce_no_nr_" + to_string(noCount) + "_" + to_string(j) + "_");
+							
+							precL.positive = !precL.positive;		ce_no.prec.push_back(precL);
+							argument_literal.positive = true;		ce_no.prec.push_back(argument_literal);
+							argument_literal.positive = false;		ce_no.eff.push_back(argument_literal);
 							// additional preconditions
-							l.positive = true;
-							ce_no.prec.push_back(l);
+							l.positive = true;						ce_no.prec.push_back(l);
 							primitive_tasks.push_back(ce_no);
-		
-							method m_ce;
-							m_ce.name = "_method_for_ce_no_" + to_string(noCount++)  + ce_at.name;
-							m_ce.at = ce_at.name;
-							m_ce.vars = ce_at.vars;
-							for(auto v : ce_at.vars) m_ce.atargs.push_back(v.first);
-							plan_step ps;
-							ps.task = ce_no.name;
-							ps.id = "id0";
-							for(auto v : m_ce.vars) ps.args.push_back(v.first);
-							m_ce.ps.push_back(ps);
-							methods.push_back(m_ce);
-	
+						
+							create_singleton_method(ce_at,ce_no,"_method_for_ce_no_" + to_string(noCount++));
 						}
 
 
