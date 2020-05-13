@@ -4,6 +4,7 @@
 #include "cwa.hpp"
 #include <iostream>
 #include <cassert>
+#include <algorithm>
 
 using namespace std;
 
@@ -57,20 +58,6 @@ void flatten_tasks(bool compileConditionalEffects){
 					t.constraints.push_back(get<literal>(pl));
 				else
 					t.prec.push_back(get<literal>(pl));
-			}
-
-			if (linearConditionalEffectExpansion && expansionHasConditionalEffect){
-				// don't do this task if we are in an CE phase
-				literal l;
-				l.positive = false;
-				l.predicate = GUARD_PREDICATE;
-				l.arguments.clear();
-				t.prec.push_back(l);
-
-
-				// also if we do this task, we are in CE mode 
-				l.positive = true;
-				t.eff.push_back(l);
 			}
 
 			// add preconditions for conditional effects (if exponentially compiled)
@@ -140,7 +127,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					auto create_predicate_and_literal = [&](string prefix, task ce_at){
 						// build three predicates, one for telling that something has to be checked still
 						predicate_definition argument_predicate;
-						argument_predicate.name = "to_check_" + ce_at.name;
+						argument_predicate.name = prefix + ce_at.name;
 						literal argument_literal;
 						argument_literal.positive = true;
 						argument_literal.predicate = argument_predicate.name;
@@ -175,59 +162,91 @@ void flatten_tasks(bool compileConditionalEffects){
 						m_ce.ps.push_back(ps);
 						methods.push_back(m_ce);
 					};
-				
-					literal l;
-					l.positive = false;
-					l.predicate = GUARD_PREDICATE;
-					l.arguments.clear();
 
-					vector<plan_step> steps_with_effects;
+					auto create_plan_step = [&](task tt, string prefix){
+						plan_step p;
+						p.task = tt.name;
+						p.id = prefix ;
+						p.args.clear();
+						for(auto v : t.vars) p.args.push_back(v.first);
+						return p;
+					};
+				
+					literal guard_literal;
+					guard_literal.positive = false;
+					guard_literal.predicate = GUARD_PREDICATE;
+					guard_literal.arguments.clear();
+
+					vector<pair<bool,plan_step>> steps_with_effects;
+					
+					// effects of the main task need to be performed *AFTER* splitting ...
+					vector<literal> add_effects, del_effects;
+					for (literal & el : t.eff)
+						if (el.positive) add_effects.push_back(el);
+						else 			 del_effects.push_back(el);
+					t.eff.clear();
+					auto [main_arguments, main_literal] = create_predicate_and_literal("doing_action_", t);
+													t.eff.push_back(main_literal);
+					guard_literal.positive = true;	t.eff.push_back(guard_literal);
 
 					int j = 0;
 					for (conditional_effect & ceff : t.ceff){
-						task ce_at = create_task(ce_at.name = "__ce_" + to_string(j) + "_");
+						/////////// PHASE 1 check conditions
+						task ce_at = create_task("__ce_check_" + to_string(j) + "_");
 						abstract_tasks.push_back(ce_at);						
 						
-						ps.task = ce_at.name;
-						ps.id = "id_ce_" + to_string(j);
-						ps.args.clear();
-						for(auto v : t.vars) ps.args.push_back(v.first);
-						add_to_method_as_last(m,ps);
+						plan_step ce_at_ps = create_plan_step(ce_at, "id_ce_prec_" + to_string(j));
+						add_to_method_as_last(m,ce_at_ps);
 
-						auto [argument_predicate, argument_literal] = create_predicate_and_literal("to_check_", ce_at);
 						auto [apply_predicate, apply_literal] = create_predicate_and_literal("do_apply_", ce_at);
 						auto [not_apply_predicate, not_apply_literal] = create_predicate_and_literal("not_apply_", ce_at);
-						
-						t.eff.push_back(argument_literal);
-
+					
 						// add methods for this task, first the one that actually apply the CE
 						task ce_yes = create_task("__ce_yes_" + to_string(j) + "_");
 						ce_yes.prec = ceff.condition;
-						ce_yes.eff.push_back(ceff.effect);
 						// additional preconditions
-						l.positive = true;					ce_yes.prec.push_back(l);
-						argument_literal.positive = true;   ce_yes.prec.push_back(argument_literal);
-						argument_literal.positive = false;  ce_yes.eff.push_back(argument_literal);
+						main_literal.positive = true;   	ce_yes.prec.push_back(main_literal);
+						apply_literal.positive = true;		ce_yes.eff.push_back(apply_literal);
 						primitive_tasks.push_back(ce_yes);
 		
-						
 						create_singleton_method(ce_at,ce_yes,"_method_for_ce_yes_");
 					
 						// for every condition of the CE add one possible negation
 						int noCount = 0;
 						for (literal precL : ceff.condition){
-							task ce_no = create_task("__ce_no_nr_" + to_string(noCount) + "_" + to_string(j) + "_");
+							task ce_no = create_task("__ce_no_" + to_string(j) + "_cond_" + to_string(noCount) + "_");
 							
 							precL.positive = !precL.positive;		ce_no.prec.push_back(precL);
-							argument_literal.positive = true;		ce_no.prec.push_back(argument_literal);
-							argument_literal.positive = false;		ce_no.eff.push_back(argument_literal);
+							main_literal.positive = true;			ce_no.prec.push_back(main_literal);
+							not_apply_literal.positive = true;		ce_no.eff.push_back(not_apply_literal);
 							// additional preconditions
-							l.positive = true;						ce_no.prec.push_back(l);
 							primitive_tasks.push_back(ce_no);
 						
 							create_singleton_method(ce_at,ce_no,"_method_for_ce_no_" + to_string(noCount++));
 						}
 
+
+						/////////// PHASE 2 apply the effect
+						task ce_apply = create_task("__ce_apply_if_applicable_" + to_string(j) + "_");
+						abstract_tasks.push_back(ce_apply);						
+						
+						plan_step ce_apply_ps = create_plan_step(ce_apply, "id_ce_eff_" + to_string(j));
+						steps_with_effects.push_back(make_pair(ceff.effect.positive, ce_apply_ps));
+
+						// a task that applies the effect if necessary
+						task ce_do = create_task("__ce_apply_" + to_string(j) + "_");
+															ce_do.eff.push_back(ceff.effect);
+						apply_literal.positive = true;		ce_do.prec.push_back(apply_literal);
+						apply_literal.positive = false;		ce_do.eff.push_back(apply_literal);
+						primitive_tasks.push_back(ce_do);
+						create_singleton_method(ce_apply,ce_do,"_method_for_ce_do_apply_");
+
+						// a task that does not applies the effect if necessary
+						task ce_not_do = create_task("__ce_not_apply_" + to_string(j) + "_");
+						not_apply_literal.positive = true;	ce_not_do.prec.push_back(not_apply_literal);
+						not_apply_literal.positive = false;	ce_not_do.eff.push_back(not_apply_literal);
+						primitive_tasks.push_back(ce_not_do);
+						create_singleton_method(ce_apply,ce_not_do,"_method_for_ce_not_do_apply_");
 
 
 						// increment
@@ -236,38 +255,34 @@ void flatten_tasks(bool compileConditionalEffects){
 
 					// remove conditional effects from main task
 					t.ceff.clear();
-
-
+					
+					// apply delete effects
+					if (del_effects.size()){
+						task main_deletes = create_task("_main_delete_");
+						main_literal.positive = true;	main_deletes.prec.push_back(main_literal);
+														main_deletes.eff = del_effects;
+						primitive_tasks.push_back(main_deletes);
+						plan_step main_deletes_ps = create_plan_step(main_deletes, "id_main_del");
+						add_to_method_as_last(m,main_deletes_ps);
+					}
+					
+					// first apply the deleting then the adding effects! else we break basic STRIPS rules
+					sort(steps_with_effects.begin(), steps_with_effects.end());
+					for (auto & [_,ps] : steps_with_effects) add_to_method_as_last(m,ps);
 				
 					// lastly, we need an action that ends the CE
-					task end_ce_phase;
-					end_ce_phase.name = "__end_ce_for_" + t.name; 
-					end_ce_phase.vars = t.vars;
-					end_ce_phase.number_of_original_vars = t.number_of_original_vars;
-					end_ce_phase.constraints.clear();
-					end_ce_phase.costExpression.clear();
-				
-					l.positive = false;
-					end_ce_phase.eff.push_back(l);
+					task main_add = create_task("_main_adds_");
+					main_literal.positive = true;	main_add.prec.push_back(main_literal);
+													main_add.eff = add_effects;
+					guard_literal.positive = false;	main_add.eff.push_back(guard_literal);
+					main_literal.positive = false;	main_add.eff.push_back(main_literal);
 					
-					// add as preconditions that all conditional effects have been handled, i.e. no pending ones remain
+					main_add.check_integrity();
+					primitive_tasks.push_back(main_add);	
 					
-					end_ce_phase.check_integrity();
-					primitive_tasks.push_back(end_ce_phase);	
-					
-					ps.task = end_ce_phase.name;
-					ps.id = "id_last";
-					ps.args.clear();
-					for(auto v : m.vars) ps.args.push_back(v.first);
-					add_to_method_as_last(m,ps);
+					plan_step main_add_ps = create_plan_step(main_add, "id_main_add");
+					add_to_method_as_last(m,main_add_ps);
 				}
-
-
-
-
-
-
-
 
 				methods.push_back(m);
 				// for this to be ok, we have to create an abstract task in the first round
@@ -279,6 +294,16 @@ void flatten_tasks(bool compileConditionalEffects){
 					abstract_tasks.push_back(at);
 				}
 			}
+
+			if (linearConditionalEffectExpansion){
+				// don't do this task if we are in an CE phase
+				literal l;
+				l.positive = false;
+				l.predicate = GUARD_PREDICATE;
+				l.arguments.clear();
+				t.prec.push_back(l);
+			}
+
 
 			// add to list
 			t.check_integrity();

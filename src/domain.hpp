@@ -50,6 +50,10 @@ struct plan_step{
 	string task;
 	string id;
 	vector<string> args;
+
+    bool operator< (const plan_step& ps) const {
+        return (id < ps.id);
+    }
 };
 
 struct method{
