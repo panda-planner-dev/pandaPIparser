@@ -9,7 +9,7 @@
 using namespace std;
 
 
-string GUARD_PREDICATE="ce_guard";
+string GUARD_PREDICATE="multi_stage_execution_guard";
 
 void add_to_method_as_last(method & m, plan_step ps){
 	for (auto & ops : m.ps)
@@ -21,9 +21,10 @@ void add_to_method_as_last(method & m, plan_step ps){
 
 void flatten_tasks(bool compileConditionalEffects){
 	compileConditionalEffects = false;
-	bool linearConditionalEffectExpansion = true;
-	
-	if (linearConditionalEffectExpansion){
+	bool linearConditionalEffectExpansion = false;
+	bool encodeDisjunctivePreconditionsInMethods = true;
+
+	if (linearConditionalEffectExpansion || encodeDisjunctivePreconditionsInMethods){
 		predicate_definition guardPredicate;
 		guardPredicate.name = GUARD_PREDICATE;
 		guardPredicate.argument_sorts.clear();
@@ -33,10 +34,17 @@ void flatten_tasks(bool compileConditionalEffects){
 
 
 	for(parsed_task a : parsed_primitive){
-		// expand the effects first, as they will contain only one element
+		// first check whether this primitive as a disjunctive precondition
+		bool disjunctivePreconditionForHTN = encodeDisjunctivePreconditionsInMethods && a.prec->isDisjunctive();
+		
+		// expand effects and preconditions (if necessary and possible)
 		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > elist = a.eff->expand(compileConditionalEffects);
-
-		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > plist = a.prec->expand(false); // precondition cannot contain conditional effects
+		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > plist;
+		if (!disjunctivePreconditionForHTN)	plist = a.prec->expand(false); // precondition cannot contain conditional effects
+		else {
+			pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> _temp;
+			plist.push_back(_temp);
+		}
 		
 		// determine whether any expansion has a conditional effect
 		bool expansionHasConditionalEffect = false;
@@ -102,80 +110,173 @@ void flatten_tasks(bool compileConditionalEffects){
 				t.vars.push_back(v);
 			}
 
-			if (plist.size() > 1 || elist.size() > 1 || expansionHasConditionalEffect) {
+			if (plist.size() > 1 || elist.size() > 1 || expansionHasConditionalEffect || disjunctivePreconditionForHTN) {
+				// HELPER FUNCTIONS
+				auto create_predicate_and_literal = [&](string prefix, task ce_at){
+					// build three predicates, one for telling that something has to be checked still
+					predicate_definition argument_predicate;
+					argument_predicate.name = prefix + ce_at.name;
+					literal argument_literal;
+					argument_literal.positive = true;
+					argument_literal.predicate = argument_predicate.name;
+					for(auto v : t.vars){
+						argument_predicate.argument_sorts.push_back(v.second);
+						argument_literal.arguments.push_back(v.first);
+					}
+					predicate_definitions.push_back(argument_predicate);
+					return make_pair(argument_predicate, argument_literal);
+				};
 				
+				auto create_task = [&](string prefix){
+					task tt;
+					tt.name = prefix + t.name;
+					tt.vars = t.vars;
+					tt.number_of_original_vars = t.number_of_original_vars;
+					tt.constraints.clear();
+					tt.costExpression.clear();
+					return tt;
+				};
+
+				auto create_method = [&](task at, string prefix){
+					method m_ce;
+					m_ce.name = prefix + at.name;
+					m_ce.at = at.name;
+					m_ce.vars = at.vars;
+					for(auto v : at.vars) m_ce.atargs.push_back(v.first);
+					return m_ce;
+				};
+
+				auto create_singleton_method = [&](task at, task sub, string prefix){
+					method m_ce = create_method(at, prefix);
+					plan_step ps;
+					ps.task = sub.name;
+					ps.id = "id0";
+					for(auto v : m_ce.vars) ps.args.push_back(v.first);
+					m_ce.ps.push_back(ps);
+					methods.push_back(m_ce);
+				};
+
+				auto create_plan_step = [&](task tt, string prefix){
+					plan_step p;
+					p.task = tt.name;
+					p.id = prefix ;
+					p.args.clear();
+					for(auto v : t.vars) p.args.push_back(v.first);
+					return p;
+				};
+			
+				////////////////// ACTUAL WORK STARTS
 				if (plist.size() > 1 || elist.size() > 1)
 					t.name += "|instance_" + to_string(i);
 				if (expansionHasConditionalEffect)
 					t.name += "|ce_base_action";
-;
+				if (disjunctivePreconditionForHTN)
+					t.name += "|disjunctive_prec";
+
 				// we have to create a new decomposition method at this point
 				method m;
 				m.name = "_method_for_multiple_expansions_of_" + t.name; // must start with an underscore s.t. this method is applied by the solution compiler
 				m.at = a.name;
 				for(auto v : a.arguments->vars) m.atargs.push_back(v.first);
 				m.vars = t.vars;
-				plan_step ps;
-				ps.task = t.name;
-				ps.id = "id0";
-				for(auto v : m.vars) ps.args.push_back(v.first);
-				m.ps.push_back(ps);
+	
+				// add the starting task as the first one to the method
+				m.ps.push_back(create_plan_step(t,"id_main"));
 
-
-				if (linearConditionalEffectExpansion){
-					// construct action applying the conditional effect
-					auto create_predicate_and_literal = [&](string prefix, task ce_at){
-						// build three predicates, one for telling that something has to be checked still
-						predicate_definition argument_predicate;
-						argument_predicate.name = prefix + ce_at.name;
-						literal argument_literal;
-						argument_literal.positive = true;
-						argument_literal.predicate = argument_predicate.name;
-						for(auto v : t.vars){
-							argument_predicate.argument_sorts.push_back(v.second);
-							argument_literal.arguments.push_back(v.first);
-						}
-						predicate_definitions.push_back(argument_predicate);
-						return make_pair(argument_predicate, argument_literal);
-					};
-					
-					auto create_task = [&](string prefix){
-						task tt;
-						tt.name = prefix + t.name;
-						tt.vars = t.vars;
-						tt.number_of_original_vars = t.number_of_original_vars;
-						tt.constraints.clear();
-						tt.costExpression.clear();
-						return tt;
-					};
-
-					auto create_singleton_method = [&](task at, task sub, string prefix){
-						method m_ce;
-						m_ce.name = prefix + at.name;
-						m_ce.at = at.name;
-						m_ce.vars = at.vars;
-						for(auto v : at.vars) m_ce.atargs.push_back(v.first);
-						plan_step ps;
-						ps.task = sub.name;
-						ps.id = "id0";
-						for(auto v : m_ce.vars) ps.args.push_back(v.first);
-						m_ce.ps.push_back(ps);
-						methods.push_back(m_ce);
-					};
-
-					auto create_plan_step = [&](task tt, string prefix){
-						plan_step p;
-						p.task = tt.name;
-						p.id = prefix ;
-						p.args.clear();
-						for(auto v : t.vars) p.args.push_back(v.first);
-						return p;
-					};
 				
+				if (disjunctivePreconditionForHTN){
+					// the precondition is disjunctive, so we have to check them using the HTN structure
+					
+					// create a carrier task
+					task formula_carrier_root = create_task("__formula-root");
+					formula_carrier_root.check_integrity();
+					abstract_tasks.push_back(formula_carrier_root);
+					add_to_method_as_last(m,create_plan_step(formula_carrier_root,"id_prec_root"));
+
+					int fcounter = 0;
+					function<void (task &, general_formula*)> generate_formula_HTN;
+					generate_formula_HTN = [&](task & current_task, general_formula * f) -> void {
+						// do different things based on formula type
+						fcounter++;
+
+						if (f->type == EMPTY) {
+							method m = create_method(current_task, "__formula_empty_" + to_string(fcounter));
+							methods.push_back(m);
+						} else if (f->type == ATOM || f->type == NOTATOM ||
+								f->type == EQUAL || f->type == NOTEQUAL || 
+								f->type == OFSORT || f->type == NOTOFSORT) {
+							string typ = "eq";
+							if (f->type == ATOM || f->type == NOTATOM) typ = "atom";
+							
+							task check = create_task("__formula_" + typ + "_" + to_string(fcounter));
+							
+							literal l = (f->type == ATOM || f->type == NOTATOM)?
+									f->atomLiteral():
+									f->equalsLiteral();
+
+							check.prec.push_back(l);
+							primitive_tasks.push_back(check);
+
+							create_singleton_method(current_task, check, "__formula_" + typ + "_" + to_string(fcounter));
+
+						} else if (f->type == OR) {
+							int subCounter = 0;
+							for (general_formula * sub : f->subformulae){
+								task subTask = create_task("__formula_or_" + to_string(fcounter) + "_" + to_string(subCounter) + "_");
+								abstract_tasks.push_back(subTask);
+								
+								// create the method
+								create_singleton_method(current_task,subTask, "__formula_or_" +
+										to_string(fcounter) + "_" + to_string(subCounter) + "_");
+							
+								generate_formula_HTN(subTask, sub);
+
+								subCounter++;
+							}
+							
+						} else if (f->type == WHEN || f->type == VALUE || f->type == COST_CHANGE || f->type == COST) {
+							assert(false); // not allowed
+						} else if (f->type == FORALL){
+							auto [var_replace, additional_vars] = f->forallVariableReplacement();
+							
+							method m = create_method(current_task, "__formula_forall_" + to_string(fcounter));
+
+							int sub = 0;
+							for (map<string,string> replacement : var_replace){
+								task subTask = create_task("__formula_forall_" + to_string(fcounter) + "_" + to_string(sub) + "_");
+								abstract_tasks.push_back(subTask);
+								add_to_method_as_last(m,create_plan_step(subTask,"id"+to_string(sub++)));
+
+								// generate an HTN for the subtask
+								generate_formula_HTN(subTask, f->subformulae[0]->copyReplace(replacement));
+							}
+
+							methods.push_back(m);
+						}
+					
+						// else AND, FORALL, EXISTS
+						
+						//for(auto sub : this->subformulae) if (sub->isDisjunctive()) return true;
+		
+					
+					};
+
+
+					generate_formula_HTN(formula_carrier_root, a.prec);
+				}
+
+
+
+
+				if (linearConditionalEffectExpansion || disjunctivePreconditionForHTN){
+					// construct action applying the conditional effect
+
 					literal guard_literal;
 					guard_literal.positive = false;
 					guard_literal.predicate = GUARD_PREDICATE;
 					guard_literal.arguments.clear();
+
+					t.prec.push_back(guard_literal);
 
 					vector<pair<bool,plan_step>> steps_with_effects;
 					
@@ -185,6 +286,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						if (el.positive) add_effects.push_back(el);
 						else 			 del_effects.push_back(el);
 					t.eff.clear();
+					
 					auto [main_arguments, main_literal] = create_predicate_and_literal("doing_action_", t);
 													t.eff.push_back(main_literal);
 					guard_literal.positive = true;	t.eff.push_back(guard_literal);
@@ -193,6 +295,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					for (conditional_effect & ceff : t.ceff){
 						/////////// PHASE 1 check conditions
 						task ce_at = create_task("__ce_check_" + to_string(j) + "_");
+						ce_at.check_integrity();
 						abstract_tasks.push_back(ce_at);						
 						
 						plan_step ce_at_ps = create_plan_step(ce_at, "id_ce_prec_" + to_string(j));
@@ -207,6 +310,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						// additional preconditions
 						main_literal.positive = true;   	ce_yes.prec.push_back(main_literal);
 						apply_literal.positive = true;		ce_yes.eff.push_back(apply_literal);
+						ce_yes.check_integrity();
 						primitive_tasks.push_back(ce_yes);
 		
 						create_singleton_method(ce_at,ce_yes,"_method_for_ce_yes_");
@@ -220,6 +324,7 @@ void flatten_tasks(bool compileConditionalEffects){
 							main_literal.positive = true;			ce_no.prec.push_back(main_literal);
 							not_apply_literal.positive = true;		ce_no.eff.push_back(not_apply_literal);
 							// additional preconditions
+							ce_no.check_integrity();
 							primitive_tasks.push_back(ce_no);
 						
 							create_singleton_method(ce_at,ce_no,"_method_for_ce_no_" + to_string(noCount++));
@@ -228,6 +333,7 @@ void flatten_tasks(bool compileConditionalEffects){
 
 						/////////// PHASE 2 apply the effect
 						task ce_apply = create_task("__ce_apply_if_applicable_" + to_string(j) + "_");
+						ce_apply.check_integrity();
 						abstract_tasks.push_back(ce_apply);						
 						
 						plan_step ce_apply_ps = create_plan_step(ce_apply, "id_ce_eff_" + to_string(j));
@@ -238,6 +344,7 @@ void flatten_tasks(bool compileConditionalEffects){
 															ce_do.eff.push_back(ceff.effect);
 						apply_literal.positive = true;		ce_do.prec.push_back(apply_literal);
 						apply_literal.positive = false;		ce_do.eff.push_back(apply_literal);
+						ce_do.check_integrity();
 						primitive_tasks.push_back(ce_do);
 						create_singleton_method(ce_apply,ce_do,"_method_for_ce_do_apply_");
 
@@ -245,6 +352,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						task ce_not_do = create_task("__ce_not_apply_" + to_string(j) + "_");
 						not_apply_literal.positive = true;	ce_not_do.prec.push_back(not_apply_literal);
 						not_apply_literal.positive = false;	ce_not_do.eff.push_back(not_apply_literal);
+						ce_not_do.check_integrity();
 						primitive_tasks.push_back(ce_not_do);
 						create_singleton_method(ce_apply,ce_not_do,"_method_for_ce_not_do_apply_");
 
@@ -261,6 +369,8 @@ void flatten_tasks(bool compileConditionalEffects){
 						task main_deletes = create_task("_main_delete_");
 						main_literal.positive = true;	main_deletes.prec.push_back(main_literal);
 														main_deletes.eff = del_effects;
+						
+						main_deletes.check_integrity();
 						primitive_tasks.push_back(main_deletes);
 						plan_step main_deletes_ps = create_plan_step(main_deletes, "id_main_del");
 						add_to_method_as_last(m,main_deletes_ps);
@@ -291,19 +401,10 @@ void flatten_tasks(bool compileConditionalEffects){
 					at.name = a.name;
 					at.vars = a.arguments->vars;
 					at.number_of_original_vars = at.vars.size();
+					at.check_integrity();
 					abstract_tasks.push_back(at);
 				}
 			}
-
-			if (linearConditionalEffectExpansion){
-				// don't do this task if we are in an CE phase
-				literal l;
-				l.positive = false;
-				l.predicate = GUARD_PREDICATE;
-				l.arguments.clear();
-				t.prec.push_back(l);
-			}
-
 
 			// add to list
 			t.check_integrity();
@@ -316,6 +417,7 @@ void flatten_tasks(bool compileConditionalEffects){
 		at.vars = a.arguments->vars;
 		at.number_of_original_vars = at.vars.size();
 		// abstract tasks cannot have additional variables (e.g. for constants): these cannot be declared in the input
+		at.check_integrity();
 		abstract_tasks.push_back(at);
 	}
 	for(task t : primitive_tasks) task_name_map[t.name] = t;
@@ -635,6 +737,7 @@ void reduce_constraints(){
 	methods.clear();
 
 	for (method m : oldm){
+		m.check_integrity();
 		// remove sort constraints
 		vector<literal> oldC = m.constraints;
 		m.constraints.clear();
@@ -657,6 +760,7 @@ void reduce_constraints(){
 				m.constraints.push_back(nl);
 			}
 		}
+		m.check_integrity();
 		methods.push_back(m);
 	}
 
@@ -715,7 +819,10 @@ void reduce_constraints(){
 		vector<pair<string,string>>	nvar;
 		for (auto x : nm.vars) nvar.push_back(make_pair(x.first,vSort[x.first]));
 		nm.vars = nvar;
-		if (!removeMethod) methods.push_back(nm);
+		if (!removeMethod) {
+			nm.check_integrity();
+			methods.push_back(nm);
+		}
 	}
 
 	vector<task> oldt = primitive_tasks;

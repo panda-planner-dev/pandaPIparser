@@ -79,6 +79,25 @@ general_formula* general_formula::copyReplace(map<string,string> & replace){
 	return ret;
 }
 
+bool general_formula::isDisjunctive(){
+	if (this->type == EMPTY) return false;
+	else if (this->type == EQUAL) return false;
+	else if (this->type == NOTEQUAL) return false;
+	else if (this->type == ATOM) return false;
+	else if (this->type == NOTATOM) return false;
+	else if (this->type == VALUE) return false;
+	else if (this->type == COST_CHANGE) return false;
+	else if (this->type == COST) return false;
+	// or and when are disjunctive	
+	else if (this->type == OR) return true;
+	else if (this->type == WHEN) return true;
+
+	// else AND, FORALL, EXISTS
+	
+	for(auto sub : this->subformulae) if (sub->isDisjunctive()) return true;
+	
+	return false;
+}
 
 int global_exists_variable_counter = 0;
 
@@ -101,25 +120,8 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	if (this->type == FORALL){
 		general_formula and_formula;
 		and_formula.type = AND;
-		additional_variables avs;
-		vector<map<string,string> > var_replace;
-		map<string,string> empty;
-		var_replace.push_back(empty);
-		int counter = 0;
-		for(pair<string,string> var : this->qvariables.vars) {
-			vector<map<string,string> > old_var_replace = var_replace;
-			var_replace.clear();
+		auto [var_replace,avs] = forallVariableReplacement();
 
-			for(string c : sorts[var.second]){
-				string newSort = sort_for_const(c);
-				string newVar = var.first + "_" + to_string(counter); counter++;
-				avs.insert(make_pair(newVar,newSort));
-				for (map<string,string> old : old_var_replace){
-					old[var.first] = newVar; // add new variable binding
-					var_replace.push_back(old);
-				}
-			}
-		}
 		for (auto r : var_replace)
 			and_formula.subformulae.push_back(this->subformulae[0]->copyReplace(r));
 
@@ -186,12 +188,7 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 
 	if (this->type == ATOM || this->type == NOTATOM || this->type == COST) {
 		vector<variant<literal,conditional_effect>> ls;
-		literal l;
-		l.positive = this->type == ATOM;
-		l.isConstantCostExpression = false;
-		l.isCostChangeExpression = false;
-		l.predicate = this->predicate;
-		l.arguments = this->arguments.vars;
+		literal l = this->atomLiteral();
 		ls.push_back(l);
 
 		additional_variables vars = this->arguments.newVar;
@@ -229,14 +226,7 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	// add dummy literal for equal and not equal constraints
 	if (this->type == EQUAL || this->type == NOTEQUAL || this->type == OFSORT || this->type == NOTOFSORT){
 		vector<variant<literal,conditional_effect>> ls;
-		literal l;
-		l.positive = this->type == EQUAL || this->type == OFSORT;
-		if (this->type == EQUAL || this->type == NOTEQUAL)
-			l.predicate = dummy_equal_literal;
-		else
-			l.predicate = dummy_ofsort_literal; 
-		l.arguments.push_back(this->arg1);
-		l.arguments.push_back(this->arg2);
+		literal l = this->equalsLiteral();
 		ls.push_back(l);
 
 		additional_variables vars; // no new vars. Never
@@ -299,9 +289,63 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 			}
 		}
 	}
-
 	return ret;
 }
 
+literal general_formula::equalsLiteral(){
+	assert(this->type == EQUAL || this->type == NOTEQUAL || 
+			this->type == OFSORT || this->type == NOTOFSORT);
+	
+	literal l;
+	l.positive = this->type == EQUAL || this->type == OFSORT;
+	if (this->type == EQUAL || this->type == NOTEQUAL)
+		l.predicate = dummy_equal_literal;
+	else
+		l.predicate = dummy_ofsort_literal; 
+	l.arguments.push_back(this->arg1);
+	l.arguments.push_back(this->arg2);
+	return l;
+}
 
+
+literal general_formula::atomLiteral(){
+	assert(this->type == ATOM || this->type == NOTATOM);
+	
+	literal l;
+	l.positive = this->type == ATOM;
+	l.isConstantCostExpression = false;
+	l.isCostChangeExpression = false;
+	l.predicate = this->predicate;
+	l.arguments = this->arguments.vars;
+
+	return l;
+}
+
+
+
+pair<vector<map<string,string> >, additional_variables> general_formula::forallVariableReplacement(){
+	assert(this->type == FORALL);
+
+	additional_variables avs;
+	vector<map<string,string> > var_replace;
+	map<string,string> empty;
+	var_replace.push_back(empty);
+	int counter = 0;
+	for(pair<string,string> var : this->qvariables.vars) {
+		vector<map<string,string> > old_var_replace = var_replace;
+		var_replace.clear();
+
+		for(string c : sorts[var.second]){
+			string newSort = sort_for_const(c);
+			string newVar = var.first + "_" + to_string(counter); counter++;
+			avs.insert(make_pair(newVar,newSort));
+			for (map<string,string> old : old_var_replace){
+				old[var.first] = newVar; // add new variable binding
+				var_replace.push_back(old);
+			}
+		}
+	}
+	
+	return make_pair(var_replace, avs);
+}
 
