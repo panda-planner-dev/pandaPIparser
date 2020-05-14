@@ -21,7 +21,7 @@ void add_to_method_as_last(method & m, plan_step ps){
 
 void flatten_tasks(bool compileConditionalEffects){
 	compileConditionalEffects = false;
-	bool linearConditionalEffectExpansion = false;
+	bool linearConditionalEffectExpansion = true;
 	bool encodeDisjunctivePreconditionsInMethods = true;
 
 	if (linearConditionalEffectExpansion || encodeDisjunctivePreconditionsInMethods){
@@ -127,11 +127,11 @@ void flatten_tasks(bool compileConditionalEffects){
 					return make_pair(argument_predicate, argument_literal);
 				};
 				
-				auto create_task = [&](string prefix){
+				auto create_task = [&](string prefix, vector<pair<string,string>> vars){
 					task tt;
 					tt.name = prefix + t.name;
-					tt.vars = t.vars;
-					tt.number_of_original_vars = t.number_of_original_vars;
+					tt.vars = vars;
+					tt.number_of_original_vars = vars.size();
 					tt.constraints.clear();
 					tt.costExpression.clear();
 					return tt;
@@ -151,7 +151,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					plan_step ps;
 					ps.task = sub.name;
 					ps.id = "id0";
-					for(auto v : m_ce.vars) ps.args.push_back(v.first);
+					for(auto v : sub.vars) ps.args.push_back(v.first);
 					m_ce.ps.push_back(ps);
 					methods.push_back(m_ce);
 				};
@@ -161,7 +161,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					p.task = tt.name;
 					p.id = prefix ;
 					p.args.clear();
-					for(auto v : t.vars) p.args.push_back(v.first);
+					for(auto v : tt.vars) p.args.push_back(v.first);
 					return p;
 				};
 			
@@ -187,17 +187,11 @@ void flatten_tasks(bool compileConditionalEffects){
 				if (disjunctivePreconditionForHTN){
 					// the precondition is disjunctive, so we have to check them using the HTN structure
 					
-					// create a carrier task
-					task formula_carrier_root = create_task("__formula-root");
-					formula_carrier_root.check_integrity();
-					abstract_tasks.push_back(formula_carrier_root);
-					add_to_method_as_last(m,create_plan_step(formula_carrier_root,"id_prec_root"));
-
-					int fcounter = 0;
-					function<void (task &, general_formula*)> generate_formula_HTN;
-					generate_formula_HTN = [&](task & current_task, general_formula * f) -> void {
+					int globalFCounter = 0;
+					function<void (task &, general_formula*, var_declaration)> generate_formula_HTN;
+					generate_formula_HTN = [&](task & current_task, general_formula * f, var_declaration current_vars) -> void {
 						// do different things based on formula type
-						fcounter++;
+						int fcounter = globalFCounter++;
 
 						if (f->type == EMPTY) {
 							method m = create_method(current_task, "__formula_empty_" + to_string(fcounter));
@@ -206,9 +200,14 @@ void flatten_tasks(bool compileConditionalEffects){
 								f->type == EQUAL || f->type == NOTEQUAL || 
 								f->type == OFSORT || f->type == NOTOFSORT) {
 							string typ = "eq";
-							if (f->type == ATOM || f->type == NOTATOM) typ = "atom";
-							
-							task check = create_task("__formula_" + typ + "_" + to_string(fcounter));
+							if (f->type == NOTEQUAL) typ = "neq";
+							if (f->type == ATOM) typ = "atom_" + f->predicate;
+							if (f->type == NOTATOM) typ = "not_atom_" + f->predicate;
+						
+							cout << "ATOM: ";
+							for (auto [a,b] : current_vars.vars) cout << " " << a << " - " << b;
+						   	cout << endl;	
+							task check = create_task("__formula_" + typ + "_" + to_string(fcounter), current_vars.vars);
 							
 							literal l = (f->type == ATOM || f->type == NOTATOM)?
 									f->atomLiteral():
@@ -222,14 +221,25 @@ void flatten_tasks(bool compileConditionalEffects){
 						} else if (f->type == OR) {
 							int subCounter = 0;
 							for (general_formula * sub : f->subformulae){
-								task subTask = create_task("__formula_or_" + to_string(fcounter) + "_" + to_string(subCounter) + "_");
+								// determine variables relevant for sub formula
+								var_declaration subVars;
+								set<string> occuringVariables = sub->occuringUnQuantifiedVariables();
+								cout << "OR :";
+								for (string s : occuringVariables) cout << " " << s;
+								cout << endl;
+
+								for (pair<string,string> var_decl : current_vars.vars)
+									if (occuringVariables.count(var_decl.first))
+										subVars.vars.push_back(var_decl);
+									
+								task subTask = create_task("__formula_or_" + to_string(fcounter) + "_" + to_string(subCounter) + "_", subVars.vars);
 								abstract_tasks.push_back(subTask);
 								
 								// create the method
 								create_singleton_method(current_task,subTask, "__formula_or_" +
 										to_string(fcounter) + "_" + to_string(subCounter) + "_");
 							
-								generate_formula_HTN(subTask, sub);
+								generate_formula_HTN(subTask, sub, subVars);
 
 								subCounter++;
 							}
@@ -238,31 +248,89 @@ void flatten_tasks(bool compileConditionalEffects){
 							assert(false); // not allowed
 						} else if (f->type == FORALL){
 							auto [var_replace, additional_vars] = f->forallVariableReplacement();
-							
+							map<string,string> newVarTypes;
+							for (auto [var,type] : additional_vars)
+								newVarTypes[var] = type;
+
 							method m = create_method(current_task, "__formula_forall_" + to_string(fcounter));
 
 							int sub = 0;
 							for (map<string,string> replacement : var_replace){
-								task subTask = create_task("__formula_forall_" + to_string(fcounter) + "_" + to_string(sub) + "_");
+								// we get new variables from the quantification, but some might already be there ...
+								set<string> existing_variables;
+								for (auto & [var,_] : current_vars.vars) existing_variables.insert(var);
+								
+								var_declaration sub_vars = current_vars;
+								for (auto & [qvar,newVar] : replacement)
+									if (existing_variables.count(newVar))
+										assert(false);
+									else {
+										string type = newVarTypes[newVar];
+										sub_vars.vars.push_back(make_pair(newVar,type));
+										m.vars.push_back(make_pair(newVar,type));
+										cout << "FORALL adding new var " << newVar << " " << type << endl;
+									}
+
+
+								task subTask = create_task("__formula_forall_" + to_string(fcounter) + "_" + to_string(sub) + "_", sub_vars.vars);
 								abstract_tasks.push_back(subTask);
 								add_to_method_as_last(m,create_plan_step(subTask,"id"+to_string(sub++)));
 
+							cout << "CALL: ";
+							for (auto [a,b] : sub_vars.vars) cout << " " << a << " - " << b;
+						   	cout << endl;	
 								// generate an HTN for the subtask
-								generate_formula_HTN(subTask, f->subformulae[0]->copyReplace(replacement));
+								generate_formula_HTN(subTask, f->subformulae[0]->copyReplace(replacement), sub_vars);
 							}
 
 							methods.push_back(m);
+						} else if (f->type == AND){
+							method m = create_method(current_task, "__formula_and_" + to_string(fcounter));
+
+							int subCounter = 0;
+							for (general_formula * sub : f->subformulae){
+								var_declaration subVars;
+								set<string> occuringVariables = sub->occuringUnQuantifiedVariables();
+								for (pair<string,string> var_decl : current_vars.vars)
+									if (occuringVariables.count(var_decl.first))
+										subVars.vars.push_back(var_decl);
+								
+								
+								task subTask = create_task("__formula_and_" + to_string(fcounter) + "_" + to_string(subCounter) + "_", subVars.vars);
+								abstract_tasks.push_back(subTask);
+								add_to_method_as_last(m,create_plan_step(subTask,"id"+to_string(subCounter++)));
+
+								// generate an HTN for the subtask
+								generate_formula_HTN(subTask, sub, subVars);
+							}
+
+							methods.push_back(m);
+						} else if (f->type == EXISTS){
+							// TODO
+							task subTask = create_task("__formula_exists_" + to_string(fcounter) + "_", t.vars);
+							abstract_tasks.push_back(subTask);
+
+							create_singleton_method(current_task, subTask, "__formula_exists_" + to_string(fcounter) + "_");
+							
 						}
-					
-						// else AND, FORALL, EXISTS
-						
-						//for(auto sub : this->subformulae) if (sub->isDisjunctive()) return true;
-		
-					
 					};
 
+					// determine initially needed variables
+					var_declaration initialVariables;
+					set<string> occuringVariables = a.prec->occuringUnQuantifiedVariables();
 
-					generate_formula_HTN(formula_carrier_root, a.prec);
+					for (pair<string,string> var_decl : t.vars)
+						if (occuringVariables.count(var_decl.first))
+							initialVariables.vars.push_back(var_decl);
+				
+
+					// create a carrier task
+					task formula_carrier_root = create_task("__formula-root", initialVariables.vars);
+					formula_carrier_root.check_integrity();
+					abstract_tasks.push_back(formula_carrier_root);
+					add_to_method_as_last(m,create_plan_step(formula_carrier_root,"id_prec_root"));
+
+					generate_formula_HTN(formula_carrier_root, a.prec, initialVariables);
 				}
 
 
@@ -294,7 +362,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					int j = 0;
 					for (conditional_effect & ceff : t.ceff){
 						/////////// PHASE 1 check conditions
-						task ce_at = create_task("__ce_check_" + to_string(j) + "_");
+						task ce_at = create_task("__ce_check_" + to_string(j) + "_", t.vars);
 						ce_at.check_integrity();
 						abstract_tasks.push_back(ce_at);						
 						
@@ -305,7 +373,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						auto [not_apply_predicate, not_apply_literal] = create_predicate_and_literal("not_apply_", ce_at);
 					
 						// add methods for this task, first the one that actually apply the CE
-						task ce_yes = create_task("__ce_yes_" + to_string(j) + "_");
+						task ce_yes = create_task("__ce_yes_" + to_string(j) + "_", t.vars);
 						ce_yes.prec = ceff.condition;
 						// additional preconditions
 						main_literal.positive = true;   	ce_yes.prec.push_back(main_literal);
@@ -318,7 +386,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						// for every condition of the CE add one possible negation
 						int noCount = 0;
 						for (literal precL : ceff.condition){
-							task ce_no = create_task("__ce_no_" + to_string(j) + "_cond_" + to_string(noCount) + "_");
+							task ce_no = create_task("__ce_no_" + to_string(j) + "_cond_" + to_string(noCount) + "_", t.vars);
 							
 							precL.positive = !precL.positive;		ce_no.prec.push_back(precL);
 							main_literal.positive = true;			ce_no.prec.push_back(main_literal);
@@ -332,7 +400,7 @@ void flatten_tasks(bool compileConditionalEffects){
 
 
 						/////////// PHASE 2 apply the effect
-						task ce_apply = create_task("__ce_apply_if_applicable_" + to_string(j) + "_");
+						task ce_apply = create_task("__ce_apply_if_applicable_" + to_string(j) + "_", t.vars);
 						ce_apply.check_integrity();
 						abstract_tasks.push_back(ce_apply);						
 						
@@ -340,7 +408,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						steps_with_effects.push_back(make_pair(ceff.effect.positive, ce_apply_ps));
 
 						// a task that applies the effect if necessary
-						task ce_do = create_task("__ce_apply_" + to_string(j) + "_");
+						task ce_do = create_task("__ce_apply_" + to_string(j) + "_", t.vars);
 															ce_do.eff.push_back(ceff.effect);
 						apply_literal.positive = true;		ce_do.prec.push_back(apply_literal);
 						apply_literal.positive = false;		ce_do.eff.push_back(apply_literal);
@@ -349,7 +417,7 @@ void flatten_tasks(bool compileConditionalEffects){
 						create_singleton_method(ce_apply,ce_do,"_method_for_ce_do_apply_");
 
 						// a task that does not applies the effect if necessary
-						task ce_not_do = create_task("__ce_not_apply_" + to_string(j) + "_");
+						task ce_not_do = create_task("__ce_not_apply_" + to_string(j) + "_", t.vars);
 						not_apply_literal.positive = true;	ce_not_do.prec.push_back(not_apply_literal);
 						not_apply_literal.positive = false;	ce_not_do.eff.push_back(not_apply_literal);
 						ce_not_do.check_integrity();
@@ -366,7 +434,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					
 					// apply delete effects
 					if (del_effects.size()){
-						task main_deletes = create_task("_main_delete_");
+						task main_deletes = create_task("_main_delete_", t.vars);
 						main_literal.positive = true;	main_deletes.prec.push_back(main_literal);
 														main_deletes.eff = del_effects;
 						
@@ -381,7 +449,7 @@ void flatten_tasks(bool compileConditionalEffects){
 					for (auto & [_,ps] : steps_with_effects) add_to_method_as_last(m,ps);
 				
 					// lastly, we need an action that ends the CE
-					task main_add = create_task("_main_adds_");
+					task main_add = create_task("_main_adds_", t.vars);
 					main_literal.positive = true;	main_add.prec.push_back(main_literal);
 													main_add.eff = add_effects;
 					guard_literal.positive = false;	main_add.eff.push_back(guard_literal);
@@ -1009,6 +1077,8 @@ void remove_unnecessary_predicates(){
 void task::check_integrity(){
 	for(auto v : this->vars)
 		assert(v.second.size() != 0); // variables must have a sort
+
+	assert(number_of_original_vars <= vars.size());
 
 	for(literal l : this->prec) {
 		bool hasPred = false;

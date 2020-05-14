@@ -41,6 +41,45 @@ bool general_formula::isEmpty(){
 	return true;
 }
 
+set<string> general_formula::occuringUnQuantifiedVariables(){
+	set<string> ret;
+
+	if (this->type == EMPTY) return ret;
+
+	if (this->type == AND || this->type == OR){
+		for (general_formula* sub : this->subformulae){
+			set<string> subres = sub->occuringUnQuantifiedVariables();
+			ret.insert(subres.begin(), subres.end());
+		}
+		return ret;
+	}
+	
+	if (this->type == FORALL || this->type == EXISTS) {
+		set<string> subres = this->subformulae[0]->occuringUnQuantifiedVariables();
+
+		for (auto [var,_] : this->qvariables.vars){
+			subres.erase(var);
+		}
+
+		return subres;
+	}
+
+	if (this->type == EQUAL || this->type == NOTEQUAL || 
+			this->type == ATOM || this->type == NOTATOM){
+		ret.insert(this->arguments.vars.begin(), this->arguments.vars.end());
+		return ret;
+	}
+
+	// things that I don't want to support ...
+	if (this->type == WHEN) assert(false);
+	if (this->type == VALUE) assert(false);
+	if (this->type == COST_CHANGE) assert(false);
+	if (this->type == COST) assert(false);
+	if (this->type == OFSORT) assert(false);
+	if (this->type == NOTOFSORT) assert(false);
+
+	assert(false);
+}
 
 additional_variables general_formula::variables_for_constants(){
 	additional_variables ret;
@@ -134,11 +173,7 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 
 	// add additional variables for every quantified variable. We have to do this for every possible instance of the precondition below	
 	if (this->type == EXISTS){
-		map<string,string> var_replace;
-		for(pair<string,string> var : this->qvariables.vars){
-			string newName = var.first + "_" + to_string(++global_exists_variable_counter);
-			var_replace[var.first] = newName;
-		}
+		map<string,string> var_replace = existsVariableReplacement();
 		this->subformulae[0] = this->subformulae[0]->copyReplace(var_replace);
 
 
@@ -347,5 +382,14 @@ pair<vector<map<string,string> >, additional_variables> general_formula::forallV
 	}
 	
 	return make_pair(var_replace, avs);
+}
+
+map<string,string> general_formula::existsVariableReplacement(){
+	map<string,string> var_replace;
+	for(pair<string,string> var : this->qvariables.vars){
+		string newName = var.first + "_" + to_string(++global_exists_variable_counter);
+		var_replace[var.first] = newName;
+	}
+	return var_replace;
 }
 

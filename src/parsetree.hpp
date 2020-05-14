@@ -69,6 +69,9 @@ class general_formula{
 		literal equalsLiteral();
 		literal atomLiteral();
 		pair<vector<map<string,string> >, additional_variables> forallVariableReplacement();
+		map<string,string> existsVariableReplacement();
+
+		set<string> occuringUnQuantifiedVariables();
 
 		general_formula* copyReplace(map<string,string>& replace);
 };
