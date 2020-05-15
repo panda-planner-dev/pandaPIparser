@@ -56,6 +56,9 @@ int main(int argc, char** argv) {
 	int poutfile = -1;
 	bool splitParameters = true;
 	bool compileConditionalEffects = true;
+	bool linearConditionalEffectExpansion = false;
+	bool encodeDisjunctivePreconditionsInMethods = false;
+	
 	bool shopOutput = false;
 	bool hpdlOutput = false;
 	bool hddlOutput = false;
@@ -68,33 +71,35 @@ int main(int argc, char** argv) {
 	int verbosity = 0;
 	
 	struct option options[] = {
-		{"no-split-parameters"     , no_argument,       NULL,   's'},
-		{"keep-conditional-effects", no_argument,       NULL,   'k'},
+		{"no-split-parameters"                    , no_argument,       NULL,   's'},
+		{"keep-conditional-effects"               , no_argument,       NULL,   'k'},
+		{"linear-conditional-effect"              , no_argument,       NULL,   'L'},
+		{"encode-disjunctive_preconditions-in-htn", no_argument,       NULL,   'D'},
 		
-		{"shop"                    , no_argument,       NULL,   'S'},
-		{"shop2"                   , no_argument,       NULL,   'S'},
-		{"shop1"                   , no_argument,       NULL,   '1'},
-		{"hpdl"                    , no_argument,       NULL,   'H'},
-		{"hddl"                    , no_argument,       NULL,   'h'},
+		{"shop"                                   , no_argument,       NULL,   'S'},
+		{"shop2"                                  , no_argument,       NULL,   'S'},
+		{"shop1"                                  , no_argument,       NULL,   '1'},
+		{"hpdl"                                   , no_argument,       NULL,   'H'},
+		{"hddl"                                   , no_argument,       NULL,   'h'},
 		
-		{"panda-converter"         , no_argument,       NULL,   'c'},
-		{"verify"                  , optional_argument, NULL,   'v'},
-		{"vverify"                 , no_argument,       NULL,   'V'},
-		{"vvverify"                , no_argument,       NULL,   'W'},
-		{"lenient"                 , no_argument,       NULL,   'l'},
-		{"verify-no-order"         , no_argument,       NULL,   'o'},
+		{"panda-converter"                        , no_argument,       NULL,   'c'},
+		{"verify"                                 , optional_argument, NULL,   'v'},
+		{"vverify"                                , no_argument,       NULL,   'V'},
+		{"vvverify"                               , no_argument,       NULL,   'W'},
+		{"lenient"                                , no_argument,       NULL,   'l'},
+		{"verify-no-order"                        , no_argument,       NULL,   'o'},
 		
-		{"no-color"                , no_argument,       NULL,   'C'},
-		{"debug"                   , optional_argument, NULL,   'd'},
+		{"no-color"                               , no_argument,       NULL,   'C'},
+		{"debug"                                  , optional_argument, NULL,   'd'},
 		
-		{"properties"              , optional_argument, NULL,   'p'},
+		{"properties"                             , optional_argument, NULL,   'p'},
 		
-		{NULL                      , 0,                 NULL,   0},
+		{NULL                                     , 0,                 NULL,   0},
 	};
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhlp", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhlpLD", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -105,6 +110,8 @@ int main(int argc, char** argv) {
 
 		if (c == 's') splitParameters = false;
 		else if (c == 'k') compileConditionalEffects = false;
+		else if (c == 'L') { compileConditionalEffects = false; linearConditionalEffectExpansion = true; }
+		else if (c == 'D') encodeDisjunctivePreconditionsInMethods = true;
 		else if (c == 'S') shopOutput = true;
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
@@ -213,11 +220,11 @@ int main(int argc, char** argv) {
 
 	if (!hpdlOutput) {
 		// flatten all primitive tasks
-		flatten_tasks(compileConditionalEffects);
+		flatten_tasks(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 		// .. and the goal
 		flatten_goal();
 		// create appropriate methods and expand method preconditions
-		parsed_method_to_data_structures(compileConditionalEffects);
+		parsed_method_to_data_structures(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 	}
 
 	if (shopOutput || hpdlOutput){
