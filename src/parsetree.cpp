@@ -64,9 +64,15 @@ set<string> general_formula::occuringUnQuantifiedVariables(){
 		return subres;
 	}
 
-	if (this->type == EQUAL || this->type == NOTEQUAL || 
-			this->type == ATOM || this->type == NOTATOM){
+	if (this->type == ATOM || this->type == NOTATOM){
 		ret.insert(this->arguments.vars.begin(), this->arguments.vars.end());
+		return ret;
+	}
+	
+	if (this->type == EQUAL || this->type == NOTEQUAL || 
+			this->type == OFSORT || this->type == NOTOFSORT){
+		ret.insert(this->arg1);
+		ret.insert(this->arg2);
 		return ret;
 	}
 
@@ -175,8 +181,6 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	if (this->type == EXISTS){
 		map<string,string> var_replace = existsVariableReplacement();
 		this->subformulae[0] = this->subformulae[0]->copyReplace(var_replace);
-
-
 
 		vector<pair<pair<vector<variant<literal,conditional_effect>>, vector<literal> >, additional_variables> > cur = 
 			this->subformulae[0]->expand(compileConditionalEffects);

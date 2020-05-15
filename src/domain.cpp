@@ -155,7 +155,14 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 				plan_step ps;
 				ps.task = sub.name;
 				ps.id = "id0";
-				for(auto v : sub.vars) ps.args.push_back(v.first);
+				set<string> existingVars; for (auto [var,_] : m_ce.vars) existingVars.insert(var);
+				for(auto v : sub.vars) {
+					if (existingVars.count(v.first) == 0){
+						m_ce.vars.push_back(v);
+						existingVars.insert(v.first);
+					}
+					ps.args.push_back(v.first);
+				}
 				m_ce.ps.push_back(ps);
 				methods.push_back(m_ce);
 			};
@@ -209,9 +216,6 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 						if (f->type == ATOM) typ = "atom_" + f->predicate;
 						if (f->type == NOTATOM) typ = "not_atom_" + f->predicate;
 					
-						cout << "ATOM: ";
-						for (auto [a,b] : current_vars.vars) cout << " " << a << " - " << b;
-					   	cout << endl;	
 						task check = create_task("__formula_" + typ + "_" + to_string(fcounter), current_vars.vars);
 						
 						literal l = (f->type == ATOM || f->type == NOTATOM)?
@@ -229,9 +233,6 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 							// determine variables relevant for sub formula
 							var_declaration subVars;
 							set<string> occuringVariables = sub->occuringUnQuantifiedVariables();
-							cout << "OR :";
-							for (string s : occuringVariables) cout << " " << s;
-							cout << endl;
 
 							for (pair<string,string> var_decl : current_vars.vars)
 								if (occuringVariables.count(var_decl.first))
@@ -257,14 +258,16 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 						for (auto [var,type] : additional_vars)
 							newVarTypes[var] = type;
 
-						method m = create_method(current_task, "__formula_forall_" + to_string(fcounter));
+						
+						// we get new variables from the quantification, but some might already be there ...
+						set<string> existing_variables;
+						for (auto & [var,_] : current_vars.vars) existing_variables.insert(var);
 
+						// all of the forall instantiations go into one method
+						method m = create_method(current_task, "__formula_forall_" + to_string(fcounter));
+						
 						int sub = 0;
 						for (map<string,string> replacement : var_replace){
-							// we get new variables from the quantification, but some might already be there ...
-							set<string> existing_variables;
-							for (auto & [var,_] : current_vars.vars) existing_variables.insert(var);
-							
 							var_declaration sub_vars = current_vars;
 							for (auto & [qvar,newVar] : replacement)
 								if (existing_variables.count(newVar))
@@ -273,7 +276,6 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 									string type = newVarTypes[newVar];
 									sub_vars.vars.push_back(make_pair(newVar,type));
 									m.vars.push_back(make_pair(newVar,type));
-									cout << "FORALL adding new var " << newVar << " " << type << endl;
 								}
 
 
@@ -281,9 +283,6 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 							addAbstractTask(subTask);
 							add_to_method_as_last(m,create_plan_step(subTask,"id"+to_string(sub++)));
 
-						cout << "CALL: ";
-						for (auto [a,b] : sub_vars.vars) cout << " " << a << " - " << b;
-					   	cout << endl;	
 							// generate an HTN for the subtask
 							generate_formula_HTN(subTask, f->subformulae[0]->copyReplace(replacement), sub_vars);
 						}
@@ -313,12 +312,28 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 						m.check_integrity();
 						methods.push_back(m);
 					} else if (f->type == EXISTS){
-						// XXX
-						task subTask = create_task("__formula_exists_" + to_string(fcounter) + "_", t.vars);
+						map<string,string> var_replace = f->existsVariableReplacement();
+
+						// we get new variables from the quantification, but some might already be there ...
+						set<string> existing_variables;
+						for (auto & [var,_] : current_vars.vars) existing_variables.insert(var);
+						
+						var_declaration sub_vars = current_vars;
+						for (auto & [qvar,type] : f->qvariables.vars){
+							string newVar = var_replace[qvar];
+							if (existing_variables.count(newVar))
+								assert(false);
+							else {
+								sub_vars.vars.push_back(make_pair(newVar,type));
+								m.vars.push_back(make_pair(newVar,type));
+							}
+						}
+
+						task subTask = create_task("__formula_exists_" + to_string(fcounter) + "_", sub_vars.vars);
 						addAbstractTask(subTask);
 
 						create_singleton_method(current_task, subTask, "__formula_exists_" + to_string(fcounter) + "_");
-						
+						generate_formula_HTN(subTask, f->subformulae[0]->copyReplace(var_replace), sub_vars);
 					}
 				};
 
@@ -504,10 +519,9 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 }
 
 
-void flatten_tasks(bool compileConditionalEffects){
-	compileConditionalEffects = false;
-	bool linearConditionalEffectExpansion = true;
-	bool encodeDisjunctivePreconditionsInMethods = true;
+void flatten_tasks(bool compileConditionalEffects,
+				   bool linearConditionalEffectExpansion,
+				   bool encodeDisjunctivePreconditionsInMethods){
 
 	if (linearConditionalEffectExpansion || encodeDisjunctivePreconditionsInMethods){
 		predicate_definition guardPredicate;
@@ -532,7 +546,9 @@ void flatten_tasks(bool compileConditionalEffects){
 	}
 }
 
-void parsed_method_to_data_structures(bool compileConditionalEffects){
+void parsed_method_to_data_structures(bool compileConditionalEffects,
+									  bool linearConditionalEffectExpansion,
+									  bool encodeDisjunctivePreconditionsInMethods){
 	int i = 0;
 	for (auto e : parsed_methods) for (parsed_method pm : e.second) {
 		method m; i++;
@@ -598,12 +614,11 @@ void parsed_method_to_data_structures(bool compileConditionalEffects){
 		set<string> mPrecVars = pm.prec->occuringUnQuantifiedVariables();
 		set<string> mEffVars = pm.eff->occuringUnQuantifiedVariables();
 
-
 		for (pair<string,string> var : m.vars)
 			if (mPrecVars.count(var.first) || mEffVars.count(var.first))
 				mPrec_task.arguments->vars.push_back(var);
 		
-		auto [mPrec,isPrimitive] = flatten_primitive_task(mPrec_task, false, true, true);
+		auto [mPrec,isPrimitive] = flatten_primitive_task(mPrec_task, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 		for (size_t newVar = mPrec_task.arguments->vars.size(); newVar < mPrec.vars.size(); newVar++)
 			m.vars.push_back(mPrec.vars[newVar]);
 
@@ -623,10 +638,6 @@ void parsed_method_to_data_structures(bool compileConditionalEffects){
 			ps.task = mPrec.name;
 			for (auto [v,_] : mPrec.vars)
 				ps.args.push_back(v);
-
-			// we might have added more parameters to these tasks to account for constants in them. We have to add them here
-			for (size_t newVar = mPrec_task.arguments->vars.size(); newVar < mPrec.vars.size(); newVar++)
-				ps.args.push_back(mPrec.vars[newVar].first);
 
 			// precondition ps precedes all other tasks
 			for (plan_step other_ps : m.ps)

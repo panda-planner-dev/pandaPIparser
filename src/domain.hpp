@@ -76,8 +76,8 @@ extern vector<task> primitive_tasks;
 extern vector<task> abstract_tasks;
 extern map<string, task> task_name_map;
 
-void flatten_tasks(bool compileConditionalEffects);
-void parsed_method_to_data_structures(bool compileConditionalEffects);
+void flatten_tasks(bool compileConditionalEffects, bool linearConditionalEffectExpansion, bool encodeDisjunctivePreconditionsInMethods);
+void parsed_method_to_data_structures(bool compileConditionalEffects, bool linearConditionalEffectExpansion, bool encodeDisjunctivePreconditionsInMethods);
 void reduce_constraints();
 void clean_up_sorts();
 void remove_unnecessary_predicates();
