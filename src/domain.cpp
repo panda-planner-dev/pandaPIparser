@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <functional>
 
 using namespace std;
 
