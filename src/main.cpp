@@ -11,6 +11,7 @@
 #include "cwa.hpp"
 #include "domain.hpp"
 #include "hddl.hpp"
+#include "hddlWriter.hpp"
 #include "hpdlWriter.hpp"
 #include "output.hpp"
 #include "parametersplitting.hpp"
@@ -62,6 +63,7 @@ int main(int argc, char** argv) {
 	bool shopOutput = false;
 	bool hpdlOutput = false;
 	bool hddlOutput = false;
+	bool internalHDDLOutput = false;
 	bool lenientVerify = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
@@ -81,6 +83,7 @@ int main(int argc, char** argv) {
 		{"shop1"                                  , no_argument,       NULL,   '1'},
 		{"hpdl"                                   , no_argument,       NULL,   'H'},
 		{"hddl"                                   , no_argument,       NULL,   'h'},
+		{"hddl-internal"                          , no_argument,       NULL,   'i'},
 		
 		{"panda-converter"                        , no_argument,       NULL,   'c'},
 		{"verify"                                 , optional_argument, NULL,   'v'},
@@ -99,7 +102,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhlpLD", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhIlpLD", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -116,6 +119,7 @@ int main(int argc, char** argv) {
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
 	   	else if (c == 'h') hddlOutput = true;
+	   	else if (c == 'h') { hddlOutput = true; internalHDDLOutput = true; }
 		else if (c == 'c') convertPlan = true;
 		else if (c == 'v') {
 			verifyPlan = true;
@@ -284,7 +288,7 @@ int main(int argc, char** argv) {
 			}
 			pout = pf;
 		}
-		hddl_output(*dout,*pout);
+		hddl_output(*dout,*pout, internalHDDLOutput);
 	} else {
 		ostream * dout = &cout;
 		if (doutfile != -1){
