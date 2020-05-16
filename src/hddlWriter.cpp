@@ -593,7 +593,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 		   else pout << " (";
 		}
 		pout << sanitise(gl.predicate);
-		for (string c : gl.args) pout << " " << c;
+		for (string c : gl.args) pout << " " << sanitise(c);
 		if (!gl.positive && !internalHDDLOutput) pout << ")";
 		pout << ")" << endl;
 	}
@@ -622,7 +622,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 				else pout << " (";
 			}
 			pout << sanitise(gl.predicate);
-			for (string c : gl.args) pout << " " << c;
+			for (string c : gl.args) pout << " " << sanitise(c);
 			if (!gl.positive && !internalHDDLOutput) pout << ")";
 			pout << ")" << endl;
 		}
