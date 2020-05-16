@@ -585,6 +585,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 
 	pout << "  (:init" << endl;
 	for (auto gl : init){
+		if (!gl.positive && !internalHDDLOutput) continue; // don't output negatives in normal mode
 		pout << "    (";
 	   	if (!gl.positive){
 		   pout << "not";
