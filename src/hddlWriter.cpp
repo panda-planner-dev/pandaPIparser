@@ -575,13 +575,19 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 	pout << "  )" << endl;
 
 
-	pout << "  (:htn" << endl;
-	pout << "    :parameters ()" << endl;
-	pout << "    :subtasks (and (";
-	if (internalHDDLOutput) pout << "t";
-	else pout << "US";
-	pout << "__top))" << endl;
-	pout << "  )" << endl;
+	bool instance_is_classical = true;
+	for (task t : abstract_tasks)
+		if (t.name == "__top") instance_is_classical = false;
+
+	if (! instance_is_classical){
+		pout << "  (:htn" << endl;
+		pout << "    :parameters ()" << endl;
+		pout << "    :subtasks (and (";
+		if (internalHDDLOutput) pout << "t";
+		else pout << "US";
+		pout << "__top))" << endl;
+		pout << "  )" << endl;
+	}
 
 	pout << "  (:init" << endl;
 	for (auto gl : init){

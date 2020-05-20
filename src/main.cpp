@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhIlpLD", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhilpLD", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
 	   	else if (c == 'h') hddlOutput = true;
-	   	else if (c == 'h') { hddlOutput = true; internalHDDLOutput = true; }
+	   	else if (c == 'i') { hddlOutput = true; internalHDDLOutput = true; }
 		else if (c == 'c') convertPlan = true;
 		else if (c == 'v') {
 			verifyPlan = true;
