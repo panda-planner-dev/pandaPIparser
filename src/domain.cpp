@@ -994,11 +994,18 @@ void method::check_integrity(){
 	for (plan_step ps : this->ps){
 		assert(task_name_map.count(ps.task));
 		task t = task_name_map[ps.task];
-		assert(ps.args.size() == t.vars.size());
+		if (ps.args.size() != t.vars.size()){
+			cerr << "Method " << this->name << " has the subtask (" << ps.id << ") " << ps.task << ". The task is declared with " << t.vars.size() << " parameters, but " << ps.args.size() << " are given in the method." << endl;
+			assert(false);
+		}
 
 		for (string v : ps.args) {
 			bool found = false;
 			for (auto vd : this->vars) found |= vd.first == v;
+			if (!found){
+				cerr << "Method " << this->name << " has the subtask (" << ps.id << ") " << ps.task << ". It has a parameter " << v << " which is not declared in the method." << endl;
+			
+			}
 			assert(found);
 		}
 	}
