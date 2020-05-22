@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
 	bool compileConditionalEffects = true;
 	bool linearConditionalEffectExpansion = false;
 	bool encodeDisjunctivePreconditionsInMethods = false;
+	bool compileGoalIntoAction = false;
 	
 	bool shopOutput = false;
 	bool hpdlOutput = false;
@@ -77,6 +78,7 @@ int main(int argc, char** argv) {
 		{"keep-conditional-effects"               , no_argument,       NULL,   'k'},
 		{"linear-conditional-effect"              , no_argument,       NULL,   'L'},
 		{"encode-disjunctive_preconditions-in-htn", no_argument,       NULL,   'D'},
+		{"compile-goal"							  , no_argument,       NULL,   'g'},
 		
 		{"shop"                                   , no_argument,       NULL,   'S'},
 		{"shop2"                                  , no_argument,       NULL,   'S'},
@@ -102,7 +104,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhilpLD", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhilpLDg", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -115,6 +117,7 @@ int main(int argc, char** argv) {
 		else if (c == 'k') compileConditionalEffects = false;
 		else if (c == 'L') { compileConditionalEffects = false; linearConditionalEffectExpansion = true; }
 		else if (c == 'D') encodeDisjunctivePreconditionsInMethods = true;
+		else if (c == 'g') compileGoalIntoAction = true;
 		else if (c == 'S') shopOutput = true;
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
@@ -211,6 +214,9 @@ int main(int argc, char** argv) {
 	// handle typeof-predicate
 	if (!hpdlOutput && has_typeof_predicate) create_typeof();
 
+	if (compileGoalIntoAction) compile_goal_into_action();
+
+
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(argv[doutfile]);
@@ -259,8 +265,8 @@ int main(int argc, char** argv) {
 
 	// split methods with independent parameters to reduce size of grounding
 	if (splitParameters) split_independent_parameters();
-	// cwa
-	compute_cwa();
+	// cwa, but only if we actually want to compile negative preconditions
+	if (!hpdlOutput || internalHDDLOutput) compute_cwa();
 	// simplify constraints as far as possible
 	reduce_constraints();
 	clean_up_sorts();

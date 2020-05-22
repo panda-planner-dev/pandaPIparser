@@ -1,4 +1,5 @@
 #include "parsetree.hpp"
+#include "cwa.hpp"
 #include <iostream>
 #include <cassert>
 
@@ -395,5 +396,44 @@ map<string,string> general_formula::existsVariableReplacement(){
 		var_replace[var.first] = newName;
 	}
 	return var_replace;
+}
+
+
+void compile_goal_into_action(){
+	if (goal_formula->isEmpty()) return;
+	
+	parsed_task t;
+	t.name = "goal_action";
+	t.arguments = new var_declaration();
+	t.prec = goal_formula;
+	t.eff = new general_formula(); t.eff->type = EMPTY;
+	parsed_primitive.push_back(t);
+
+	// add as last task into top method
+	assert(parsed_methods["__top"].size() == 1);
+	parsed_method m = parsed_methods["__top"][0];
+	parsed_methods["__top"].clear();
+	sub_task * g = new sub_task();	
+	g->id = "__goal_id";
+	g->task = t.name;
+	g->arguments = new var_and_const();
+	
+	// ordering
+	for (sub_task* st : m.tn->tasks){
+		pair<string,string>* o = new pair<string,string>();
+		o->first = st->id;
+		o->second = g->id;
+		m.tn->ordering.push_back(o);
+	}
+	
+	m.tn->tasks.push_back(g);
+
+	
+	// add the method back in
+	parsed_methods["__top"].push_back(m);
+
+
+	// clear the goal formula
+	goal_formula = NULL;
 }
 
