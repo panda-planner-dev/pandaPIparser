@@ -58,6 +58,26 @@ function<string(string)> variable_declaration_closure(map<string,string> method2
     };
 }
 
+// ----------------------------------------
+// Returns a predicate of the type (= ?a ?b) when ?a has been substituted for ?b
+// but both are equivalent
+function<string(string)> get_variable_substitution(map<string,string> method2task){
+    return [method2task](string varOrConst) mutable {		
+		// check if this variable is bound to a AT argument
+		if (method2task.find(varOrConst) != method2task.end()) {			
+			// If is not the same variable
+			if (varOrConst != method2task[varOrConst]) {				
+				return "(= " + varOrConst + " " + method2task[varOrConst] + ")";
+			}
+		}
+
+		varOrConst.clear();
+		return varOrConst;
+    };
+}
+// ----------------------------------------
+
+
 void write_HPDL_parameters(ostream & out, parsed_task & task){
 	out << "    :parameters (";
 	bool first = true;
@@ -289,7 +309,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 	dout << "  (:constants" << endl;
 	pout << "  (:objects" << endl;
-	const int MAX_OBJECTS_PER_LINE = 2000;
+	const int MAX_OBJECTS_PER_LINE = 100;
 	for (auto & s_entry : sorts){
 		// don't write sorts that are artificial
 		if (s_entry.first.rfind("sort_for", 0) == 0) continue;
@@ -362,21 +382,23 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 
 
 	///////////////////////////////////////////////////// Writing the main part of the domain
-	dout << "  (:predicates" << endl;
-	for(auto [s,elems] : sorts){
-		(void) elems; // get rid of unused variable
-		if (s.rfind("sort_for", 0) == 0) continue;
-		dout << "    (type_member_" << get_hpdl_sort_name(s) << " ?var - object)" << endl;
-	}
-	for (predicate_definition pred_def : predicate_definitions){
-		dout << "    (" << pred_def.name;
-		for(unsigned int i = 0; i < pred_def.argument_sorts.size(); i++)
-			dout << " ?var" << i << " - " << get_hpdl_sort_name(pred_def.argument_sorts[i]);
-		dout << ")" << endl;
-	}
-	dout << "  )" << endl;
+	if (sorts.size() > 0 || predicate_definitions.size() > 0) {
+		dout << "  (:predicates" << endl;
+		for(auto [s,elems] : sorts){
+			(void) elems; // get rid of unused variable
+			if (s.rfind("sort_for", 0) == 0) continue;
+			dout << "    (type_member_" << get_hpdl_sort_name(s) << " ?var - object)" << endl;
+		}
+		for (predicate_definition pred_def : predicate_definitions){
+			dout << "    (" << pred_def.name;
+			for(unsigned int i = 0; i < pred_def.argument_sorts.size(); i++)
+				dout << " ?var" << i << " - " << get_hpdl_sort_name(pred_def.argument_sorts[i]);
+			dout << ")" << endl;
+		}
+		dout << "  )" << endl;
 
-	dout << endl << endl;
+		dout << endl << endl;
+	}
 
 	// Creating a new task as a wrapper_compound for each primitive
 	for (parsed_task prim : parsed_primitive) {
@@ -452,11 +474,18 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			
 			// the method might contain variables that have the same name as variables of the AT, we first have to rename them
 
+			// ----------------------------------------
+			set<string> varSubstituted;
+			// ----------------------------------------
 			map<string,string> method2Task;
 			map<string,string> method2TaskSort;
 			
 			for (auto & varDecl : method.vars->vars)
 				if (atArgs.count(varDecl.first)) {
+					// ----------------------------------------
+					varSubstituted.insert(varDecl.first);
+					// ----------------------------------------
+
 					method2Task[varDecl.first] = varDecl.first + "_in_method";
 					method2TaskSort[method2Task[varDecl.first]] = varDecl.second;
 				}
@@ -530,6 +559,20 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 					write_HPDL_indent(dout,4);
 					dout << "(type_member_" << get_hpdl_sort_name(v.second) << " " << v.first << ")" << endl;
 				}
+				
+								
+				// ----------------------------------------
+				auto variable_substitution = get_variable_substitution(method2Task);
+				for (string var : varSubstituted) {
+					string sub = variable_substitution(var);
+					if (!sub.empty()) {
+						write_HPDL_indent(dout,4);
+						dout << variable_substitution(var) << endl;
+					}
+				}
+				// ----------------------------------------
+
+
 				dout << "      )" << endl;
 			}
 
