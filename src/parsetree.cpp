@@ -400,6 +400,7 @@ map<string,string> general_formula::existsVariableReplacement(){
 
 
 void compile_goal_into_action(){
+	if (goal_formula == NULL) return;
 	if (goal_formula->isEmpty()) return;
 	
 	parsed_task t;
