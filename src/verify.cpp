@@ -928,7 +928,7 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 		if (debugMode){
 			print_n_spaces(1+2*level+1);
 			cout << color(COLOR_BLUE,"The new state is:") << endl;
-			for (ground_literal literal : current_state){
+			for (ground_literal literal : new_state){
 				print_n_spaces(1+2*level+1);
 				cout << "  " << literal.predicate;
 				for (string arg : literal.args)	cout << " " << arg;
