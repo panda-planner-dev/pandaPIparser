@@ -47,7 +47,7 @@ set<string> general_formula::occuringUnQuantifiedVariables(){
 
 	if (this->type == EMPTY) return ret;
 
-	if (this->type == AND || this->type == OR){
+	if (this->type == AND || this->type == OR || this->type == WHEN){
 		for (general_formula* sub : this->subformulae){
 			set<string> subres = sub->occuringUnQuantifiedVariables();
 			ret.insert(subres.begin(), subres.end());
@@ -78,7 +78,6 @@ set<string> general_formula::occuringUnQuantifiedVariables(){
 	}
 
 	// things that I don't want to support ...
-	if (this->type == WHEN) assert(false);
 	if (this->type == VALUE) assert(false);
 	if (this->type == COST_CHANGE) assert(false);
 	if (this->type == COST) assert(false);
