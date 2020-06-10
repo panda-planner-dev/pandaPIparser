@@ -217,7 +217,6 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 		string methodName; ss >> methodName;
 		if (debugMode) {
 			cout << "Parsed method name: " << methodName << endl;
-			cout << endl;
 		}
 		// read subtask IDs
 		vector<int> subtasks = parse_list_of_integers(ss, debugMode);
@@ -229,7 +228,7 @@ parsed_plan parse_plan(istream & plan, int debugMode){
 		if (debugMode) {
 			cout << "Subtasks:";
 			for(int st : subtasks) cout << " " << st;
-			cout << endl;
+			cout << endl << endl;
 		}
 	}
 
