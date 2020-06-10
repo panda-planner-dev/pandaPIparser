@@ -390,8 +390,8 @@ ordering_defs : '(' ')'{$$ = new vector<pair<string,string>*>();}
 			   | '(' KEY_AND ordering_def-list ')' {$$ = $3;}
 ordering_def-list: ordering_def-list ordering_def {$$ = $1; $$->push_back($2);}
 				 | {$$ = new vector<pair<string,string>*>();}
-ordering_def : '(' NAME '<' NAME ')' {$$ = new pair<string,string>(); $$->first = $2; $$->second = $4;}
-
+ordering_def : '(' NAME '<' NAME ')' {$$ = new pair<string,string>(); $$->first = $2; $$->second = $4;} | 
+			   '(' '<' NAME NAME ')' {$$ = new pair<string,string>(); $$->first = $3; $$->second = $4;}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Variable Constraits
 // @HDDL
