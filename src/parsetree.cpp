@@ -348,7 +348,7 @@ literal general_formula::equalsLiteral(){
 
 
 literal general_formula::atomLiteral(){
-	assert(this->type == ATOM || this->type == NOTATOM);
+	assert(this->type == ATOM || this->type == NOTATOM || this->type == COST);
 	
 	literal l;
 	l.positive = this->type == ATOM;

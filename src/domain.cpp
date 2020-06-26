@@ -524,6 +524,13 @@ void flatten_tasks(bool compileConditionalEffects,
 				   bool linearConditionalEffectExpansion,
 				   bool encodeDisjunctivePreconditionsInMethods){
 
+	bool artificialUnitCosts = false;
+	if (metric_target == dummy_function_type){
+		metric_target = "method_precondition_cost";
+		artificialUnitCosts = true;
+	}
+
+
 	if (linearConditionalEffectExpansion || encodeDisjunctivePreconditionsInMethods){
 		predicate_definition guardPredicate;
 		guardPredicate.name = GUARD_PREDICATE;
@@ -533,9 +540,36 @@ void flatten_tasks(bool compileConditionalEffects,
 	}
 
 	// flatten the primitives ...
-	for(parsed_task & a : parsed_primitive)
+	for(parsed_task & a : parsed_primitive){
+		if (artificialUnitCosts){
+			general_formula * cost_f = new general_formula();
+			cost_f->type = COST;
+			cost_f->predicate = metric_target;
+			
+			general_formula * cost_v = new general_formula();
+			cost_v->type = VALUE;
+			cost_v->value = 1;
+
+ 			general_formula * cost_form = new general_formula();
+			cost_form->type=COST_CHANGE;
+			cost_form->subformulae.push_back(cost_f);
+			cost_form->subformulae.push_back(cost_v);
+	
+			general_formula * fullEff = new general_formula();
+			fullEff->type=AND;
+			fullEff->subformulae.push_back(a.eff);
+			fullEff->subformulae.push_back(cost_form);
+
+			a.eff = fullEff;
+		}
+		
+		
+		
 		flatten_primitive_task(a, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 	
+	}
+
+
 	for(parsed_task & a : parsed_abstract){
 		task at;
 		at.name = a.name;
@@ -609,8 +643,32 @@ void parsed_method_to_data_structures(bool compileConditionalEffects,
 		parsed_task mPrec_task;
 		mPrec_task.name = method_precondition_action_name + m.name;
 		mPrec_task.prec = pm.prec;
-		mPrec_task.eff = pm.eff;
 		mPrec_task.arguments = new var_declaration();
+
+		if (metric_target == dummy_function_type){
+			metric_target = "method_precondition_cost";
+		}
+
+		general_formula * cost_f = new general_formula();
+		cost_f->type = COST;
+		cost_f->predicate = metric_target;
+		
+		general_formula * cost_v = new general_formula();
+		cost_v->type = VALUE;
+		cost_v->value = 0;
+
+ 		general_formula * cost_form = new general_formula();
+		cost_form->type=COST_CHANGE;
+		cost_form->subformulae.push_back(cost_f);
+		cost_form->subformulae.push_back(cost_v);
+	
+		general_formula * fullEff = new general_formula();
+		fullEff->type=AND;
+		fullEff->subformulae.push_back(pm.eff);
+		fullEff->subformulae.push_back(cost_form);
+
+		mPrec_task.eff = fullEff;
+
 
 		set<string> mPrecVars = pm.prec->occuringUnQuantifiedVariables();
 		set<string> mEffVars = pm.eff->occuringUnQuantifiedVariables();
