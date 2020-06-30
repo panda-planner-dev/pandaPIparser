@@ -47,6 +47,8 @@ vector<int> parse_list_of_integers(istringstream & ss, int debugMode){
 
 vector<int> parse_list_of_integers(string & line, int debugMode){
 	if (debugMode) cout << "Reading list of integers from \"" << line << "\"" << endl;
+	line.erase(0,line.find_first_not_of(" "));
+	line.erase(line.find_last_not_of(" ") + 1);
 	if (!line.size()) return vector<int>();
 	istringstream ss (line);
 	return parse_list_of_integers(ss,debugMode);
