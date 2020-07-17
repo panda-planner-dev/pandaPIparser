@@ -47,6 +47,19 @@ bool recursionFindingDFS(string cur, map<string,int> & colour){
 	return false;
 }
 
+
+bool isRecursiveParentSort(string current, string target){
+	if (current == target) return true;
+	for (sort_definition & sd : sort_definitions){
+		for (string & ss : sd.declared_sorts)
+			if (current == ss){
+				if (!sd.has_parent_sort) continue;
+				if (isRecursiveParentSort(sd.parent_sort, target)) return true;
+			}
+	}
+	return false;
+}
+
 void printProperties(){
 	// determine lifted instance properties and print them
 	
@@ -86,6 +99,103 @@ void printProperties(){
 	
 	cout << "Instance is acyclic:         ";
 	if (!hasLiftedRecursion) cout << "yes" << endl; else cout << "no" << endl;
+
+	// requirements
+	cout << "Requirements:" << endl;
+	cout << "\t:hierarchy" << endl;
+	if (sort_definitions.size()) cout << "\t:typing" << endl;	
+	bool hasEquals = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms)
+			hasEquals |= m.prec->hasEquals() || m.eff->hasEquals();
+	for (auto & p : parsed_primitive)
+		hasEquals |= p.prec->hasEquals() || p.eff->hasEquals();
+	if (hasEquals) cout << "\t:equality" << endl;
+
+
+	bool exists_prec = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms)
+			exists_prec |= m.prec->hasExists();
+	for (auto & p : parsed_primitive)
+		exists_prec |= p.prec->hasExists();
+	if (exists_prec) cout << "\t:existential-precondition" << endl;
+
+	bool forall_prec = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms)
+			forall_prec |= m.prec->hasForall();
+	for (auto & p : parsed_primitive)
+		forall_prec |= p.prec->hasForall();
+	if (forall_prec) cout << "\t:universal-precondition" << endl;
+
+	bool forall_eff = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms)
+			forall_eff |= m.eff->hasForall();
+	for (auto & p : parsed_primitive)
+		forall_eff |= p.eff->hasForall();
+	if (forall_eff) cout << "\t:universal-effect" << endl;
+	
+	
+	bool method_preconditon = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms)
+			method_preconditon |= !m.prec->isEmpty();
+	if (method_preconditon) cout << "\t:method-precondition" << endl;
+
+
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms){
+			for (sub_task * sub : m.tn->tasks){
+				// quadratic
+				for (parsed_task prim : parsed_primitive){
+					if (sub->task != prim.name) continue;
+					for (size_t i = 0; i < prim.arguments->vars.size(); i++){
+						string primArgType = prim.arguments->vars[i].second;
+						string method_var = sub->arguments->vars[i];
+					
+						for (pair<string,string> a : m.vars->vars){
+							if (method_var == a.first){
+								if (primArgType != a.second){
+									if (!isRecursiveParentSort(a.second, primArgType)){
+										cout << "Method: " << m.name << endl;
+										cout << "\tVariable: " << method_var << endl;
+										cout << "\tSubtask: " << sub->id << endl;
+										cout << "\t\tTask argument: " << primArgType << endl;
+										cout << "\t\tvariable: " << a.second << endl;
+									}
+								}
+							}
+						}
+					}
+				}
+				for (parsed_task prim : parsed_abstract){
+					if (sub->task != prim.name) continue;
+					for (size_t i = 0; i < prim.arguments->vars.size(); i++){
+						string primArgType = prim.arguments->vars[i].second;
+						string method_var = sub->arguments->vars[i];
+						
+						for (pair<string,string> a : m.vars->vars){
+							if (method_var == a.first){
+								if (primArgType != a.second){
+									if (!isRecursiveParentSort(a.second, primArgType)){
+										cout << "Method: " << m.name << endl;
+										cout << "\tVariable: " << method_var << endl;
+										cout << "\tSubtask: " << sub->id << endl;
+										cout << "\t\tTask argument: " << primArgType << endl;
+										cout << "\t\tvariable: " << a.second << endl;
+									}
+									
+								}
+								break;
+							}
+						}
+					}
+				}
+			
+			}
+		}
 
 
 }

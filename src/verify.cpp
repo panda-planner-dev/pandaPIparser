@@ -1275,6 +1275,10 @@ bool check_executability_of_primitive_plan(parsed_plan & plan, map<int,parsed_ta
 bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int debugMode){
 
 	parsed_plan pplan = parse_plan(plan,debugMode);
+	if (pplan.tasks.size() == 0 && pplan.root_tasks.size() == 0 && pplan.appliedMethod.size() == 0) {
+		cout << "No plan provided" << endl;
+		return false;
+	}
 
 	map<int,instantiated_plan_step> & tasks = pplan.tasks;
 	vector<int> & primitive_plan = pplan.primitive_plan;
