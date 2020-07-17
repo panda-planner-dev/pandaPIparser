@@ -42,6 +42,32 @@ bool general_formula::isEmpty(){
 	return true;
 }
 
+
+bool general_formula::hasEquals(){
+	if (this->type == EQUAL) return true;
+	if (this->type == NOTEQUAL) return true;
+	
+	for(auto sub : this->subformulae) if (sub->hasEquals()) return true;
+
+	return false;
+}
+
+bool general_formula::hasExists(){
+	if (this->type == EXISTS) return true;
+	
+	for(auto sub : this->subformulae) if (sub->hasExists()) return true;
+
+	return false;
+}
+
+bool general_formula::hasForall(){
+	if (this->type == FORALL) return true;
+	
+	for(auto sub : this->subformulae) if (sub->hasForall()) return true;
+
+	return false;
+}
+
 set<string> general_formula::occuringUnQuantifiedVariables(){
 	set<string> ret;
 

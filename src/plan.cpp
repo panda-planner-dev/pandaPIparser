@@ -104,12 +104,16 @@ instantiated_plan_step parse_plan_step_from_string(string input, int debugMode){
 
 
 parsed_plan parse_plan(istream & plan, int debugMode){
+	parsed_plan pplan;
+	
 	// parse everything until marker
 	string s = "";
-	while (s != "==>") plan >> s;
+	while (s != "==>") {
+		plan >> s;
+		if (plan.eof()) return pplan;
+	}
 	// then read the primitive plan
 
-	parsed_plan pplan;
 
 	pplan.tasks.clear();
 	pplan.primitive_plan.clear();

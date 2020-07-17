@@ -60,6 +60,9 @@ class general_formula{
 
 		void negate();
 		bool isEmpty();
+		bool hasEquals();
+		bool hasExists();
+		bool hasForall();
 		// first: effect, second: additional precondition for that effect
 		// if it is an uncompiled conditional effect, the additional prec will be empty
 		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > expand(bool compileConditionalEffects);
