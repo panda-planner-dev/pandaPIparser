@@ -328,12 +328,12 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			dout << "   ";
 			int counter = 0;
 			for(string constant : dconst) {
-				counter += 1;
 				if (counter >= MAX_OBJECTS_PER_LINE) {
 					counter = 0;
 					dout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
 					dout << "   ";
 				}
+				counter += 1;
 				dout << " " << constant;
 			}
 			if (counter) dout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
@@ -342,12 +342,12 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			pout << "   ";
 			int counter = 0;
 			for(string constant : pconst) {
-				counter += 1;
 				if (counter >= MAX_OBJECTS_PER_LINE) {
 					counter = 0;
 					pout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
 					pout << "   ";
 				}
+				counter += 1;
 				pout << " " << constant;
 			}
 			if (counter) pout << " - " << get_hpdl_sort_name(s_entry.first) << endl;
