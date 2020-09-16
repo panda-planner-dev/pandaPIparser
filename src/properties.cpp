@@ -82,6 +82,7 @@ void printProperties(){
 
 				if (! orderEnforced){
 					totalOrder = false;
+					cout << "Partially Ordered Method: " << m.name << endl;
 					break;
 				}
 			}
@@ -119,7 +120,7 @@ void printProperties(){
 			exists_prec |= m.prec->hasExists();
 	for (auto & p : parsed_primitive)
 		exists_prec |= p.prec->hasExists();
-	if (exists_prec) cout << "\t:existential-precondition" << endl;
+	if (exists_prec) cout << "\t:existential-preconditions" << endl;
 
 	bool forall_prec = false;
 	for (auto & [_,ms] : parsed_methods)
@@ -127,7 +128,7 @@ void printProperties(){
 			forall_prec |= m.prec->hasForall();
 	for (auto & p : parsed_primitive)
 		forall_prec |= p.prec->hasForall();
-	if (forall_prec) cout << "\t:universal-precondition" << endl;
+	if (forall_prec) cout << "\t:universal-preconditions" << endl;
 
 	bool forall_eff = false;
 	for (auto & [_,ms] : parsed_methods)
@@ -135,14 +136,14 @@ void printProperties(){
 			forall_eff |= m.eff->hasForall();
 	for (auto & p : parsed_primitive)
 		forall_eff |= p.eff->hasForall();
-	if (forall_eff) cout << "\t:universal-effect" << endl;
+	if (forall_eff) cout << "\t:universal-effects" << endl;
 	
 	
 	bool method_preconditon = false;
 	for (auto & [_,ms] : parsed_methods)
 		for (auto & m : ms)
 			method_preconditon |= !m.prec->isEmpty();
-	if (method_preconditon) cout << "\t:method-precondition" << endl;
+	if (method_preconditon) cout << "\t:method-preconditions" << endl;
 
 
 	for (auto & [_,ms] : parsed_methods)
