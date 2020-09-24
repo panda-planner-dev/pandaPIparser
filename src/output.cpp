@@ -179,6 +179,9 @@ void simple_hddl_output(ostream & dout){
 		task_out.push_back(make_pair(t,true));
 	}
 	for (task t : abstract_tasks){
+		if (task_id.count(t.name) != 0){
+			cerr << "Duplicate abstract task " << t.name << endl;
+		}
 		assert(task_id.count(t.name) == 0);
 		task_id[t.name] = task_id.size();
 		task_out.push_back(make_pair(t,false));
