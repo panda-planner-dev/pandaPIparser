@@ -1277,7 +1277,7 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 	parsed_plan pplan = parse_plan(plan,debugMode);
 	if (pplan.tasks.size() == 0 && pplan.root_tasks.size() == 0 && pplan.appliedMethod.size() == 0) {
 		cout << "No plan provided" << endl;
-		return false;
+		exit(0);
 	}
 
 	map<int,instantiated_plan_step> & tasks = pplan.tasks;
