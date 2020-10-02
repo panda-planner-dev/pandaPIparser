@@ -63,6 +63,7 @@ int main(int argc, char** argv) {
 	
 	bool shopOutput = false;
 	bool hpdlOutput = false;
+	bool pureHddlOutput = false;
 	bool hddlOutput = false;
 	bool internalHDDLOutput = false;
 	bool lenientVerify = false;
@@ -85,6 +86,7 @@ int main(int argc, char** argv) {
 		{"shop1"                                  , no_argument,       NULL,   '1'},
 		{"hpdl"                                   , no_argument,       NULL,   'H'},
 		{"hddl"                                   , no_argument,       NULL,   'h'},
+		{"processed-hddl"                         , no_argument,       NULL,   'P'},
 		{"hddl-internal"                          , no_argument,       NULL,   'i'},
 		
 		{"panda-converter"                        , no_argument,       NULL,   'c'},
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
 
 	bool optionsValid = true;
 	while (true) {
-		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhilpLDg", options, NULL);
+		int c = getopt_long_only (argc, argv, "sS1HcvVWoCdkhilpLDgP", options, NULL);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':'){
@@ -121,7 +123,8 @@ int main(int argc, char** argv) {
 		else if (c == 'S') shopOutput = true;
 		else if (c == '1') { shopOutput = true; shop_1_compatability_mode = true; }
 	   	else if (c == 'H') hpdlOutput = true;
-	   	else if (c == 'h') hddlOutput = true;
+	   	else if (c == 'h') pureHddlOutput = true;
+	   	else if (c == 'P') hddlOutput = true;
 	   	else if (c == 'i') { hddlOutput = true; internalHDDLOutput = true; }
 		else if (c == 'c') convertPlan = true;
 		else if (c == 'v') {
@@ -193,7 +196,7 @@ int main(int argc, char** argv) {
 		cout << "I can't open " << argv[pfile] << "!" << endl;
 		return 2;
 	}
-	if (!shopOutput && !hpdlOutput && !hddlOutput && poutfile != -1){
+	if (!shopOutput && !hpdlOutput && !hddlOutput && !pureHddlOutput && poutfile != -1){
 		cout << "For ordinary pandaPI output, you may only specify one output file, but you specified two: " << argv[doutfile] << " and " << argv[poutfile] << endl;
 	}
 	
@@ -209,6 +212,31 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	if (pureHddlOutput) {
+		// produce streams for output
+		ostream * dout = &cout;
+		ostream * pout = &cout;
+		if (doutfile != -1){
+			ofstream * df  = new ofstream(argv[doutfile]);
+			if (!df->is_open()){
+				cout << "I can't open " << argv[doutfile] << "!" << endl;
+				return 2;
+			}
+			dout = df;
+		}
+		if (poutfile != -1){
+			ofstream * pf  = new ofstream(argv[poutfile]);
+			if (!pf->is_open()){
+				cout << "I can't open " << argv[poutfile] << "!" << endl;
+				return 2;
+			}
+			pout = pf;
+		}
+		hddl_output(*dout,*pout, false, true);
+		return 0;
+	}
+
+	
 	if (!hpdlOutput) expand_sorts(); // add constants to all sorts
 	
 	// handle typeof-predicate
@@ -294,7 +322,7 @@ int main(int argc, char** argv) {
 			}
 			pout = pf;
 		}
-		hddl_output(*dout,*pout, internalHDDLOutput);
+		hddl_output(*dout,*pout, internalHDDLOutput, false);
 	} else {
 		ostream * dout = &cout;
 		if (doutfile != -1){

@@ -11,6 +11,7 @@
 #include "domain.hpp"
 #include "sortexpansion.hpp"
 #include "cwa.hpp"
+#include "properties.hpp"
 #include "util.hpp"
 
 using namespace std;
@@ -115,8 +116,12 @@ tuple<vector<string>,
 			if (subset[s1][s2]){
 				parents[s2].insert(s1);
 				if (parent[s2] != -1){
-					if (parent[s2] >= 0) 
+					if (parent[s2] >= 0) {
 						cout << "Type hierarchy is not a tree ...I can't write this in standard conform HDDL, so ..." << endl;
+						cout << "\tThe sort " << s2 << " " << sortsInOrder[s2] << " has multiple parents." << endl;
+					  	for (int ss : parents[s2])
+							cout << "\t\t" << sortsInOrder[ss] << endl;
+					}
 					parent[s2] = -2;
 				} else {
 					parent[s2] = s1;
@@ -212,27 +217,103 @@ tuple<vector<string>,
 }
 
 
+void print_indent(ostream & out, int indent, bool end = false){
+	if (indent == -1) {
+		if (end) out << "    ";
+		return;
+	}
+	out << "    ";
+	for (int i = 0; i < indent + 1; i++)
+		out << "  ";
+}
+
+void print_var_and_const(ostream & out, var_and_const & vars){
+	map<string,string> constants;
+	for (auto [v,s] : vars.newVar)
+		constants[v] = *sorts[s].begin();
+	for (string v : vars.vars){
+		if (constants.count(v))
+			v = constants[v];
+		out << " " << v;
+	}
+
+}
+
+void print_formula(ostream & out, general_formula * f, int indent){
+	if (f == 0) return;
+	if (f->type == EMPTY) return;
+	if (f->type == AND || f->type == OR){
+		print_indent(out,indent);
+		out << "("; if (f->type == AND) out << "and"; else out << "or";
+		out << endl;
+		for (general_formula * s : f->subformulae)
+			print_formula(out,s,indent + 1);
+		print_indent(out,indent,true);
+		out << ")" << endl;
+	}
+	
+	if (f->type == FORALL || f->type == EXISTS){
+		print_indent(out,indent);
+		out << "(";
+		if (f->type == FORALL) out << "forall"; else out << "exists";
+		out << " (";
+		bool first = true;
+		for (auto [v,s] : f->qvariables.vars){
+			if (!first) out << " ";
+			out << v << " - " << s;
+			first = false;
+		}
+		out << ")" << endl;
+		for (general_formula * s : f->subformulae)
+			print_formula(out,s,indent + 1);
+		
+		print_indent(out,indent,true);
+		out << ")" << endl;
+	}
+
+	if (f->type == ATOM || f->type == NOTATOM){
+		print_indent(out,indent);
+		if (f->type == NOTEQUAL) out << "(not ";
+		out << "(" << f->predicate;
+		print_var_and_const(out,f->arguments);
+		if (f->type == NOTEQUAL) out << ")";
+		out << ")" << endl;
+	}
+
+	if (f->type == WHEN){
+		print_indent(out,indent);
+		out << "(when" << endl;	
+		print_formula(out,f->subformulae[0],indent + 1);
+		print_formula(out,f->subformulae[1],indent + 1);
+		print_indent(out,indent);
+		out << ")" << endl;	
+	}
+
+	if (f->type == EQUAL || f->type == NOTEQUAL){
+		print_indent(out,indent);
+		if (f->type == NOTEQUAL) out << "(not ";
+		out << "(= " << f->arg1 << " " << f->arg2;
+		if (f->type == NOTEQUAL) out << ")";
+		out << ")" << endl;
+	}
+}
+
+void print_formula_for(ostream & out, general_formula * f, string topic){
+	general_formula * pf = f;
+	if (pf->type != AND){
+		pf = new general_formula();
+		pf->type = AND;
+		pf->subformulae.push_back(f);
+	}
+	out << "    " << topic << " ";
+	print_formula(out,pf,-1);
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
+void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed){
 
 	auto sanitise = [&](string s){
-		if (internalHDDLOutput) {
+		if (internalHDDLOutput || usedParsed) {
 			if (s[0] == '_') return "t" + s;
 			return s;
 		}
@@ -263,8 +344,9 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 	for (auto l : goal) if (!l.positive) neg_pred.insert(l.predicate);
 
 
+	// TODO do this more intelligently
 	dout << "(define (domain d)" << endl;
-	dout << "  (:requirements :typing :hierarchy";
+	dout << "  (:requirements :typing :hierarchy :method-preconditions";
 	if (!internalHDDLOutput) dout << " :negative-preconditions";
 	dout << ")" << endl;
 	
@@ -272,40 +354,57 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 
 	
 	
+	// TODO identical types are not recognised and are treated as a non-dag structure, which is not necessary
 	dout << "  (:types" << endl;
-	
-	// add artificial root type ...
-	set<string> allConstants;
-	for (auto [_,cs] : sorts)
-		allConstants.insert(cs.begin(), cs.end());
-	
-	bool hasRootSort = false;
-	for (auto [_,cs] : sorts) if (cs.size() == allConstants.size()) hasRootSort = true;
-	if (! hasRootSort) sorts["master_sort"] = allConstants;
-	
-	
-	auto [sortsInOrder, parent, sortOfElement, replacedSorts] = compute_local_type_hierarchy();
-	
-	if (internalHDDLOutput){
-		// if we do internal output, remove it immediately
-		sorts.erase("master_sort");
-		// sorts
-		for (auto x : sorts) dout << "    " << sanitise(x.first) << endl;
-	} else {
-		// compute and output an appropriate type hierarchy
-		vector<int> sortsWithoutParents;
-		unordered_set<int> onRightHandSide;
-		for (size_t s = 0; s < sortsInOrder.size(); s++){
-			if (parent[s] >= 0){
-				dout << "    " << sanitise(sortsInOrder[s]) << " - " << sanitise(sortsInOrder[parent[s]]) << endl;
-				onRightHandSide.insert(parent[s]);
-			} else if (parent[s] == -1)
-				sortsWithoutParents.push_back(s);
-		}
-
-		for (int s : sortsWithoutParents) if (!onRightHandSide.count(s))
-			dout << "    " << sanitise(sortsInOrder[s]) << endl;
+	vector<string> sortsInOrder;
+	map<int,int> replacedSorts;
+	map<string,string> sortOfElement;
+	set<string> declaredSorts;
+	if (!usedParsed){
+		// add artificial root type ...
+		set<string> allConstants;
+		for (auto [_,cs] : sorts)
+			allConstants.insert(cs.begin(), cs.end());
 		
+		bool hasRootSort = false;
+		for (auto [_,cs] : sorts) if (cs.size() == allConstants.size()) hasRootSort = true;
+		if (! hasRootSort) sorts["master_sort"] = allConstants;
+		
+		auto [_sortsInOrder, parent, _sortOfElement, _replacedSorts] = compute_local_type_hierarchy();
+		sortsInOrder = _sortsInOrder;
+		replacedSorts = _replacedSorts;
+		sortOfElement = _sortOfElement;
+		
+		if (internalHDDLOutput){
+			// if we do internal output, remove it immediately
+			sorts.erase("master_sort");
+			// sorts
+			for (auto x : sorts) dout << "    " << sanitise(x.first) << endl;
+		} else {
+			// compute and output an appropriate type hierarchy
+			vector<int> sortsWithoutParents;
+			unordered_set<int> onRightHandSide;
+			for (size_t s = 0; s < sortsInOrder.size(); s++){
+				if (parent[s] >= 0){
+					dout << "    " << sanitise(sortsInOrder[s]) << " - " << sanitise(sortsInOrder[parent[s]]) << endl;
+					onRightHandSide.insert(parent[s]);
+				} else if (parent[s] == -1)
+					sortsWithoutParents.push_back(s);
+			}
+
+			for (int s : sortsWithoutParents) if (!onRightHandSide.count(s))
+				dout << "    " << sanitise(sortsInOrder[s]) << endl;
+			
+		}
+	} else {
+		for (sort_definition s : sort_definitions){
+			dout << "   ";
+			for (string ss : s.declared_sorts)
+				dout << " " << ss, declaredSorts.insert(ss);
+			if (s.has_parent_sort)
+				dout << " - " << s.parent_sort, declaredSorts.insert(s.parent_sort);
+			dout << endl;
+		}	
 	}
 	dout << "  )" << endl;
 	
@@ -344,6 +443,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 
 	dout << "  )" << endl;
 	dout << endl;
+	
 
 	bool hasActionCosts = metric_target != dummy_function_type;
 
@@ -361,213 +461,321 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 	dout << endl;
 
 	// abstract tasks
-	for (task t : abstract_tasks){
-		dout << "  (:task ";
-		dout << sanitise(t.name);
-		dout << " :parameters (";
-		bool first = true;
-		for (auto v : t.vars){
-			if (!first) dout << " ";
-			first = false;
-			dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
+	if (!usedParsed){
+		for (task t : abstract_tasks){
+			dout << "  (:task ";
+			dout << sanitise(t.name);
+			dout << " :parameters (";
+			bool first = true;
+			for (auto v : t.vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
+			}
+			dout << "))" << endl;
 		}
-		dout << "))" << endl;
+	} else {
+		for (parsed_task a : parsed_abstract){
+			dout << "  (:task ";
+			dout << sanitise(a.name);
+			dout << " :parameters (";
+			bool first = true;
+			for (auto [v,s] : a.arguments->vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
+			}
+			dout << "))" << endl;
+	
+		}
 	}
 	
 	dout << endl;
 
 	// decomposition methods
-	for (method m : methods){
-		dout << "  (:method ";
-	   	dout << sanitise(m.name) << endl;
-		dout << "    :parameters (";
-		bool first = true;
-		vector<pair<string,string>> variablesToConstrain;
-		for (auto v : m.vars){
-			if (!first) dout << " ";
-			first = false;
-			dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
-			if (typeConstraint.count(v.second))
-				variablesToConstrain.push_back(make_pair(v.first, typeConstraint[v.second]));
-		}
-		dout << ")" << endl;
-
-		// AT
-		dout << "    :task (";
-		dout << sanitise(m.at);
-		for (string v : m.atargs) dout << " " << sanitise(v);
-		dout << ")" << endl;
-
-		// constraints
-		if (m.constraints.size() || variablesToConstrain.size()){
-			dout << "    :precondition (and" << endl;
-
-			for (auto & [v,pred] : variablesToConstrain)
-				dout << "      (" << sanitise(pred) << " " << sanitise(v) << ")" << endl;
-			
-			for (literal l : m.constraints){
-				dout << "      ";
-				if (!l.positive) dout << "(not ";
-				dout << "(= " << sanitise(l.arguments[0]) << " " << sanitise(l.arguments[1]) << ")";
-				if (!l.positive) dout << ")";
-				dout << endl;
+	if (!usedParsed){
+		for (method m : methods){
+			dout << "  (:method ";
+		   	dout << sanitise(m.name) << endl;
+			dout << "    :parameters (";
+			bool first = true;
+			vector<pair<string,string>> variablesToConstrain;
+			for (auto v : m.vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
+				if (typeConstraint.count(v.second))
+					variablesToConstrain.push_back(make_pair(v.first, typeConstraint[v.second]));
 			}
+			dout << ")" << endl;
+
+			// AT
+			dout << "    :task (";
+			dout << sanitise(m.at);
+			for (string v : m.atargs) dout << " " << sanitise(v);
+			dout << ")" << endl;
+
+			// constraints
+			if (m.constraints.size() || variablesToConstrain.size()){
+				dout << "    :precondition (and" << endl;
+
+				for (auto & [v,pred] : variablesToConstrain)
+					dout << "      (" << sanitise(pred) << " " << sanitise(v) << ")" << endl;
+				
+				for (literal l : m.constraints){
+					dout << "      ";
+					if (!l.positive) dout << "(not ";
+					dout << "(= " << sanitise(l.arguments[0]) << " " << sanitise(l.arguments[1]) << ")";
+					if (!l.positive) dout << ")";
+					dout << endl;
+				}
+				
+				dout << "    )" << endl;
+			}
+
+			// subtasks
+			dout << "    :subtasks (and" << endl;
+			for (plan_step ps : m.ps){
+				dout << "      (x" << sanitise(ps.id) << " (";
+				dout << sanitise(ps.task);
+				for (string v : ps.args) dout << " " << sanitise(v);
+				dout << "))" << endl;
+			}
+			dout << "    )" << endl;
+
 			
-			dout << "    )" << endl;
-		}
+			if (m.ordering.size()){
+				// ordering of subtasks
+				dout << "    :ordering (and" << endl;
+				for (auto o : m.ordering)
+					dout << "      (< x" << sanitise(o.first) << " x" << sanitise(o.second) << ")" << endl;
+				dout << "    )" << endl;
+			}
 
-		// subtasks
-		dout << "    :subtasks (and" << endl;
-		for (plan_step ps : m.ps){
-			dout << "      (x" << sanitise(ps.id) << " (";
-			dout << sanitise(ps.task);
-			for (string v : ps.args) dout << " " << sanitise(v);
-			dout << "))" << endl;
+			dout << "  )" << endl << endl;
 		}
-		dout << "    )" << endl;
+	} else {
+		for (auto [atname,ms] : parsed_methods) for (parsed_method m : ms){
+			dout << "  (:method ";
+		   	dout << sanitise(m.name) << endl;
+			dout << "    :parameters (";
+			bool first = true;
+			for (auto [v,s] : m.vars->vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
+			}
+			dout << ")" << endl;
 
-		
-		if (m.ordering.size()){
-			// ordering of subtasks
-			dout << "    :ordering (and" << endl;
-			for (auto o : m.ordering)
-				dout << "      (x" << sanitise(o.first) << " < x" << sanitise(o.second) << ")" << endl;
-			dout << "    )" << endl;
+			// AT
+			dout << "    :task (";
+			dout << sanitise(atname);
+			map<string,string> atConstants;
+			for (auto [v,s] : m.newVarForAT)
+				atConstants[v] = *sorts[s].begin();
+
+			for (string v : m.atArguments) {
+				if (atConstants.count(v))
+					v = atConstants[v];
+				dout << " " << sanitise(v);
+			}
+			dout << ")" << endl;
+			
+
+			if (!m.prec->isEmpty())
+				print_formula_for(dout,m.prec,":precondition");
+
+			if (!m.eff->isEmpty())
+				print_formula_for(dout,m.eff,":effect");
+
+			// subtasks
+			vector<string> liftedTopSort = liftedPropertyTopSort(m.tn);
+			if (isTopSortTotalOrder(liftedTopSort,m.tn)){
+				dout << "    :ordered-subtasks (and" << endl;
+				map<string, sub_task* > idMap;
+				for (sub_task* t : m.tn->tasks) idMap[t->id] = t;
+				int c = 1;
+				for (string id : liftedTopSort){
+					dout << "      (t" << c++ << " (" << sanitise(idMap[id]->task);
+					print_var_and_const(dout,*idMap[id]->arguments);
+					dout << "))" << endl;
+				}
+				dout << "    )" << endl;
+			} else {
+				dout << "    :subtasks (and" << endl;
+				for (sub_task * task : m.tn->tasks){
+					dout << "      (" << task->id << " (" << sanitise(task->task);
+					print_var_and_const(dout,*task->arguments);
+					dout << "))" << endl;
+				}
+				dout << "    )" << endl;
+				if (m.tn->ordering.size()){
+					// ordering of subtasks
+					dout << "    :ordering (and" << endl;
+					for (auto p : m.tn->ordering)
+						dout << "      (< " << p->first << " " << p->second << ")" << endl;
+					dout << "    )" << endl;
+				}
+			} 
+			
+			if (!m.tn->constraint->isEmpty())
+				print_formula_for(dout,m.tn->constraint,":constraints");
+			
+			dout << "  )" << endl << endl;
 		}
-
-		dout << "  )" << endl << endl;
 	}
 
-
 	// actions
-	for (task t : primitive_tasks){
-		dout << "  (:action ";
-		dout << sanitise(t.name) << endl;
-		dout << "    :parameters (";
-		bool first = true;
-		vector<pair<string,string>> variablesToConstrain;
-		for (auto v : t.vars){
-			if (!first) dout << " ";
-			first = false;
-			dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
-			if (typeConstraint.count(v.second))
-				variablesToConstrain.push_back(make_pair(v.first, typeConstraint[v.second]));
-		}
-		dout << ")" << endl;
-		
-	
-		if (variablesToConstrain.size() || t.prec.size() || t.constraints.size()){
-			// precondition
-			dout << "    :precondition (and" << endl;
-			
-			for (auto & [v,pred] : variablesToConstrain)
-				dout << "      (" << sanitise(pred) << " " << sanitise(v) << ")" << endl;
-			
-			for (literal l : t.constraints){
-				dout << "      ";
-				if (!l.positive) dout << "(not ";
-				dout << "(= " << sanitise(l.arguments[0]) << " " << sanitise(l.arguments[1]) << ")";
-				if (!l.positive) dout << ")";
-				dout << endl;
+	if (!usedParsed){
+		for (task t : primitive_tasks){
+			dout << "  (:action ";
+			dout << sanitise(t.name) << endl;
+			dout << "    :parameters (";
+			bool first = true;
+			vector<pair<string,string>> variablesToConstrain;
+			for (auto v : t.vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v.first) << " - " << sanitise(sortReplace[v.second]);
+				if (typeConstraint.count(v.second))
+					variablesToConstrain.push_back(make_pair(v.first, typeConstraint[v.second]));
 			}
+			dout << ")" << endl;
 			
-			for (literal l : t.prec){
-				string p;
-				if (internalHDDLOutput)
-					p = (l.positive ? "" : "not_")  + sanitise(l.predicate);
-				else
-					p = (l.positive ? "" : "not (") + sanitise(l.predicate);
-
-				dout << "      (" << p;
-				for (string v : l.arguments) dout << " " << sanitise(v);
-				if (!internalHDDLOutput && !l.positive) dout << ")";
-				dout << ")" << endl;
-			}
-			dout << "    )" << endl;
-		}
-
 		
-		if (t.eff.size() || t.ceff.size() || 
-				(hasActionCosts && t.costExpression.size())){
-			// effect
-			dout << "    :effect (and" << endl;
+			if (variablesToConstrain.size() || t.prec.size() || t.constraints.size()){
+				// precondition
+				dout << "    :precondition (and" << endl;
+				
+				for (auto & [v,pred] : variablesToConstrain)
+					dout << "      (" << sanitise(pred) << " " << sanitise(v) << ")" << endl;
+				
+				for (literal l : t.constraints){
+					dout << "      ";
+					if (!l.positive) dout << "(not ";
+					dout << "(= " << sanitise(l.arguments[0]) << " " << sanitise(l.arguments[1]) << ")";
+					if (!l.positive) dout << ")";
+					dout << endl;
+				}
+				
+				for (literal l : t.prec){
+					string p;
+					if (internalHDDLOutput)
+						p = (l.positive ? "" : "not_")  + sanitise(l.predicate);
+					else
+						p = (l.positive ? "" : "not (") + sanitise(l.predicate);
 
-			for (literal l : t.eff){
-				for (int positive = 0; positive < 2; positive ++){
-					if ((neg_pred.count(l.predicate) && internalHDDLOutput) || (l.positive == positive)){
-						dout << "      (";
-						if (!positive) dout << "not (";
-						dout << ((l.positive == positive) ? "" : "not_") << sanitise(l.predicate);
-						for (string v : l.arguments) dout << " " << sanitise(v);
-						if (!positive) dout << ")";
+					dout << "      (" << p;
+					for (string v : l.arguments) dout << " " << sanitise(v);
+					if (!internalHDDLOutput && !l.positive) dout << ")";
+					dout << ")" << endl;
+				}
+				dout << "    )" << endl;
+			}
+
+			
+			if (t.eff.size() || t.ceff.size() || 
+					(hasActionCosts && t.costExpression.size())){
+				// effect
+				dout << "    :effect (and" << endl;
+
+				for (literal l : t.eff){
+					for (int positive = 0; positive < 2; positive ++){
+						if ((neg_pred.count(l.predicate) && internalHDDLOutput) || (l.positive == positive)){
+							dout << "      (";
+							if (!positive) dout << "not (";
+							dout << ((l.positive == positive) ? "" : "not_") << sanitise(l.predicate);
+							for (string v : l.arguments) dout << " " << sanitise(v);
+							if (!positive) dout << ")";
+							dout << ")" << endl;
+						}
+					}
+				}
+
+				for (conditional_effect ceff : t.ceff) {
+					for (int positive = 0; positive < 2; positive ++){
+						if ((neg_pred.count(ceff.effect.predicate) && internalHDDLOutput) || (ceff.effect.positive == positive)){
+
+							dout << "      (when (and";
+						
+							for (literal l : ceff.condition){
+								dout << " (";
+								if (!l.positive){
+									dout << "not";
+									if (internalHDDLOutput) dout << "_";
+									else dout << " (";
+								}
+								dout << sanitise(l.predicate);
+								for (string v : l.arguments) dout << " " << sanitise(v);
+								if (!l.positive && !internalHDDLOutput) dout << ")";
+								dout << ")";
+							}
+
+							dout << ") (";
+
+							// actual effect
+							if (!positive) dout << "not (";
+							dout << ((ceff.effect.positive == positive) ? "" : "not_") << sanitise(ceff.effect.predicate);
+							for (string v : ceff.effect.arguments) dout << " " << sanitise(v);
+							if (!positive) dout << ")";
+
+							dout << "))" << endl;
+						}
+					}
+				}
+				
+				if (hasActionCosts){
+					for (auto c : t.costExpression){
+						dout << "      (increase (" << sanitise(metric_target) << ") ";
+						if (c.isConstantCostExpression)
+							 dout << c.costValue << ")" << endl;
+						else {
+							dout << "(" << sanitise(c.predicate);
+							for (string v : c.arguments) dout << " " << sanitise(v);
+							dout << ")";
+						}
 						dout << ")" << endl;
 					}
 				}
+		
+				dout << "    )" << endl;
 			}
-
-			for (conditional_effect ceff : t.ceff) {
-				for (int positive = 0; positive < 2; positive ++){
-					if ((neg_pred.count(ceff.effect.predicate) && internalHDDLOutput) || (ceff.effect.positive == positive)){
-
-						dout << "      (when (and";
-					
-						for (literal l : ceff.condition){
-							dout << " (";
-							if (!l.positive){
-								dout << "not";
-								if (internalHDDLOutput) dout << "_";
-								else dout << " (";
-							}
-							dout << sanitise(l.predicate);
-							for (string v : l.arguments) dout << " " << sanitise(v);
-							if (!l.positive && !internalHDDLOutput) dout << ")";
-							dout << ")";
-						}
-
-						dout << ") (";
-
-						// actual effect
-						if (!positive) dout << "not (";
-						dout << ((ceff.effect.positive == positive) ? "" : "not_") << sanitise(ceff.effect.predicate);
-						for (string v : ceff.effect.arguments) dout << " " << sanitise(v);
-						if (!positive) dout << ")";
-
-						dout << "))" << endl;
-					}
-				}
-			}
-			
-			if (hasActionCosts){
-				for (auto c : t.costExpression){
-					dout << "      (increase (" << sanitise(metric_target) << ") ";
-					if (c.isConstantCostExpression)
-						 dout << c.costValue << ")" << endl;
-					else {
-						dout << "(" << sanitise(c.predicate);
-						for (string v : c.arguments) dout << " " << sanitise(v);
-						dout << ")";
-					}
-					dout << ")" << endl;
-				}
-			}
-	
-			dout << "    )" << endl;
+		
+			dout << "  )" << endl << endl;
 		}
-	
-		dout << "  )" << endl << endl;
+	} else {
+		for (parsed_task p : parsed_primitive){
+			dout << "  (:action " << sanitise(p.name) << endl;
+			dout << "    :parameters (";
+			bool first = true;
+			for (auto [v,s] : p.arguments->vars){
+				if (!first) dout << " ";
+				first = false;
+				dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
+			}
+			dout << ")" << endl;
+			if (!p.prec->isEmpty())
+				print_formula_for(dout,p.prec,":precondition");
+			if (!p.eff->isEmpty())
+				print_formula_for(dout,p.eff,":effect");
+
+			dout << "  )" << endl;
+		}
 	}
 
 	dout << ")" << endl;
-
 
 	pout << "(define" << endl;
 	pout << "  (problem p)" << endl;
 	pout << "  (:domain d)" << endl;
 
 	pout << "  (:objects" << endl;
-	if (internalHDDLOutput){
-		for (auto x : sorts) for (string s : x.second)
-			pout << "    " << sanitise(s) << " - " << sanitise(x.first) << endl;
+	if (internalHDDLOutput || usedParsed){
+		for (auto x : sorts) {
+			if (! declaredSorts.count(x.first) && usedParsed) continue;
+			for (string s : x.second)
+				pout << "    " << sanitise(s) << " - " << sanitise(x.first) << endl;
+		}
 	} else {
 		for (auto [c,s] : sortOfElement)
 			pout << "    " << sanitise(c) << " - " << sanitise(s) << endl;
@@ -578,16 +786,20 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 	bool instance_is_classical = true;
 	for (task t : abstract_tasks)
 		if (t.name == "__top") instance_is_classical = false;
+	
+	for (parsed_task t : parsed_abstract)
+		if (t.name == "__top") instance_is_classical = false;
 
 	if (! instance_is_classical){
 		pout << "  (:htn" << endl;
 		pout << "    :parameters ()" << endl;
 		pout << "    :subtasks (and (";
-		if (internalHDDLOutput) pout << "t";
+		if (internalHDDLOutput || usedParsed) pout << "t";
 		else pout << "US";
 		pout << "__top))" << endl;
 		pout << "  )" << endl;
 	}
+	
 
 	pout << "  (:init" << endl;
 	for (auto gl : init){
@@ -603,6 +815,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 		if (!gl.positive && !internalHDDLOutput) pout << ")";
 		pout << ")" << endl;
 	}
+
 	for (auto [oldType,predicate] : typeConstraint){
 		for (string c : sorts[oldType])
 			pout << "    (" << sanitise(predicate) << " " << sanitise(c) << ")" << endl;
@@ -618,21 +831,29 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput){
 
 	pout << "  )" << endl;
 
-	if (goal.size()){
-		pout << "  (:goal (and" << endl;
-		for (auto gl : goal){
-			pout << "    (";
-			if (!gl.positive) {
-				pout << "not";
-				if (internalHDDLOutput) pout << "_";
-				else pout << " (";
+	
+	if (!usedParsed){
+		if (goal.size()){
+			pout << "  (:goal (and" << endl;
+			for (auto gl : goal){
+				pout << "    (";
+				if (!gl.positive) {
+					pout << "not";
+					if (internalHDDLOutput) pout << "_";
+					else pout << " (";
+				}
+				pout << sanitise(gl.predicate);
+				for (string c : gl.args) pout << " " << sanitise(c);
+				if (!gl.positive && !internalHDDLOutput) pout << ")";
+				pout << ")" << endl;
 			}
-			pout << sanitise(gl.predicate);
-			for (string c : gl.args) pout << " " << sanitise(c);
-			if (!gl.positive && !internalHDDLOutput) pout << ")";
-			pout << ")" << endl;
+			pout << "  ))" << endl;
 		}
-		pout << "  ))" << endl;
+	} else {
+		if (!goal_formula->isEmpty()){
+			print_formula_for(pout,goal_formula,"(:goal");
+			pout << "  )" << endl;
+		}
 	}
 
 	if (hasActionCosts)
