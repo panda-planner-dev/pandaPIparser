@@ -7,21 +7,19 @@
 
 using namespace std;
 
-vector<string> liftedTopSort;
-
-void liftedPropertyTopSortDFS(string cur, map<string,vector<string>> & adj, map<string, int> & colour){
+void liftedPropertyTopSortDFS(string cur, map<string,vector<string>> & adj, map<string, int> & colour, vector<string> & liftedTopSort){
 	assert (colour[cur] != 1);
 	if (colour[cur]) return;
 
 	colour[cur] = 1;
-	for (string & nei : adj[cur]) liftedPropertyTopSortDFS(nei,adj,colour);
+	for (string & nei : adj[cur]) liftedPropertyTopSortDFS(nei,adj,colour, liftedTopSort);
 	colour[cur] = 2;
 
 	liftedTopSort.push_back(cur);
 }
 
-void liftedPropertyTopSort(parsed_task_network* tn){
-	liftedTopSort.clear();
+vector<string> liftedPropertyTopSort(parsed_task_network* tn){
+	vector<string> liftedTopSort;
 	map<string,vector<string>> adj;
 	for (pair<string,string> * nei : tn->ordering)
 		adj[nei->first].push_back(nei->second);
@@ -29,10 +27,28 @@ void liftedPropertyTopSort(parsed_task_network* tn){
 	map<string,int> colour;
 
 	for (sub_task* t : tn->tasks)
-		if (!colour[t->id]) liftedPropertyTopSortDFS(t->id, adj, colour);
+		if (!colour[t->id]) liftedPropertyTopSortDFS(t->id, adj, colour, liftedTopSort);
 
 	reverse(liftedTopSort.begin(), liftedTopSort.end());
+
+	return liftedTopSort;
 }
+
+
+bool isTopSortTotalOrder(vector<string> & liftedTopSort, parsed_task_network * tn){
+	for (size_t i = 1; i < liftedTopSort.size(); i++){
+		bool orderEnforced = false;
+		for (pair<string,string> * nei : tn->ordering)
+			if (nei->first == liftedTopSort[i-1] && nei->second == liftedTopSort[i]){
+				orderEnforced = true;
+				break;
+			}
+		if (!orderEnforced) return false;
+	}
+	return true;
+}
+
+
 
 bool recursionFindingDFS(string cur, map<string,int> & colour){
 	if (colour[cur] == 1) return true;
@@ -69,24 +85,12 @@ void printProperties(){
 		for (auto & m : ms){
 			if (m.tn->tasks.size() < 2) continue;
 			// do topsort
-			liftedPropertyTopSort(m.tn);
+			vector<string> liftedTopSort = liftedPropertyTopSort(m.tn);
 
-			// check whether it is a total order
-			for (size_t i = 1; i < liftedTopSort.size(); i++){
-				bool orderEnforced = false;
-				for (pair<string,string> * nei : m.tn->ordering)
-					if (nei->first == liftedTopSort[i-1] && nei->second == liftedTopSort[i]){
-						orderEnforced = true;
-						break;
-					}
-
-				if (! orderEnforced){
-					totalOrder = false;
-					cout << "Partially Ordered Method: " << m.name << endl;
-					break;
-				}
+			if (!isTopSortTotalOrder(liftedTopSort,m.tn)){
+				cout << "Partially Ordered Method: " << m.name << endl;
+				totalOrder = false;
 			}
-			if (! totalOrder) break;
 		}
 
 
