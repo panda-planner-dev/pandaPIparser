@@ -594,11 +594,10 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 				dout << "    :ordered-subtasks (and" << endl;
 				map<string, sub_task* > idMap;
 				for (sub_task* t : m.tn->tasks) idMap[t->id] = t;
-				int c = 1;
 				for (string id : liftedTopSort){
-					dout << "      (t" << c++ << " (" << sanitise(idMap[id]->task);
+					dout << "      (" << sanitise(idMap[id]->task);
 					print_var_and_const(dout,*idMap[id]->arguments);
-					dout << "))" << endl;
+					dout << ")" << endl;
 				}
 				dout << "    )" << endl;
 			} else {
