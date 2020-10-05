@@ -273,10 +273,10 @@ void print_formula(ostream & out, general_formula * f, int indent){
 
 	if (f->type == ATOM || f->type == NOTATOM){
 		print_indent(out,indent);
-		if (f->type == NOTEQUAL) out << "(not ";
+		if (f->type == NOTATOM) out << "(not ";
 		out << "(" << f->predicate;
 		print_var_and_const(out,f->arguments);
-		if (f->type == NOTEQUAL) out << ")";
+		if (f->type == NOTATOM) out << ")";
 		out << ")" << endl;
 	}
 
@@ -755,8 +755,12 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			dout << ")" << endl;
 			if (!p.prec->isEmpty())
 				print_formula_for(dout,p.prec,":precondition");
+			else
+				dout << "    :precondition ()" << endl;
 			if (!p.eff->isEmpty())
 				print_formula_for(dout,p.eff,":effect");
+			else	
+				dout << "    :effect ()" << endl;
 
 			dout << "  )" << endl;
 		}
