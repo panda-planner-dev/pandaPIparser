@@ -728,6 +728,10 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 	// try all sources
 	bool foundNonSource = false;
 	for (auto node : num_prec){
+		if (debugMode == 2){
+			print_n_spaces(1+2*level);
+			cout << "Node " << node.first << " c= " << node.second  << endl;
+		}
 		if (node.second < 0) continue;
 		if (node.second > 0) { foundNonSource = true; continue; }
 		sources.push_back(node.first);
@@ -942,7 +946,7 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 		}
 
 		if (executeDAG(num_prec,successors,new_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation,debugMode,level+(uniqLinearisation?0:1))) return true;
-				
+
 		for (int succ : successors[source]) num_prec[succ]++;
 		num_prec[source]++; // set back to 0
 	}
@@ -1119,6 +1123,8 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 			for (auto edge : recursiveEdges){
 				successors[edge.first].push_back(edge.second);
 				num_prec[edge.second]++;
+				// evaluate to force a zero
+				num_prec[edge.first];
 			}
 
 			// if this DAG cannot be executed, just continue ...
@@ -1146,6 +1152,13 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 					for (int n : adj.second) cout << " " << n;
 					cout << endl;
 				}
+				print_n_spaces(1+2*level+1);
+				cout << "Dot:" << endl;
+				cout << "digraph graphname {" << endl;
+				for (auto adj : successors){
+					for (int n : adj.second) cout << "a" << adj.first << " -> a" << n << ";" << endl;
+				}
+				cout << "}" << endl;
 			}
 
 			if (backtrackForbidden || !executeDAG(num_prec, successors, init_set, parsedMethodForTask, tasks, chosen_method_matchings, task_variable_values, taskIDToParsedTask, uniqueMatching,debugMode,level+1)){
