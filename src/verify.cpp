@@ -1,3 +1,4 @@
+#include <sys/resource.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -712,7 +713,7 @@ void getRecursive(int source, vector<int> & allSub,map<int,vector<int>> & subtas
 }
 
 
-bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors, 
+bool executeDAG(map<int,int> & num_prec, map<int,vector<int>> & successors, 
 		set<ground_literal> & current_state,
 		map<int,parsed_method> & parsedMethodForTask,
 		map<int,instantiated_plan_step> & tasks,
@@ -942,7 +943,7 @@ bool executeDAG(map<int,int> num_prec, map<int,vector<int>> successors,
 
 		if (branching_sources.size() == 1){
 			// if source is not branching, it is not needed any more
-			current_state.clear();	
+			current_state.clear();
 		}
 
 		if (executeDAG(num_prec,successors,new_state, parsedMethodForTask,tasks,method_variable_values,task_variable_values,taskIDToParsedTask,uniqLinearisation,debugMode,level+(uniqLinearisation?0:1))) return true;
@@ -1064,7 +1065,7 @@ pair<pair<bool,bool>,vector<pair<int,int>>> findLinearisation(int currentTask,
 		bool subtasksOk = true;
 		vector<pair<int,int>> recursiveEdges;
 		for (int st : subtasksForTask[currentTask]){
-			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings, backtrackForbidden, uniqueMatching,false,debugMode,level+1);
+			pair<pair<bool,bool>,vector<pair<int,int>>> linearisation = findLinearisation(st,parsedMethodForTask,tasks,subtasksForTask,matchings,pos_in_primitive_plan,primitive_plan,task_variable_values,taskIDToParsedTask,chosen_method_matchings,chosen_non_unique_matchings,forbidden_matchings, backtrackForbidden, uniqueMatching,false,debugMode,level + (uniqueMatching?0:1));
 			// add all edges to result
 			recursiveEdges.insert(recursiveEdges.end(),linearisation.second.begin(), linearisation.second.end());
 			subtasksOk &= linearisation.first.first;
@@ -1286,6 +1287,30 @@ bool check_executability_of_primitive_plan(parsed_plan & plan, map<int,parsed_ta
 
 
 bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int debugMode){
+
+	// for long plans execution needs a *large* stack
+	// set the size of the stack to 256 MB
+	// code from: https://stackoverflow.com/questions/2275550/change-stack-size-for-a-c-application-in-linux-during-compilation-with-gnu-com
+    const rlim_t kStackSize = 256 * 1024 * 1024;
+    struct rlimit rl;
+    int result;
+
+    result = getrlimit(RLIMIT_STACK, &rl);
+    if (result == 0) {
+        if (rl.rlim_cur < kStackSize) {
+            rl.rlim_cur = kStackSize;
+            result = setrlimit(RLIMIT_STACK, &rl);
+            if (result != 0) {
+                cerr << "Could not set the stack size. setrlimit returned: " << result << endl;
+				return false;
+            }
+        }
+    }
+
+
+
+
+
 
 	parsed_plan pplan = parse_plan(plan,debugMode);
 	if (pplan.tasks.size() == 0 && pplan.root_tasks.size() == 0 && pplan.appliedMethod.size() == 0) {
