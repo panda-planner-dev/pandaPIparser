@@ -233,7 +233,7 @@ void simple_hddl_output(ostream & dout){
 	for (auto tt : task_out){
 		task t = tt.first;
 		dout << "#begin_task_name_number_of_original_variables_and_number_of_variables" << endl;
-		assert(t.vars.size() >= t.number_of_original_vars);
+		assert(int(t.vars.size()) >= t.number_of_original_vars);
 		dout << t.name << " " << t.number_of_original_vars << " " << t.vars.size() << endl;
 		dout << "#sorts_of_variables" << endl;
 		map<string,int> v_id;
