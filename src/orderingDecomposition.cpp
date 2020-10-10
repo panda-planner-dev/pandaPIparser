@@ -3,7 +3,7 @@
 #include <map>
 #include <cassert>
 
-bool order_decomposition_matrix[1024][1024];
+bool order_decomposition_matrix[2048][2048];
 
 order_decomposition* extract_order_decomposition_dfs(vector<string> & ids, vector<int> bitmask);
 
