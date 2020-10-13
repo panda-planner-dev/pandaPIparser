@@ -35,7 +35,8 @@ void addAbstractTask(task & t){
 pair<task,bool> flatten_primitive_task(parsed_task & a,
 							bool compileConditionalEffects,
 							bool linearConditionalEffectExpansion,
-							bool encodeDisjunctivePreconditionsInMethods
+							bool encodeDisjunctivePreconditionsInMethods,
+							bool isArtificial
 							){
 	// first check whether this primitive as a disjunctive precondition
 	bool disjunctivePreconditionForHTN = encodeDisjunctivePreconditionsInMethods && a.prec->isDisjunctive();
@@ -64,6 +65,7 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 		assert(p.first.second.size() == 0); // precondition cannot contain conditional effects
 		task t; i++;
 		t.name = a.name;
+		t.artificial = isArtificial;
 		// sort out the constraints
 		for(variant<literal,conditional_effect> pl : p.first.first){
 			if (!holds_alternative<literal>(pl)) assert(false); // precondition cannot have conditional effects in it
@@ -134,6 +136,7 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 			
 			auto create_task = [&](string prefix, vector<pair<string,string>> vars){
 				task tt;
+				tt.artificial = false;
 				tt.name = prefix + t.name;
 				tt.vars = vars;
 				tt.number_of_original_vars = vars.size();
@@ -495,6 +498,7 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 				at.name = a.name;
 				at.vars = a.arguments->vars;
 				at.number_of_original_vars = at.vars.size();
+				at.artificial = false;
 				at.check_integrity();
 				addAbstractTask(at);
 				mainTask = at;
@@ -565,7 +569,7 @@ void flatten_tasks(bool compileConditionalEffects,
 		
 		
 		
-		flatten_primitive_task(a, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
+		flatten_primitive_task(a, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods, false);
 	
 	}
 
@@ -677,7 +681,8 @@ void parsed_method_to_data_structures(bool compileConditionalEffects,
 			if (mPrecVars.count(var.first) || mEffVars.count(var.first))
 				mPrec_task.arguments->vars.push_back(var);
 		
-		auto [mPrec,isPrimitive] = flatten_primitive_task(mPrec_task, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
+		auto [mPrec,isPrimitive] = flatten_primitive_task(mPrec_task, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods, true);
+		mPrec.artificial = true;
 		for (size_t newVar = mPrec_task.arguments->vars.size(); newVar < mPrec.vars.size(); newVar++)
 			m.vars.push_back(mPrec.vars[newVar]);
 
@@ -1046,7 +1051,12 @@ void task::check_integrity(){
 
 void method::check_integrity(){
 	set<string> varnames;
-	for (auto v : vars) varnames.insert(v.first);
+	for (auto v : vars) { 
+		varnames.insert(v.first);
+		if (v.second.size() == 0)
+			cerr << "Variable " << v.first << " has empty sort " << endl;
+		assert(v.second.size() != 0);
+	}
 	assert(varnames.size() == vars.size());
 
 	for (plan_step ps : this->ps){
@@ -1074,4 +1084,59 @@ conditional_effect::conditional_effect(vector<literal> cond, literal eff){
 	effect = eff;
 }
 
+bool method::is_sub_group(set<string> & sset, set<string> & beforeID, set<string> & afterID){
+	if (sset.size() == 1){
+		string id = *sset.begin();
+		for (auto [b,a] : this->ordering)
+			if (b == id)
+				afterID.insert(a);
+			else if (a == id)
+				beforeID.insert(b);
+
+		return true;
+	}
+
+
+
+	this->compute_adj_matrix();
+	beforeID.clear();
+	afterID.clear();
+
+	for (plan_step & k : this->ps){
+		if (sset.count(k.id)) continue;
+		int myrel = 0; // 1 is unord, 2 s is before k , 3 s is after k
+		for (const string & s : sset) {
+			if (this->adj_matrix[s].count(k.id)) {
+				if (myrel != 0 && myrel != 2) return false;
+				myrel = 2;
+			} else if (this->adj_matrix[k.id].count(s)){
+				if (myrel != 0 && myrel != 3) return false;
+				myrel = 3;
+			} else {
+				if (myrel > 1) return false; // unrelated task, but set relation
+				myrel = 1;
+			}
+		}
+		if (myrel == 2) afterID.insert(k.id);
+		if (myrel == 3) beforeID.insert(k.id);
+	}
+
+	return true;
+}
+
+void method::compute_adj_matrix(){
+	if (this->adj_matrix_computed) return;
+	this->adj_matrix_computed = true;
+	this->adj_matrix.clear();
+
+	for (auto [t1,t2] : this->ordering) this->adj_matrix[t1].insert(t2);
+
+
+	for (plan_step & k : this->ps)
+		for (plan_step & i : this->ps)
+			for (plan_step & j : this->ps)
+				if (this->adj_matrix[i.id].count(k.id) && this->adj_matrix[k.id].count(j.id))
+					this->adj_matrix[i.id].insert(j.id);
+
+}
 

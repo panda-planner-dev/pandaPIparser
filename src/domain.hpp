@@ -43,6 +43,8 @@ struct task{
 	vector<literal> constraints;
 	vector<literal> costExpression;
 
+	bool artificial;
+
 	void check_integrity();
 };
 
@@ -57,6 +59,7 @@ struct plan_step{
 };
 
 struct method{
+	method(){adj_matrix_computed = false;};
 	string name;
 	vector<pair<string,string>> vars;
 	string at;
@@ -64,8 +67,15 @@ struct method{
 	vector<plan_step> ps;
 	vector<literal> constraints;
 	vector<pair<string,string>> ordering;
-	
+
 	void check_integrity();
+	
+	bool is_sub_group(set<string> & sset, set<string> & beforeID, set<string> & afterID);
+
+	private:
+		map<string,set<string>> adj_matrix;
+		bool adj_matrix_computed;
+		void compute_adj_matrix();
 };
 
 
