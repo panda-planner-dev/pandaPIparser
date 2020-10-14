@@ -212,8 +212,16 @@ void split_independent_parameters(){
 					for (size_t i = 0; i < tMain.prec.size(); i++)
 						if (splitPrecs.count(i))
 							tSub.prec.push_back(tMain.prec[i]);
-						else
-							tBase.prec.push_back(tMain.prec[i]);
+						else {
+							bool needsSplit = false;
+							for (string arg : tMain.prec[i].arguments)
+								needsSplit |= variables_in_sub_group.count(arg);
+
+							if (needsSplit)
+								tSub.prec.push_back(tMain.prec[i]);
+							else
+								tBase.prec.push_back(tMain.prec[i]);
+						}
 	
 					set<string> varsSub, varsBase;
 					for (literal l : tSub.prec) for (string v : l.arguments) varsSub.insert(v);
