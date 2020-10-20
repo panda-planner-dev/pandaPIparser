@@ -286,7 +286,7 @@ void split_independent_parameters(){
 			for (auto [b,a] : m.ordering){
 				int c = 0;
 				if (subgroup.count({b,-1}) && !splittedIDs.count(b)) c++;
-				if (subgroup.count({a,-1}) && !splittedIDs.count(b)) c++;
+				if (subgroup.count({a,-1}) && !splittedIDs.count(a)) c++;
 				if (c == 0)	base.ordering.push_back({b,a});
 				if (c == 2)	sm.ordering.push_back({b,a});
 			}
