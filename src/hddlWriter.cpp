@@ -410,6 +410,41 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 	
 	dout << endl;
 
+
+
+	pout << "(define" << endl;
+	pout << "  (problem p)" << endl;
+	pout << "  (:domain d)" << endl;
+
+	
+	// determine which constants need to be declared in the domain
+	set<string> constants_in_domain = compute_constants_in_domain();
+
+	if (constants_in_domain.size()) dout << "  (:constants" << endl;
+	pout << "  (:objects" << endl;
+	if (internalHDDLOutput || usedParsed){
+		for (auto x : sorts) {
+			if (! declaredSorts.count(x.first) && usedParsed) continue;
+			for (string s : x.second)
+				if (!constants_in_domain.count(s))
+					pout << "    " << sanitise(s) << " - " << sanitise(x.first) << endl;
+				else
+					dout << "    " << sanitise(s) << " - " << sanitise(x.first) << endl;
+		}
+	} else {
+		for (auto [c,s] : sortOfElement)
+			if (!constants_in_domain.count(c))
+				pout << "    " << sanitise(c) << " - " << sanitise(s) << endl;
+			else
+				pout << "    " << sanitise(c) << " - " << sanitise(s) << endl;
+	}
+	pout << "  )" << endl;
+
+	if (constants_in_domain.size()) dout << "  )" << endl << endl;
+
+
+
+
 	// predicate definitions
 	dout << "  (:predicates" << endl;
 	map<string,string> sortReplace;
@@ -767,23 +802,6 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 	}
 
 	dout << ")" << endl;
-
-	pout << "(define" << endl;
-	pout << "  (problem p)" << endl;
-	pout << "  (:domain d)" << endl;
-
-	pout << "  (:objects" << endl;
-	if (internalHDDLOutput || usedParsed){
-		for (auto x : sorts) {
-			if (! declaredSorts.count(x.first) && usedParsed) continue;
-			for (string s : x.second)
-				pout << "    " << sanitise(s) << " - " << sanitise(x.first) << endl;
-		}
-	} else {
-		for (auto [c,s] : sortOfElement)
-			pout << "    " << sanitise(c) << " - " << sanitise(s) << endl;
-	}
-	pout << "  )" << endl;
 
 
 	bool instance_is_classical = true;

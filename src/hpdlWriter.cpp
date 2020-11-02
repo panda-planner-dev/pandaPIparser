@@ -169,25 +169,6 @@ void write_HPDL_general_formula_outer_and(ostream & out, general_formula * f, fu
 	}
 }
 
-void add_consts_to_set(general_formula * f, set<string> & const_set){
-	if (!f) return;
-	if (f->type == EQUAL || f->type == NOTEQUAL){
-		if (f->arg1[0] != '?')
-			const_set.insert(f->arg1);
-		if (f->arg2[0] != '?')
-			const_set.insert(f->arg2);
-	}
-
-	for(auto sub : f->subformulae) add_consts_to_set(sub, const_set);
-}
-	
-void add_consts_to_set(additional_variables additionalVars, set<string> & const_set){
-	for(pair<string,string> varDecl : additionalVars){
-		// determine const of this sort
-		assert(sorts[varDecl.second].size() == 1);
-		const_set.insert(*(sorts[varDecl.second].begin()));
-	}
-}
 
 void add_var_for_const_to_map(additional_variables additionalVars, map<string,string> & var2const){
 	for(pair<string,string> varDecl : additionalVars){
@@ -300,27 +281,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 	dout << endl;
 
 	// determine which constants need to be declared in the domain
-	set<string> constants_in_domain;
-	for (parsed_task & at : parsed_abstract){
-		if (at.name == "__top") continue; // the __top task will be written into the problem file
-		for (parsed_method & method : parsed_methods[at.name]){
-			// determine which variables are actually constants
-			add_consts_to_set(method.newVarForAT,constants_in_domain);
-			for (sub_task* st : method.tn->tasks)
-				add_consts_to_set(st->arguments->newVar,constants_in_domain);
-
-			add_consts_to_set(method.tn->constraint,constants_in_domain);
-			add_consts_to_set(method.prec,constants_in_domain);
-			add_consts_to_set(method.eff,constants_in_domain);
-		}
-	}
-
-	// constants in primitives
-	for (parsed_task prim : parsed_primitive){
-		add_consts_to_set(prim.prec->variables_for_constants(),constants_in_domain);
-		add_consts_to_set(prim.eff->variables_for_constants(),constants_in_domain);
-	}
-
+	set<string> constants_in_domain = compute_constants_in_domain();
 
 	pout << "(define (problem prob) (:domain dom)" << endl;
 

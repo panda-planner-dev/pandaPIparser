@@ -92,4 +92,7 @@ void reduce_constraints();
 void clean_up_sorts();
 void remove_unnecessary_predicates();
 
+
+set<string> compute_constants_in_domain();
+
 #endif
