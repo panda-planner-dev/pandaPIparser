@@ -3,8 +3,8 @@ CC=g++
 CWARN=-Wno-unused-parameter
 CERROR=
 
-COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
-LINKERFLAG=-O3 -lm -flto -static -static-libgcc
+COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 -DNDEBUG $(CWARN) $(CERROR)
+LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
 #COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
 #LINKERFLAG=-O0 -ggdb
 

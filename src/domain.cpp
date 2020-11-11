@@ -1082,7 +1082,7 @@ void method::check_integrity(){
 	}
 
 	for (auto [b,a] : this->ordering){
-		cout << a << " " << b << endl;
+		//cout << a << " " << b << endl;
 		assert(ids.count(b));
 		assert(ids.count(a));
 	}
