@@ -15,9 +15,12 @@ Note that the translation into (J)SHOP2 is necessarily incomplete as (J)SHOP2 ca
 
 
 ## Compilation
-To compile pandaPIparser you need g++, make, flex, and bison. No libraries are required.
+To compile pandaPIparser you need g++, make, flex, and bison. No libraries are required. You need a recent version of bison (version 3.7.2 is known to work) and flex at least in version 2.6. Your C++ compiler needs to support C++17. If you are using MacOSX, the default versions of bison and flex are quite old. You need to install a recent version of bison and flex via brew.
+
+If you are using MacOSX, you need to remove the flags `-static` and `-static-libgcc` from the `LINKERFLAGS` in the `makefile`. This may slow down the parser, but it should not be significant.
 
 To create the executable, simply run `make -j` in the root folder, which will create an executable called `pandaPIparser`
+
 
 ## Usage
 The parser is called with at least two arguments: the domain and the problem file. Both must be written in HDDL.
