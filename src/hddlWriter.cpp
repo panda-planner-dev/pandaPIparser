@@ -398,12 +398,21 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 		}
 	} else {
 		for (sort_definition s : sort_definitions){
-			dout << "   ";
-			for (string ss : s.declared_sorts)
-				dout << " " << ss, declaredSorts.insert(ss);
-			if (s.has_parent_sort)
+			bool first = true;
+			for (string ss : s.declared_sorts){
+				if (s.has_parent_sort){
+					if (first) dout << "   ";
+					first = false;
+					dout << " " << ss;
+				} else
+					dout << "    " << ss << endl;
+				
+				declaredSorts.insert(ss);
+			}
+			if (s.has_parent_sort){
 				dout << " - " << s.parent_sort, declaredSorts.insert(s.parent_sort);
-			dout << endl;
+				dout << endl;
+			}
 		}	
 	}
 	dout << "  )" << endl;
@@ -871,7 +880,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			pout << "  ))" << endl;
 		}
 	} else {
-		if (!goal_formula->isEmpty()){
+		if (goal_formula != nullptr && !goal_formula->isEmpty()){
 			print_formula_for(pout,goal_formula,"(:goal");
 			pout << "  )" << endl;
 		}
