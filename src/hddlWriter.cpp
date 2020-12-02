@@ -217,7 +217,7 @@ tuple<vector<string>,
 }
 
 
-void print_indent(ostream & out, int indent, bool end = false){
+void print_indent(ostream & out, int indent, bool end){
 	if (indent == -1) {
 		if (end) out << "    ";
 		return;
