@@ -247,7 +247,20 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
 		}
 		dout << ")" << endl;
-		if (!p.prec->isEmpty())
+
+        dout << "    :task (";
+        dout << sanitise(p.name);
+        dout << " ";
+        first = true;
+        for (auto [v,s] : p.arguments->vars){
+            if (!first) dout << " ";
+            first = false;
+            dout << sanitise(v);
+        }
+        dout << ")" << endl;
+
+
+        if (!p.prec->isEmpty())
 			print_formula_for(dout,p.prec,":precondition");
 		else
 			dout << "    :precondition ()" << endl;
