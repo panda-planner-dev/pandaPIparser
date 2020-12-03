@@ -145,15 +145,24 @@ void htn2strips_output(ostream & dout, ostream & pout){
 
 	// abstract tasks
     dout << "  (:tasks " << endl;
-	for (parsed_task a : parsed_abstract){
-		dout << "    (";
-	    dout << sanitise(a.name);
-		for (auto [v,s] : a.arguments->vars){
+    for (parsed_task a : parsed_abstract){
+        dout << "    (";
+        dout << sanitise(a.name);
+        for (auto [v,s] : a.arguments->vars){
             dout << " ";
-			dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
-		}
-		dout << ")" << endl;
-	}
+            dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
+        }
+        dout << ")" << endl;
+    }
+    for (parsed_task a : parsed_primitive){
+        dout << "    (";
+        dout << sanitise(a.name);
+        for (auto [v,s] : a.arguments->vars){
+            dout << " ";
+            dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
+        }
+        dout << ")" << endl;
+    }
     dout << "  )" << endl;
     dout << endl;
 
