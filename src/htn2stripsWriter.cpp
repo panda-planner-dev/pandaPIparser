@@ -301,7 +301,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 	pout << "  )" << endl;
 
     if (! instance_is_classical) {
-        pout << endl << "  (:tasks ((__top)))" << endl << endl;
+        pout << endl << "  (:tasks ((t__top)))" << endl << endl;
     }
 
 	if (goal_formula != nullptr && !goal_formula->isEmpty()){
