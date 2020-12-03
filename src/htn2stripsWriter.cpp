@@ -33,8 +33,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 
 	// TODO do this more intelligently
 	dout << "(define (domain d)" << endl;
-	dout << "  (:requirements :typing :hierarchy :method-preconditions";
-	dout << " :negative-preconditions";
+	dout << "  (:requirements :strips :disjunctive-preconditions :negative-preconditions";
 	dout << ")" << endl;
 	
 	dout << endl;
@@ -141,24 +140,22 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			dout << ") - " << f.second << endl;
 		}
 		dout << "  )" << endl;
-	}
-	dout << endl;
+        dout << endl;
+    }
 
 	// abstract tasks
+    dout << "  (:tasks " << endl;
 	for (parsed_task a : parsed_abstract){
-		dout << "  (:task ";
-		dout << sanitise(a.name);
-		dout << " :parameters (";
-		bool first = true;
+		dout << "    (";
+	    dout << sanitise(a.name);
 		for (auto [v,s] : a.arguments->vars){
-			if (!first) dout << " ";
-			first = false;
+            dout << " ";
 			dout << sanitise(v) << " - " << sanitise(sortReplace[s]);
 		}
-		dout << "))" << endl;
-
+		dout << ")" << endl;
 	}
-	dout << endl;
+    dout << "  )" << endl;
+    dout << endl;
 
 	// decomposition methods
 	for (auto [atname,ms] : parsed_methods) for (parsed_method m : ms){
@@ -197,7 +194,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 		// subtasks
 		vector<string> liftedTopSort = liftedPropertyTopSort(m.tn);
 		if (isTopSortTotalOrder(liftedTopSort,m.tn)){
-			dout << "    :ordered-subtasks (and" << endl;
+			dout << "    :tasks (" << endl;
 			map<string, sub_task* > idMap;
 			for (sub_task* t : m.tn->tasks) idMap[t->id] = t;
 			for (string id : liftedTopSort){
@@ -207,19 +204,19 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			}
 			dout << "    )" << endl;
 		} else {
-			dout << "    :subtasks (and" << endl;
+			//dout << "    :tasks (" << endl;
 			for (sub_task * task : m.tn->tasks){
-				dout << "      (" << task->id << " (" << sanitise(task->task);
+				dout << "    :tasks (" << task->id << " (" << sanitise(task->task);
 				print_var_and_const(dout,*task->arguments);
 				dout << "))" << endl;
 			}
-			dout << "    )" << endl;
+			//dout << "    )" << endl;
 			if (m.tn->ordering.size()){
 				// ordering of subtasks
-				dout << "    :ordering (and" << endl;
+				dout << "    :ordering (" << endl;
 				for (auto p : m.tn->ordering)
-					dout << "      (< " << p->first << " " << p->second << ")" << endl;
-				dout << "    )" << endl;
+					dout << " (" << p->first << " " << p->second << ")" << endl;
+				dout << " )" << endl;
 			}
 		} 
 		
@@ -263,6 +260,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 	for (parsed_task t : parsed_abstract)
 		if (t.name == "__top") instance_is_classical = false;
 
+	/*
 	if (! instance_is_classical){
 		pout << "  (:htn" << endl;
 		pout << "    :parameters ()" << endl;
@@ -271,7 +269,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 		pout << "__top))" << endl;
 		pout << "  )" << endl;
 	}
-	
+	*/
 
 	pout << "  (:init" << endl;
 	for (auto gl : init){
@@ -302,7 +300,10 @@ void htn2strips_output(ostream & dout, ostream & pout){
 
 	pout << "  )" << endl;
 
-	
+    if (! instance_is_classical) {
+        pout << endl << "  (:tasks ((__top)))" << endl << endl;
+    }
+
 	if (goal_formula != nullptr && !goal_formula->isEmpty()){
 		print_formula_for(pout,goal_formula,"(:goal");
 		pout << "  )" << endl;
