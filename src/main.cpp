@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
 		if (result) cout << color(COLOR_GREEN,"true",MODE_BOLD);
 		else cout << color(COLOR_RED,"false",MODE_BOLD);
 		cout << endl;
-		return 0;
+		return result ? 0 : 1;
 	}
 
 	if (!hpdlOutput) {
