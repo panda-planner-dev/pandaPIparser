@@ -18,6 +18,8 @@
 	char* current_parser_file_name;
 	
 	void yyerror(const char *s);
+
+	bool sortObjectNeeded = false;
 %}
 
 %locations
@@ -60,7 +62,7 @@
 %type <bval> task_or_action
 %type <vstring> NAME-list NAME-list-non-empty 
 %type <vstring> VAR_NAME-list VAR_NAME-list-non-empty
-%type <vardecl> parameters-option typed_var_list typed_var typed_vars
+%type <vardecl> parameters-option typed_var_list typed_or_untyped_var_list typed_var typed_vars
 %type <preddecl> atomic_predicate_def 
 %type <preddecllist> atomic_function_def-list
 %type <varandconst> var_or_const-list
@@ -135,7 +137,7 @@ problem_defs: problem_defs require_def |
               problem_defs p_constraint | // I think this is only for global LTL constraints
 			  problem_defs p_metric |
 
-p_object_declaration : '(' KEY_OBJECTS constant_declaration_list')';
+p_object_declaration : '(' KEY_OBJECTS constant_declaration_list ')';
 p_init : '(' KEY_INIT init_el ')';
 init_el : init_el literal {
 		if ($2->type != NOTATOM){ // just ignore not in the initial state
@@ -165,7 +167,7 @@ init_el : init_el literal {
 p_goal : '(' KEY_GOAL gd ')' {goal_formula = $3;}
 
 htn_type: KEY_HTN | KEY_TIHTN {assert(false); /*we don't support ti-htn yet*/}
-parameters-option: KEY_PARAMETERS '(' typed_var_list ')' {$$ = $3;} | {$$ = new var_declaration(); }
+parameters-option: KEY_PARAMETERS '(' typed_or_untyped_var_list ')' {$$ = $3;} | {$$ = new var_declaration(); }
 p_htn : '(' htn_type
         parameters-option
         tasknetwork_def
@@ -209,7 +211,8 @@ require_defs : require_defs REQUIRE_NAME {string r($2); if (r == ":typeof-predic
 // Type Definition
 // @PDDL
 type_def : '(' KEY_TYPES type_def_list ')' { /*reverse list after all types have been parsed*/ reverse(sort_definitions.begin(), sort_definitions.end()); };
-type_def_list : NAME-list {	sort_definition s; s.has_parent_sort = false; s.declared_sorts = *($1); delete $1;
+type_def_list : | 
+			  NAME-list-non-empty {	sort_definition s; s.has_parent_sort = false; s.declared_sorts = *($1); delete $1;
 			  				if (s.declared_sorts.size()) {
 								sort_definitions.push_back(s);
 								// touch constant map to ensure a consistent access
@@ -230,8 +233,22 @@ type_def_list : NAME-list {	sort_definition s; s.has_parent_sort = false; s.decl
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constant Definition
 const_def : '(' KEY_CONSTANTS constant_declaration_list ')'
+
+constant_declaration_list : 
+						  | NAME-list-non-empty {
+							for(unsigned int i = 0; i < $1->size(); i++)
+								sorts["object"].insert((*($1))[i]);
+							sortObjectNeeded = true;
+						}
+						  | NAME-list-non-empty '-' NAME constant_declaration_list_with_type {
+							string type($3);
+							for(unsigned int i = 0; i < $1->size(); i++)
+								sorts[type].insert((*($1))[i]);
+						}
+
 // this is used in both the domain and the initial state
-constant_declaration_list : constant_declaration_list constant_declarations |
+constant_declaration_list_with_type : constant_declaration_list_with_type constant_declarations |
+
 constant_declarations : NAME-list-non-empty '-' NAME {
 						string type($3);
 						for(unsigned int i = 0; i < $1->size(); i++)
@@ -244,7 +261,7 @@ constant_declarations : NAME-list-non-empty '-' NAME {
 predicates_def : '(' KEY_PREDICATES atomic_predicate_def-list ')'
 
 atomic_predicate_def-list : atomic_predicate_def-list atomic_predicate_def {predicate_definitions.push_back(*($2)); delete $2;} | 
-atomic_predicate_def : '(' NAME typed_var_list ')' {
+atomic_predicate_def : '(' NAME typed_or_untyped_var_list  ')' {
 		$$ = new predicate_definition();
 		$$->name = $2;
 		for (unsigned int i = 0; i < $3->vars.size(); i++) $$->argument_sorts.push_back($3->vars[i].second);
@@ -438,8 +455,8 @@ gd_conjuction : '(' KEY_AND gd-list ')' {$$ = new general_formula(); $$->type=AN
 gd_disjuction : '(' KEY_OR gd-list ')' {$$ = new general_formula(); $$->type=OR; $$->subformulae = *($3);}
 gd_negation : '(' KEY_NOT gd ')' {$$ = $3; $$->negate();}
 gd_implication : '(' KEY_IMPLY gd gd ')' {$$ = new general_formula(); $$->type=OR; $3->negate(); $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
-gd_existential : '(' KEY_EXISTS '(' typed_var_list ')' gd ')' {$$ = new general_formula(); $$->type = EXISTS; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
-gd_universal : '(' KEY_FORALL '(' typed_var_list ')' gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
+gd_existential : '(' KEY_EXISTS '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = EXISTS; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
+gd_universal : '(' KEY_FORALL '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
 gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = EQUAL; $$->arg1 = $3; $$->arg2 = $4;}
 
 var_or_const-list :   var_or_const-list NAME {
@@ -476,7 +493,7 @@ effect : eff_empty {$$ = $1;}
 
 eff_empty : '(' ')' {$$ = new general_formula(); $$->type=EMPTY;}
 eff_conjunction : '(' KEY_AND effect-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);}
-eff_universal : '(' KEY_FORALL '(' typed_var_list ')' effect ')'{$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);}
+eff_universal : '(' KEY_FORALL '(' typed_or_untyped_var_list  ')' effect ')'{$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);}
 eff_conditional : '(' KEY_WHEN gd effect ')' {$$ = new general_formula(); $$->type=WHEN; $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
 
 
@@ -494,7 +511,8 @@ f_exp : f_head { $$ = $1; }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // elementary list of names
-NAME-list-non-empty: NAME-list NAME {string s($2); free($2); $$->push_back(s);}
+NAME-list-non-empty: NAME NAME-list {string s($1); free($1); $$ = $2; $$->push_back(s);}
+
 NAME-list: NAME-list NAME {string s($2); free($2); $$->push_back(s);}
 			|  {$$ = new vector<string>();} 
 
@@ -514,6 +532,21 @@ typed_vars : VAR_NAME-list-non-empty '-' NAME {
 				$$->vars.push_back(make_pair((*($1))[i],t));
 			}
 typed_var : VAR_NAME '-' NAME { $$ = new var_declaration; string v($1); string t($3); $$->vars.push_back(make_pair(v,t));}
+
+typed_or_untyped_var_list :  {$$ = new var_declaration;} 
+						| VAR_NAME-list-non-empty {
+							sortObjectNeeded = true;
+		   					$$ = new var_declaration;
+							for (unsigned int i = 0; i < $1->size(); i++)
+								$$->vars.push_back(make_pair((*($1))[i],"object"));
+							}
+						| VAR_NAME-list-non-empty '-' NAME typed_var_list {
+						   	$$ = $4;
+							string t($3);
+							for (unsigned int i = 0; i < $1->size(); i++)
+								$$->vars.push_back(make_pair((*($1))[i],t));
+						}
+
 typed_var_list : typed_var_list typed_vars {
 			   		$$ = $1;
 					for (unsigned int i = 0; i < $2->vars.size(); i++) $$->vars.push_back($2->vars[i]);
@@ -521,11 +554,20 @@ typed_var_list : typed_var_list typed_vars {
 				}
 			   | {$$ = new var_declaration;} 
 
+
 %%
 void run_parser_on_file(FILE* f, char* filename){
 	current_parser_file_name = filename;
 	yyin = f;
 	yyparse();
+
+
+	if (sortObjectNeeded){
+		sort_definition s;
+		s.has_parent_sort = false;
+		s.declared_sorts.push_back("object");
+		sort_definitions.push_back(s);
+	}
 }
 
 void yyerror(const char *s) {
