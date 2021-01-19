@@ -105,6 +105,21 @@ void printProperties(){
 	cout << "Instance is acyclic:         ";
 	if (!hasLiftedRecursion) cout << "yes" << endl; else cout << "no" << endl;
 
+	
+	// 3. empty methods
+	bool emptyMethod = false;
+	for (auto & [_,ms] : parsed_methods)
+		for (auto & m : ms){
+			if (m.tn->tasks.size() == 0) emptyMethod = true;
+		}
+
+
+	cout << "Instance has empty methods: ";
+	if (emptyMethod) cout << "yes" << endl; else cout << "no" << endl;
+
+
+
+
 	// requirements
 	cout << "Requirements:" << endl;
 	cout << "\t:hierarchy" << endl;
