@@ -216,7 +216,10 @@ type_def_list : |
 			  				if (s.declared_sorts.size()) {
 								sort_definitions.push_back(s);
 								// touch constant map to ensure a consistent access
-								for (string & ss : s.declared_sorts) sorts[ss].size();
+								for (string & ss : s.declared_sorts) {
+									cout << "SORT " << ss << endl;
+									sorts[ss].size();
+								}
 							}
 				}
 			  | NAME-list-non-empty '-' NAME type_def_list {
@@ -242,8 +245,9 @@ constant_declaration_list :
 						}
 						  | NAME-list-non-empty '-' NAME constant_declaration_list_with_type {
 							string type($3);
-							for(unsigned int i = 0; i < $1->size(); i++)
+							for(unsigned int i = 0; i < $1->size(); i++){
 								sorts[type].insert((*($1))[i]);
+							}
 						}
 
 // this is used in both the domain and the initial state
@@ -251,8 +255,9 @@ constant_declaration_list_with_type : constant_declaration_list_with_type consta
 
 constant_declarations : NAME-list-non-empty '-' NAME {
 						string type($3);
-						for(unsigned int i = 0; i < $1->size(); i++)
+						for(unsigned int i = 0; i < $1->size(); i++){
 							sorts[type].insert((*($1))[i]);
+						}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
