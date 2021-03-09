@@ -546,10 +546,12 @@ typed_or_untyped_var_list :  {$$ = new var_declaration;}
 								$$->vars.push_back(make_pair((*($1))[i],"object"));
 							}
 						| VAR_NAME-list-non-empty '-' NAME typed_var_list {
-						   	$$ = $4;
+						   	$$ = new var_declaration;
 							string t($3);
 							for (unsigned int i = 0; i < $1->size(); i++)
 								$$->vars.push_back(make_pair((*($1))[i],t));
+							for (const auto & declaration : $4->vars)
+								$$->vars.push_back(declaration);	
 						}
 
 typed_var_list : typed_var_list typed_vars {
