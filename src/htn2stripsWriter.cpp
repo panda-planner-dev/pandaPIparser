@@ -194,8 +194,19 @@ void htn2strips_output(ostream & dout, ostream & pout){
 		dout << ")" << endl;
 		
 
-		if (!m.prec->isEmpty())
-			print_formula_for(dout,m.prec,":precondition");
+		if (!m.prec->isEmpty() || !m.tn->constraint->isEmpty()){
+			general_formula * precFormula = m.prec;
+			if (m.prec->isEmpty())
+				precFormula = m.tn->constraint;
+			else if (!m.tn->constraint->isEmpty()){
+				precFormula = new general_formula();
+				precFormula->type = AND;
+				precFormula->subformulae.push_back(m.prec);
+				precFormula->subformulae.push_back(m.tn->constraint);
+			} 
+			
+			print_formula_for(dout,precFormula,":precondition");
+		}
 
 		if (!m.eff->isEmpty())
 			print_formula_for(dout,m.eff,":effect");
@@ -229,8 +240,6 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			}
 		} 
 		
-		if (!m.tn->constraint->isEmpty())
-			print_formula_for(dout,m.tn->constraint,":constraints");
 		
 		dout << "  )" << endl << endl;
 	}
