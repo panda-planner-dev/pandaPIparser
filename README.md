@@ -1,10 +1,20 @@
+# More Background Information
+
+We've put together a website with the history of all planning systems of the PANDA family, links to all relevant software projects, and further background information including pointers explaining the techniques deployed by the respective systems.
+
+- You find it on https://panda-planner-dev.github.io/
+- or, as a forward, on http://panda.hierarchical-task.net
+
+
 # pandaPIparser
 
 This is the parsing utility of the pandaPI planning system. It is designed to parse HTN planning problems. Its main (and currently only) input language is HDDL (see the following [paper](http://www.uni-ulm.de/fileadmin/website_uni_ulm/iui.inst.090/Publikationen/2019/Hoeller2019HDDL.pdf)).
 
 If you use pandaPIparser in any of your published work, we would kindly ask you to cite us (see Reference below).
 
+
 ## Capabilities 
+
 The parser can currently produce two different output formats:
 
 1. pandaPI's internal numeric format for lifted HTN planning problems
@@ -44,16 +54,20 @@ Note that
 * any action named `call` will be renamed to `_call`, as `call` is a keyword for (J)SHOP2.
 * current `forall` statements in preconditions are fully instantiated.
 
+
 ### Usage for Compilation to (J)SHOP1
 pandaPIparser also supports (J)SHOP1's output. This is essentially the same as the output for (J)SHOP2 with the only difference that underscores will be replaced by minuses and leading minuses are prepended with an `x`.
 To call the translator in this compatibility mode, use `--shop1` instead of `--shop` as the command line argument.
+
 
 ### Usage for Compilation to HPDL
 pandaPIparser also offers to option to write the output to HPDL. In order to do so add `--hpdl` as one of the command line arguments (the position does not matter).
 Parameter-wise `--hpdl` works exactly as `--shop`
 
+
 ## Contact
 If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:gregor.behnke@uni-ulm.de).
+
 
 ## Reference
 If you would like to cite pandaPIparser, you may do so my referring to the following paper:
