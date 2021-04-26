@@ -36,6 +36,8 @@ problem			{return KEY_PROBLEM;}
 :tihtn			{return KEY_TIHTN;}
 :htnti			{return KEY_TIHTN;}
 :objects		{return KEY_OBJECTS;}
+:bound			{return KEY_BOUND;}
+:utility		{return KEY_UTILITY;}
       
 :subtasks			{return KEY_TASKS;}
 :tasks				{return KEY_TASKS;}

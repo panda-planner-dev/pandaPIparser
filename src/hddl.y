@@ -50,7 +50,7 @@
 
 %token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES KEY_FUNCTIONS
 %token KEY_TASK KEY_CONSTANTS KEY_ACTION KEY_PARAMETERS KEY_PRECONDITION KEY_EFFECT KEY_METHOD
-%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC   
+%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC KEY_UTILITY KEY_BOUND
 %token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF
 %token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS 
 %token <sval> NAME REQUIRE_NAME VAR_NAME 
@@ -136,6 +136,8 @@ problem_defs: problem_defs require_def |
               problem_defs p_goal | 
               problem_defs p_constraint | // I think this is only for global LTL constraints
 			  problem_defs p_metric |
+			  problem_defs p_utility |
+			  problem_defs p_cost_bound |
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list ')';
 p_init : '(' KEY_INIT init_el ')';
@@ -191,9 +193,22 @@ p_htn : '(' htn_type
 
 p_constraint : '(' KEY_CONSTRAINTS gd ')'
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Cost metric
 p_metric : '(' KEY_METRIC KEY_MIMIZE metric_f_exp ')' 
 metric_f_exp : NAME { metric_target = $1; }
 metric_f_exp : '(' NAME ')' { metric_target = $2; }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Final state utilities for over subscription planning
+p_utility : '(' KEY_UTILITY utility_list ')'
+utility_list : '(' '=' atomic_formula INT ')' utility_list |
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Upper bound on the total cost of the plan for over subscription planning
+p_cost_bound : '(' KEY_BOUND INT ')'
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // @PDDL
