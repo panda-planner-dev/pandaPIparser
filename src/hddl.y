@@ -232,7 +232,6 @@ type_def_list : |
 								sort_definitions.push_back(s);
 								// touch constant map to ensure a consistent access
 								for (string & ss : s.declared_sorts) {
-									cout << "SORT " << ss << endl;
 									sorts[ss].size();
 								}
 							}
