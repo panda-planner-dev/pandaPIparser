@@ -445,6 +445,7 @@ void simple_hddl_output(ostream & dout){
 	dout << cost_bound << endl;
 
 	dout << "#utility" << endl;
+	dout << utility.size() << endl;
 	for (auto [gl,utility_value] : utility){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
 		assert(predicates.count(pn) != 0);
