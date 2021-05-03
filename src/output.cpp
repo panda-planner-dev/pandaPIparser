@@ -123,6 +123,7 @@ void simple_hddl_output(ostream & dout){
 	for (task t : primitive_tasks) for (literal l : t.prec) if (!l.positive) neg_pred.insert(l.predicate);
 	for (task t : primitive_tasks) for (conditional_effect ceff : t.ceff) for (literal l : ceff.condition) if (!l.positive) neg_pred.insert(l.predicate);
 	for (auto l : goal) if (!l.positive) neg_pred.insert(l.predicate);
+	for (auto [l,_] : utility) if (!l.positive) neg_pred.insert(l.predicate);
 
 	map<string,int> predicates;
 	vector<pair<string,predicate_definition>> predicate_out;
