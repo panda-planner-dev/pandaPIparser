@@ -39,6 +39,7 @@ vector<parsed_task> parsed_abstract;
 map<string,vector<parsed_method> > parsed_methods;
 vector<pair<predicate_definition,string>> parsed_functions;
 string metric_target = dummy_function_type;
+int cost_bound = -1;
 
 
 map<string,set<string> > sorts;

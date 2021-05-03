@@ -7,6 +7,7 @@ vector<ground_literal> init;
 vector<pair<ground_literal,int>> init_functions;
 vector<ground_literal> goal;
 general_formula* goal_formula = NULL;
+vector<pair<ground_literal,int>> utility;
 
 bool operator< (const ground_literal& lhs, const ground_literal& rhs){
 	if (lhs.predicate < rhs.predicate) return true;

@@ -202,12 +202,21 @@ metric_f_exp : '(' NAME ')' { metric_target = $2; }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Final state utilities for over subscription planning
 p_utility : '(' KEY_UTILITY utility_list ')'
-utility_list : '(' '=' atomic_formula INT ')' utility_list |
+utility_list : '(' '=' literal INT ')' utility_list {
+			map<string,string> access;
+			// for each constant a new sort with a uniq name has been created. We access it here and retrieve its only element, the constant in questions
+			for(auto x : $3->arguments.newVar) access[x.first] = *sorts[x.second].begin();  
+			ground_literal l;
+			l.positive = $3->type == ATOM;
+			l.predicate = $3->predicate;
+			for(string v : $3->arguments.vars) l.args.push_back(access[v]);
+			utility.push_back({l,$4});
+} |
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Upper bound on the total cost of the plan for over subscription planning
-p_cost_bound : '(' KEY_BOUND INT ')'
+p_cost_bound : '(' KEY_BOUND INT ')' { cost_bound = $3; }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

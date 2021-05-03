@@ -120,6 +120,7 @@ extern map<string,vector<parsed_method> > parsed_methods;
 extern vector<pair<predicate_definition,string>> parsed_functions;
 extern string metric_target;
 
+extern int cost_bound;
 
 string sort_for_const(string c);
 void compile_goal_into_action();

@@ -23,4 +23,6 @@ extern vector<pair<ground_literal,int>> init_functions;
 extern vector<ground_literal> goal;
 extern general_formula* goal_formula;
 
+extern vector<pair<ground_literal,int>> utility;
+
 #endif

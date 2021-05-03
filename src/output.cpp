@@ -438,4 +438,17 @@ void simple_hddl_output(ostream & dout){
 	dout << "#initial_task" << endl;
 	if (instance_is_classical) dout << "-1" << endl;
 	else dout << task_id["__top"] << endl;
+
+
+	dout << "#cost bound" << endl;
+	dout << cost_bound << endl;
+
+	dout << "#utility" << endl;
+	for (auto [gl,utility_value] : utility){
+		string pn = (gl.positive ? "+" : "-") + gl.predicate;
+		assert(predicates.count(pn) != 0);
+		dout << predicates[pn];
+		for (string c : gl.args) dout << " " << constants[c];
+		dout << " " << utility_value << endl;
+	}
 }
