@@ -89,8 +89,12 @@ pair<task,bool> flatten_primitive_task(parsed_task & a,
 				else
 					t.eff.push_back(get<literal>(eff));
 			} else {
-				if (get<conditional_effect>(eff).effect.isCostChangeExpression)
+				if (get<conditional_effect>(eff).effect.isCostChangeExpression){
+					cout << "Domain contains state-dependent action costs while compiling conditional effects is not allowed"
+					exit(0);
+					
 					assert(false); // TODO state dependent action costs. This is very complicated. Ask Robert Mattmüller how to do it.
+				}
 				// conditional effect
 				t.ceff.push_back(get<conditional_effect>(eff));
 			}
@@ -572,6 +576,7 @@ void flatten_tasks(bool compileConditionalEffects,
 		flatten_primitive_task(a, compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods, false);
 	
 	}
+	exit(0);
 
 
 	for(parsed_task & a : parsed_abstract){
