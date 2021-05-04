@@ -123,7 +123,7 @@ void simple_hddl_output(ostream & dout){
 	for (task t : primitive_tasks) for (literal l : t.prec) if (!l.positive) neg_pred.insert(l.predicate);
 	for (task t : primitive_tasks) for (conditional_effect ceff : t.ceff) for (literal l : ceff.condition) if (!l.positive) neg_pred.insert(l.predicate);
 	for (auto l : goal) if (!l.positive) neg_pred.insert(l.predicate);
-	for (auto [l,_] : utility) if (!l.positive) neg_pred.insert(l.predicate);
+	for (auto [l,_] : utility) for (auto ll : l) if (!ll.positive) neg_pred.insert(ll.predicate);
 
 	map<string,int> predicates;
 	vector<pair<string,predicate_definition>> predicate_out;
@@ -446,11 +446,15 @@ void simple_hddl_output(ostream & dout){
 
 	dout << "#utility" << endl;
 	dout << utility.size() << endl;
-	for (auto [gl,utility_value] : utility){
-		string pn = (gl.positive ? "+" : "-") + gl.predicate;
-		assert(predicates.count(pn) != 0);
-		dout << predicates[pn];
-		for (string c : gl.args) dout << " " << constants[c];
+	for (auto [gll,utility_value] : utility){
+		dout << gll.size();
+		for (auto gl : gll){
+			dout << " ";
+			string pn = (gl.positive ? "+" : "-") + gl.predicate;
+			assert(predicates.count(pn) != 0);
+			dout << predicates[pn];
+			for (string c : gl.args) dout << " " << constants[c];
+		}
 		dout << " " << utility_value << endl;
 	}
 }
