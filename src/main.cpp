@@ -167,8 +167,8 @@ int main(int argc, char** argv) {
 
 	if (inputFiles.size() > 0) dfile = 0;
 	if (inputFiles.size() > 1) pfile = 1;
-	if (inputFiles.size() > 2) pfile = 2;
-	if (inputFiles.size() > 3) pfile = 3;
+	if (inputFiles.size() > 2) doutfile = 2;
+	if (inputFiles.size() > 3) poutfile = 3;
 
 	if (dfile == -1){
 		if (convertPlan)

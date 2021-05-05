@@ -21,7 +21,7 @@ endif
 
 .PHONY = all clean
 
-all: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/hddlWriter.o src/htn2stripsWriter.o src/orderingDecomposition.o src/plan.o src/verify.o src/properties.o
+all: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/hddlWriter.o src/htn2stripsWriter.o src/orderingDecomposition.o src/plan.o src/verify.o src/properties.o src/cmdline.o
 	${CXX} ${LINKERFLAG} $^ -o pandaPIparser 
 
 %.o: %.cpp %.hpp src/hddl.hpp
@@ -38,6 +38,12 @@ src/hddl.cpp: src/hddl.y
 	bison -v -d -o src/hddl.cpp src/hddl.y
 
 src/hddl.hpp: src/hddl.cpp
+
+src/main.cpp: src/cmdline.h
+
+src/cmdline.c src/cmdline.h: src/options.ggo
+	gengetopt --include-getopt --default-optional --unamed-opts --output-dir=src -i src/options.ggo
+
 
 clean:
 	rm src/hddl-token.cpp
