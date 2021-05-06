@@ -111,6 +111,7 @@ set<string> general_formula::occuringUnQuantifiedVariables(){
 	if (this->type == NOTOFSORT) assert(false);
 
 	assert(false);
+	return ret;
 }
 
 additional_variables general_formula::variables_for_constants(){
@@ -463,3 +464,12 @@ void compile_goal_into_action(){
 	goal_formula = NULL;
 }
 
+void remove_method_preconditions(){
+	for (auto & [_, mm] : parsed_methods){
+		for (auto & m : mm){
+			m.prec = new general_formula();
+			m.prec->type = EMPTY;
+		}
+	}
+
+}

@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
 	bool useOrderInPlanVerification = true;
 	bool convertPlan = false;
 	bool showProperties = false;
+	bool removeMethodPreconditions = false;
 	int verbosity = 0;
 	
 	gengetopt_args_info args_info;
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
 	}
 	if (args_info.encode_disjunctive_preconditions_in_htn_given) encodeDisjunctivePreconditionsInMethods = true;
 	if (args_info.goal_action_given) compileGoalIntoAction = true;
+	if (args_info.remove_method_preconditions_given) removeMethodPreconditions = true;
 
 	if (args_info.shop_given) shopOutput = true;
 	if (args_info.shop1_given) shopOutput = shop_1_compatability_mode = true;
@@ -263,7 +265,7 @@ int main(int argc, char** argv) {
 	if (!hpdlOutput && has_typeof_predicate) create_typeof();
 
 	if (compileGoalIntoAction) compile_goal_into_action();
-
+	if (removeMethodPreconditions) remove_method_preconditions();
 
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){

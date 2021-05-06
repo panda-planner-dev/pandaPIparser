@@ -123,5 +123,6 @@ extern string metric_target;
 
 string sort_for_const(string c);
 void compile_goal_into_action();
+void remove_method_preconditions();
 
 #endif

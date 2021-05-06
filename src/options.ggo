@@ -29,6 +29,7 @@ groupoption "exponential-conditional-effect" - "use the standard exponential enc
 option "encode-disjunctive-preconditions-in-htn" D "don't compile disjunctive preconditions into one action per element of the disjunction, but use the HTN structure instead" flag off
 option "goal-action" g "compile the state goal into an action" flag off
 
+option "remove-method-preconditions" m "remove all methods preconditions from the model (this alters the semantics of the model)" flag off
 
 
 
