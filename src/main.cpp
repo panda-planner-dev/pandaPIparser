@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 
 	
 	cout << "pandaPIparser is configured as follows" << endl;
-	cout << "  Colurs in output: " << boolalpha << !no_colors_in_output << endl;
+	cout << "  Colors in output: " << boolalpha << !no_colors_in_output << endl;
 	if (showProperties){
 		cout << "  Mode: show instance properties" << endl;
 	} else if (convertPlan){
