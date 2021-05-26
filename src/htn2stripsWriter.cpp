@@ -224,19 +224,20 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			}
 			dout << "    )" << endl;
 		} else {
-			//dout << "    :tasks (" << endl;
+			dout << "    :tasks (" << endl;
 			for (sub_task * task : m.tn->tasks){
-				dout << "    :tasks (" << task->id << " (" << sanitise(task->task);
+				dout << "      (" << sanitise(task->id) << " (" << sanitise(task->task);
 				print_var_and_const(dout,*task->arguments);
-				dout << "))" << endl;
+				dout << ")" << endl;
 			}
+			dout << "    )" << endl;
 			//dout << "    )" << endl;
 			if (m.tn->ordering.size()){
 				// ordering of subtasks
 				dout << "    :ordering (" << endl;
 				for (auto p : m.tn->ordering)
-					dout << " (" << p->first << " " << p->second << ")" << endl;
-				dout << " )" << endl;
+					dout << " (" << sanitise(p->first) << " " << sanitise(p->second) << ")" << endl;
+				dout << "     )" << endl;
 			}
 		} 
 		
