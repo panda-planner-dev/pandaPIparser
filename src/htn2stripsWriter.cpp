@@ -228,7 +228,7 @@ void htn2strips_output(ostream & dout, ostream & pout){
 			for (sub_task * task : m.tn->tasks){
 				dout << "      (" << sanitise(task->id) << " (" << sanitise(task->task);
 				print_var_and_const(dout,*task->arguments);
-				dout << ")" << endl;
+				dout << "))" << endl;
 			}
 			dout << "    )" << endl;
 			//dout << "    )" << endl;
