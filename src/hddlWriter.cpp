@@ -578,14 +578,16 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			}
 
 			// subtasks
-			dout << "    :subtasks (and" << endl;
-			for (plan_step ps : m.ps){
-				dout << "      (x" << sanitise(ps.id) << " (";
-				dout << sanitise(ps.task);
-				for (string v : ps.args) dout << " " << sanitise(v);
-				dout << "))" << endl;
+			if (m.ps.size()){
+				dout << "    :subtasks (and" << endl;
+				for (plan_step ps : m.ps){
+					dout << "      (x" << sanitise(ps.id) << " (";
+					dout << sanitise(ps.task);
+					for (string v : ps.args) dout << " " << sanitise(v);
+					dout << "))" << endl;
+				}
+				dout << "    )" << endl;
 			}
-			dout << "    )" << endl;
 
 			
 			if (m.ordering.size()){

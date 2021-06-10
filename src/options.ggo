@@ -1,0 +1,94 @@
+package "pandaPIparser"
+version "0.1"
+purpose "The parser of the pandaPI planning system. Takes read an HTN problem written in HDDL and outputs it in pandaPI's internal simplified lifted format or one of other supported output formats"
+usage "./pandaPIparser [OPTIONS] domain.hddl problem.hddl output.htn"
+#description "<description>"
+#versiontext "<versiontext>"
+
+args "--string-parser -u"
+
+
+## use "-" for an option without a short option
+
+section "General Options"
+
+option "debug" d "activate debug mode and set the debug level" argoptional int default="1"
+option "no-colour" C "activate the no-colour mode, i.e. disable coloured output" flag off
+option "properties" p "only show the instances properties and exit" flag off
+
+
+section "Transformations"
+
+option "no-split-parameters" s "don't perform parameter splitting. Parameter splitting re-formulates methods in a way s.t. they have fewer groundings" flag off
+
+defgroup "conditionalEffects" groupdesc="Mode for handling conditional effects. Default is exponential encoding."
+groupoption "keep-conditional-effects" k "don't compile conditional effects into multiple actions. This compilation is active by default, but will lead to an exponential amount of actions in the number of conditional effects per actions. If it is turned off the conditional effects are written directly as-is to the output. The pandaPIgrounder can handle this, but not all planners might." group="conditionalEffects"
+groupoption "linear-conditional-effect" L "use a linear size encoding of conditional effects (by using the HTN structure). This has generally not a good performance in the planner" group="conditionalEffects"
+groupoption "exponential-conditional-effect" - "use the standard exponential encoding of conditional effects" group="conditionalEffects"
+
+option "encode-disjunctive-preconditions-in-htn" D "don't compile disjunctive preconditions into one action per element of the disjunction, but use the HTN structure instead" flag off
+option "goal-action" g "compile the state goal into an action" flag off
+
+option "remove-method-preconditions" m "remove all methods preconditions from the model (this alters the semantics of the model)" flag off
+
+
+
+
+section "Output" sectiondesc="Default output is pandaPI's internal lifted representation. For formats that have both a domain and a problem file for output, you need to provide both as command line arguments instead of output.htn." 
+defgroup "output"
+groupoption "shop" S "output in SHOP2 format" group="output"
+groupoption "shop1" 1 "output in SHOP1 format" group="output"
+groupoption "hpdl" H "output in HPDL format (for SIADEX)" group="output"
+groupoption "hppdl" R "output in HPPDL format (Ron Alford's format)" group="output"
+
+groupoption "hddl" h "output in HDDL format as is, i.e. without any transformations applied (even if they are activated)." group="output"
+groupoption "processed-hddl" P "output in processed HDDL, i.e. with transformations applied." group="output"
+groupoption "internal-hddl" i "output in processed HDDL, i.e. with transformations applied. This output will not try to conform with HDDL standards w.r.t. to action/task/method/predicate/object names, i.e. they may start with underscores or contain other illegal characters like ';' or '|'. This output is intended for debuggig." group="output"
+
+section "Verifier" sectiondesc="These options only pertain to the plan verifier integrated into pandaPIparser. For plan verification, you need to call the verifier with three arguments: domain.hddl problem.hddl plan.txt"
+option "verify" v "activates the verifier" argoptional int values="0","1","2"  default="0"
+option "vverify" V "activates the verifier with verbose output (i.e. verbosity level 1)" flag off
+option "vvverify" W "activates the verifier with very verbose output (i.e. verbosity level 2)" flag off
+option "lenient" l "switches the verifier to lenient mode. It will ignore difference is case and allow for all non letter characters in action, task, and method names to be replaced by underscores" flag off
+option "verify-no-order" o "ignore the order of subtasks given in the plan" flag off
+option "panda-converter" c "activates the pandaPI plan converter. Both the grounder and the parser may alter the planning problem s.t. the plan found by the engine might not be verifiable any more. With the converter, one can translate the found plan back into a verifiable plan. Run with two arguments: plan.in plan.out" flag off
+
+##option "print-timings" T "print detailed timings of individual operations." flag off
+##option "output-domain" O "write internal data structures representing the lifted input to standard out (only for debugging)." flag off
+##
+##
+##section "Additional Inferences"
+##option "invariants" i "use CPDL to infer lifted FAM groups and ground them." flag off
+##option "h2" 2 "use H2 preprocessor to infer invariants." flag off
+##
+##section "Transformations"
+##option "dont-remove-duplicates" D "don't remove duplcate actions, i.e. actions with the same preconditions and effects will be replaced by the same action. Currently, this applies only to method precondition actions." flag on
+##option "no-empty-compilation" E "by default the grounder adds a zero-cost no-op action to otherwise empty methods. Needed by the pandaPIengine progression planner. This option disables the compilation" flag on
+##option "no-literal-pruning" l "disables removal of statically true or false literals. Also literals that don't occur in preconditions are removed." flag on
+##option "no-abstract-expansion" e "disables application of methods in the model. If an abstract task has only one applicable method, it will be applied directly in them model." flag on
+##option "no-method-precondition-pruning" m "disables removal of actions without precondition and effects that where artificially inserted by the parser." flag on
+##option "two-regularisation" t "transforms the model s.t. every method has at most two subtasks. Might be impossible for some partially ordered instances." flag off
+##
+##section "Grounding options" sectiondesc="These options only affect the performance of the grounder. Usually the defaults are fine. Please only change them if the grounder fails to ground the instance in a reasonable amount of time"
+##option "static-precondition-checking-in-hierarchy-typing" c "check static preconditions already during hierarchy typing. This will increase the size of the hierarchy typing, but will make it more informed" flag off
+##option "future-caching-by-initially-matched-precondition" f "enables future caching for the initially matched precondition in the generalised planning graph" flag off
+##option "no-hierarchy-typing" n "disables hierarchy typing" flag on
+##
+##
+##section "Output Mode" 
+##
+##text "Default output mode is planner mode" # new line
+##groupoption "planner" - "normal output for pandaPIplanner." group="outputmode"
+##groupoption "sasplus" s "output SAS+ in Fast Downwards format. Note that this will only output the classical part of the model." group="outputmode"
+##groupoption "hddl" H "output HDDL." group="outputmode"
+##groupoption "no-output" g "only ground the instance, don't output anything." group="outputmode"
+##
+##defgroup "sasmode"
+##text "Default SAS+ mode is as-input-sas-deletes" 
+##groupoption "as-input-sas-deletes" - "write the delete effects in the input (usually the minimally needed delete effects)" group="sasmode"
+##groupoption "no-sas-deletes" N "don't output delete effects for SAS+ variables." group="sasmode"
+##groupoption "all-sas-deletes" A "output all inferrable delete effects for each SAS+ variables." group="sasmode"
+##
+##text "\nFurther options" # new line
+##option "force-sas" S "output all facts as SAS+ variables. Normally we use a special format for binary SAS+variables." flag off
+##option "compile-negative" G "compile away negative SAS+ preconditions" flag off
