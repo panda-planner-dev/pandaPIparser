@@ -7,8 +7,8 @@ vector<ground_literal> init;
 vector<pair<ground_literal,int>> init_functions;
 vector<ground_literal> goal;
 general_formula* goal_formula = NULL;
-vector<pair<vector<ground_literal>,int>> utility;
-vector<pair<general_formula*,int>> utility_formulae;
+general_formula* constraint_formula = NULL;
+vector<pair<string,vector<ground_literal>>> preferences;
 
 bool operator< (const ground_literal& lhs, const ground_literal& rhs){
 	if (lhs.predicate < rhs.predicate) return true;
@@ -47,31 +47,87 @@ void flatten_goal(){
 		}
 	}
 
-	for (auto [gf,u] : utility_formulae){
-		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > ex = gf->expand(false);
-		// disjunctions are ok in utilities
-		for (auto expansion : ex){
-			assert(expansion.first.second.size() == 0);
-			map<string,string> access;
-			for (auto x : expansion.second){
-				string sort = x.second;
-				assert(sorts[sort].size() == 1); // must be an actual constant
-				access[x.first] = *sorts[sort].begin();
+
+	// process the problem constraints. This can contain a cost bound, preferences, and further goals
+	// TODO here we would have to process LTL formulae in the future
+	if (constraint_formula != NULL){
+		additional_variables vars;
+		vector<general_formula*> subformulae = constraint_formula->expandQualifiedCondGD(vars);
+
+		for (general_formula * cf : subformulae){
+			if (cf->type == PREFERENCE){
+				string name = cf->arg1;
+
+				assert(cf->subformulae[0]->type == ATEND);
+
+				general_formula * endformula = cf->subformulae[0]->subformulae[0];
+
+				vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > ex = endformula->expand(false);
+				// disjunctions are ok in utilities
+				for (auto expansion : ex){
+					assert(expansion.first.second.size() == 0);
+					map<string,string> access;
+					for (auto x : expansion.second){
+						string sort = x.second;
+						assert(sorts[sort].size() == 1); // must be an actual constant
+						access[x.first] = *sorts[sort].begin();
+					}
+					for (auto x : vars){
+						string sort = x.second;
+						assert(sorts[sort].size() == 1); // must be an actual constant
+						access[x.first] = *sorts[sort].begin();
+					}
+			
+					vector<ground_literal> conditions;
+			
+					for (variant<literal,conditional_effect> l : expansion.first.first){
+						if (holds_alternative<conditional_effect>(l))
+							assert(false); // goal may not contain conditional effects
+			
+						ground_literal gl;
+						gl.predicate = get<literal>(l).predicate;
+						gl.positive = get<literal>(l).positive;
+						for (string v : get<literal>(l).arguments) gl.args.push_back(access[v]);
+						conditions.push_back(gl);
+					}
+					preferences.push_back({name, conditions});
+				}
+			} else {
+				assert(cf->type == ATEND);
+				general_formula* end_formula = cf->subformulae[0];
+				
+				vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > ex = end_formula->expand(false);
+				// disjunctions are ok in utilities
+				for (auto expansion : ex){
+					map<string,string> access;
+					for (auto x : expansion.second){
+						string sort = x.second;
+						assert(sorts[sort].size() == 1); // must be an actual constant
+						access[x.first] = *sorts[sort].begin();
+					}
+					for (auto x : vars){
+						string sort = x.second;
+						assert(sorts[sort].size() == 1); // must be an actual constant
+						access[x.first] = *sorts[sort].begin();
+					}
+
+					for (variant<literal,conditional_effect> l : expansion.first.first){
+						if (holds_alternative<conditional_effect>(l))
+							assert(false); // goal may not contain conditional effects
+					
+						if (get<literal>(l).isCostCompareExpression){
+							cost_bound = get<literal>(l).costValue;
+						} else {
+							// this is a true state-based goal so write it as such
+							ground_literal gl;
+							gl.predicate = get<literal>(l).predicate;
+							gl.positive = get<literal>(l).positive;
+							for (string v : get<literal>(l).arguments) gl.args.push_back(access[v]);
+							goal.push_back(gl);
+						}
+					}
+				}
 			}
-
-			vector<ground_literal> conditions;
-
-			for (variant<literal,conditional_effect> l : expansion.first.first){
-				if (holds_alternative<conditional_effect>(l))
-					assert(false); // goal may not contain conditional effects
-
-				ground_literal gl;
-				gl.predicate = get<literal>(l).predicate;
-				gl.positive = get<literal>(l).positive;
-				for (string v : get<literal>(l).arguments) gl.args.push_back(access[v]);
-				conditions.push_back(gl);
-			}
-			utility.push_back({conditions,u});
 		}
 	}
 }

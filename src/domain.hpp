@@ -21,6 +21,7 @@ struct literal{
 	bool positive;
 	bool isConstantCostExpression;
 	bool isCostChangeExpression;
+	bool isCostCompareExpression;
 	string predicate;
 	vector<string> arguments;
 	int costValue;

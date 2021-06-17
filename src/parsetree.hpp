@@ -42,7 +42,9 @@ struct function_expression{
 enum formula_type {EMPTY, AND, OR, FORALL, EXISTS, ATOM, NOTATOM,  // formulae
 				   EQUAL, NOTEQUAL, OFSORT, NOTOFSORT,
 				   WHEN,   // conditional effect
-				   VALUE, COST, COST_CHANGE // cost statement
+				   VALUE, COST, COST_CHANGE, // cost statement
+				   PREFERENCE, ATEND, // preference statement
+				   LEQ // numerical comparision
 				  };
 
 class general_formula{
@@ -66,6 +68,8 @@ class general_formula{
 		// first: effect, second: additional precondition for that effect
 		// if it is an uncompiled conditional effect, the additional prec will be empty
 		vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, additional_variables> > expand(bool compileConditionalEffects);
+		vector<general_formula*> expandQualifiedCondGD(additional_variables & additionalVars);
+		
 		bool isDisjunctive();
 		additional_variables variables_for_constants();
 		
@@ -79,6 +83,15 @@ class general_formula{
 		general_formula* copyReplace(map<string,string>& replace);
 };
 
+enum arithmetic_formula_type {ADD,MUL,SUB,VAL,CONST};
+
+class arithmetic_formula {
+	public:
+		arithmetic_formula_type type;
+		vector<arithmetic_formula*> subformulae;
+		int value;
+		string preference;
+};
 
 struct parsed_task{
 	string name;
@@ -119,6 +132,7 @@ extern vector<parsed_task> parsed_abstract;
 extern map<string,vector<parsed_method> > parsed_methods;
 extern vector<pair<predicate_definition,string>> parsed_functions;
 extern string metric_target;
+extern arithmetic_formula * metric_expression;
 
 extern int cost_bound;
 

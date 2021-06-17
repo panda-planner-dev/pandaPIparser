@@ -37,8 +37,10 @@
 	var_declaration* vardecl;
 	predicate_definition* preddecl;
 	general_formula* formula;
+	arithmetic_formula* arithmeticformula;
 	std::vector<predicate_definition*>* preddecllist;
 	std::vector<general_formula*>* formulae;
+	std::vector<arithmetic_formula*>* arithmeticformulae;
 	var_and_const* varandconst;
 	sub_task* subtask;
 	std::vector<sub_task*>* subtasks;
@@ -51,8 +53,9 @@
 %token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES KEY_FUNCTIONS
 %token KEY_TASK KEY_CONSTANTS KEY_ACTION KEY_PARAMETERS KEY_PRECONDITION KEY_EFFECT KEY_METHOD
 %token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC KEY_UTILITY KEY_BOUND
-%token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF
-%token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS 
+%token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF KEY_LEQ
+%token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS KEY_PREFERENCE KEY_ATEND
+%token KEY_ISVIOLATED KEY_MAXIMIZE
 %token <sval> NAME REQUIRE_NAME VAR_NAME 
 %token <fval> FLOAT
 %token <ival> INT
@@ -66,9 +69,9 @@
 %type <preddecl> atomic_predicate_def 
 %type <preddecllist> atomic_function_def-list
 %type <varandconst> var_or_const-list
-%type <formulae> gd-list
+%type <formulae> gd-list pref_con_gd-list quantified_con_gd-list
 %type <formula> atomic_formula
-%type <formula> gd
+%type <formula> gd pref_con_gd con_gd quantified_con_gd
 %type <formula> gd_empty 
 %type <formula> gd_conjuction 
 %type <formula> gd_disjuction 
@@ -77,6 +80,7 @@
 %type <formula> gd_existential 
 %type <formula> gd_universal 
 %type <formula> gd_equality_constraint 
+%type <formula> gd_f_comp 
 %type <formula> precondition_option
 %type <formula> effect_option
 %type <formulae> effect-list
@@ -91,6 +95,8 @@
 %type <formula> f_head 
 %type <formula> f_exp
 
+%type <arithmeticformula> metric_f_exp
+%type <arithmeticformulae> metric_f_exp-list
 
 %type <formula> constraint_def 
 %type <formulae> constraint_def-list
@@ -136,8 +142,6 @@ problem_defs: problem_defs require_def |
               problem_defs p_goal | 
               problem_defs p_constraint | // I think this is only for global LTL constraints
 			  problem_defs p_metric |
-			  problem_defs p_utility |
-			  problem_defs p_cost_bound |
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list ')';
 p_init : '(' KEY_INIT init_el ')';
@@ -191,26 +195,50 @@ p_htn : '(' htn_type
 		parsed_abstract.push_back(top);
 }
 
-p_constraint : '(' KEY_CONSTRAINTS gd ')'
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// Preferences
+p_constraint : '(' KEY_CONSTRAINTS pref_con_gd ')' { constraint_formula = $3; }
+
+pref_con_gd : '(' KEY_AND pref_con_gd-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);} |
+			  '(' KEY_FORALL '(' typed_or_untyped_var_list ')' pref_con_gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} |
+			  '(' KEY_PREFERENCE NAME quantified_con_gd ')' {$$ = new general_formula(); $$->type = PREFERENCE; $$->subformulae.push_back($4); $$->arg1 = $3; } |
+			  con_gd {$$ = $1; }
+
+pref_con_gd-list : pref_con_gd-list pref_con_gd {$$ = $1; $$->push_back($2);} 
+		| {$$ = new vector<general_formula*>();}
+
+
+
+quantified_con_gd: '(' KEY_AND quantified_con_gd-list ')' {$$ = new general_formula(); $$->type=AND; $$->subformulae = *($3);} |
+		 		   '(' KEY_FORALL '(' typed_or_untyped_var_list ')' quantified_con_gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} |
+				   con_gd
+		 
+
+con_gd : '(' KEY_ATEND gd ')' {$$ = new general_formula(); $$->type = ATEND; $$->subformulae.push_back($3); } 
+
+
+quantified_con_gd-list : quantified_con_gd-list quantified_con_gd {$$ = $1; $$->push_back($2);} 
+		| {$$ = new vector<general_formula*>();}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cost metric
-p_metric : '(' KEY_METRIC KEY_MIMIZE metric_f_exp ')' 
-metric_f_exp : NAME { metric_target = $1; }
-metric_f_exp : '(' NAME ')' { metric_target = $2; }
+p_metric : '(' KEY_METRIC metric_direction metric_target ')' 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-// Final state utilities for over subscription planning
-p_utility : '(' KEY_UTILITY utility_list ')'
-utility_list : '(' '=' gd INT ')' utility_list {
-			utility_formulae.push_back({$3,$4});
-} |
+metric_direction: KEY_MIMIZE | KEY_MAXIMIZE 
 
+metric_target : NAME { metric_target = $1; }
+//metric_target : '(' NAME ')' { metric_target = $2; }
+metric_target : metric_f_exp { metric_expression = $1; }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-// Upper bound on the total cost of the plan for over subscription planning
-p_cost_bound : '(' KEY_BOUND INT ')' { cost_bound = $3; }
+metric_f_exp : '(' '*' metric_f_exp-list ')' {$$ = new arithmetic_formula(); $$->type = MUL; $$->subformulae = *($3); }
+metric_f_exp : '(' '+' metric_f_exp-list ')' {$$ = new arithmetic_formula(); $$->type = ADD; $$->subformulae = *($3); }
+metric_f_exp : '(' '-' metric_f_exp metric_f_exp ')' {$$ = new arithmetic_formula(); $$->type = SUB; $$->subformulae.push_back($3); $$->subformulae.push_back($4); }
+metric_f_exp : '(' KEY_ISVIOLATED NAME ')' {$$ = new arithmetic_formula(); $$->type = VAL; $$->preference = $3; }
+metric_f_exp : INT {$$ = new arithmetic_formula(); $$->type = CONST; $$->value = $1; }
 
+metric_f_exp-list : metric_f_exp-list metric_f_exp {$$ = $1; $$->push_back($2);} 
+		| {$$ = new vector<arithmetic_formula*>();}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // @PDDL
@@ -467,6 +495,7 @@ gd :  gd_empty {$$ = $1;}
 	| gd_existential {$$ = $1;}
 	| gd_universal {$$ = $1;}
 	| gd_equality_constraint {$$ = $1;}
+	| gd_f_comp {$$ = $1;}
 
 gd-list : gd-list gd {$$ = $1; $$->push_back($2);} 
 		| {$$ = new vector<general_formula*>();}
@@ -478,7 +507,10 @@ gd_negation : '(' KEY_NOT gd ')' {$$ = $3; $$->negate();}
 gd_implication : '(' KEY_IMPLY gd gd ')' {$$ = new general_formula(); $$->type=OR; $3->negate(); $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
 gd_existential : '(' KEY_EXISTS '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = EXISTS; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
 gd_universal : '(' KEY_FORALL '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
-gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = EQUAL; $$->arg1 = $3; $$->arg2 = $4;}
+gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = LEQ; $$->arg1 = $3; $$->arg2 = $4;}
+
+
+gd_f_comp : '(' KEY_LEQ var_or_const INT ')' {$$ = new general_formula(); $$->type = LEQ; $$->arg1 = $3; $$->value = $4;}
 
 var_or_const-list :   var_or_const-list NAME {
 						$$ = $1;

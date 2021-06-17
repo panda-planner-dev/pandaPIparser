@@ -13,6 +13,10 @@
 \(				{return '('; }
 \)				{return ')'; }
 -				{return '-'; }
+\+				{return '+'; }
+\*				{return '*'; }
+\/				{return '/'; }
+\<=				{return KEY_LEQ; }
 =				{return '='; }
 \<				{return '<'; }
 define			{return KEY_DEFINE;}
@@ -49,6 +53,7 @@ problem			{return KEY_PROBLEM;}
 :constraints		{return KEY_CONSTRAINTS;}
 :metric				{return KEY_METRIC;}
 minimize			{return KEY_MIMIZE;}
+maximize			{return KEY_MAXIMIZE;}
 
 :causal-links		{return KEY_CAUSAL_LINKS;}
 :causallinks		{return KEY_CAUSAL_LINKS;}
@@ -61,6 +66,10 @@ forall			{return KEY_FORALL;}
 exists			{return KEY_EXISTS;}
 when			{return KEY_WHEN;}
 increase		{return KEY_INCREASE;}
+preference		{return KEY_PREFERENCE;}
+at[ ]end		{return KEY_ATEND;}
+is-violated		{return KEY_ISVIOLATED;}
+
 
 typeof			{return KEY_TYPEOF;}
 sortof			{return KEY_TYPEOF;}

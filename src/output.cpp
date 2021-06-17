@@ -106,6 +106,27 @@ void verbose_output(int verbosity){
 	}
 }
 
+
+void write_metric_expression(ostream & dout, arithmetic_formula * f){
+	if (f->type == SUB && f->subformulae[0]->type == CONST && f->subformulae[0]->value == 1 && f->subformulae[1]->type == VAL){
+		dout << " " << f->subformulae[1]->preference;
+	} else if (f->type == ADD || f->type == MUL || f->type == SUB){
+		for (size_t i = 0; i < f->subformulae.size() - 1; i++){
+			if (f->type == ADD) dout << " +";
+			if (f->type == MUL) dout << " *";
+			if (f->type == SUB) dout << " -";
+		}
+		
+		for (size_t i = 0; i < f->subformulae.size(); i++)
+			write_metric_expression(dout, f->subformulae[i]);
+	} else if (f->type == CONST){
+		dout << " "  << f->value;
+	} else if (f->type == VAL){
+		dout << " - 1 " << f->preference;
+	}
+}
+
+
 void simple_hddl_output(ostream & dout){
 	// prep indices
 	map<string,int> constants;
@@ -123,7 +144,7 @@ void simple_hddl_output(ostream & dout){
 	for (task t : primitive_tasks) for (literal l : t.prec) if (!l.positive) neg_pred.insert(l.predicate);
 	for (task t : primitive_tasks) for (conditional_effect ceff : t.ceff) for (literal l : ceff.condition) if (!l.positive) neg_pred.insert(l.predicate);
 	for (auto l : goal) if (!l.positive) neg_pred.insert(l.predicate);
-	for (auto [l,_] : utility) for (auto ll : l) if (!ll.positive) neg_pred.insert(ll.predicate);
+	for (auto [_,l] : preferences) for (auto ll : l) if (!ll.positive) neg_pred.insert(ll.predicate);
 
 	map<string,int> predicates;
 	vector<pair<string,predicate_definition>> predicate_out;
@@ -444,10 +465,10 @@ void simple_hddl_output(ostream & dout){
 	dout << "#cost bound" << endl;
 	dout << cost_bound << endl;
 
-	dout << "#utility" << endl;
-	dout << utility.size() << endl;
-	for (auto [gll,utility_value] : utility){
-		dout << gll.size();
+	dout << "#preferences" << endl;
+	dout << preferences.size() << endl;
+	for (auto [preferencename, gll] : preferences){
+		dout << preferencename << " " << gll.size();
 		for (auto gl : gll){
 			dout << " ";
 			string pn = (gl.positive ? "+" : "-") + gl.predicate;
@@ -455,6 +476,10 @@ void simple_hddl_output(ostream & dout){
 			dout << predicates[pn];
 			for (string c : gl.args) dout << " " << constants[c];
 		}
-		dout << " " << utility_value << endl;
+		dout << endl;
 	}
+	
+	dout << "#metric" << endl;
+	write_metric_expression(dout, metric_expression);
+	dout << endl;
 }

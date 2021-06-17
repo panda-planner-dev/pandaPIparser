@@ -41,6 +41,7 @@ vector<parsed_task> parsed_abstract;
 map<string,vector<parsed_method> > parsed_methods;
 vector<pair<predicate_definition,string>> parsed_functions;
 string metric_target = dummy_function_type;
+arithmetic_formula * metric_expression = NULL;
 int cost_bound = -1;
 
 
@@ -278,6 +279,7 @@ int main(int argc, char** argv) {
 		cout << endl;
 		return result ? 0 : 1;
 	}
+	
 
 	if (!hpdlOutput) {
 		// flatten all primitive tasks
@@ -287,7 +289,7 @@ int main(int argc, char** argv) {
 		// create appropriate methods and expand method preconditions
 		parsed_method_to_data_structures(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 	}
-
+	
 	if (shopOutput || hpdlOutput){
 		// produce streams for output
 		ostream * dout = &cout;
@@ -322,6 +324,8 @@ int main(int argc, char** argv) {
 	reduce_constraints();
 	clean_up_sorts();
 	remove_unnecessary_predicates();
+
+
 
 	// write to output
 	if (verboseOutput) verbose_output(verbosity);

@@ -23,7 +23,7 @@ extern vector<pair<ground_literal,int>> init_functions;
 extern vector<ground_literal> goal;
 extern general_formula* goal_formula;
 
-extern vector<pair<vector<ground_literal>,int>> utility;
-extern vector<pair<general_formula*,int>> utility_formulae;
+extern vector<pair<string,vector<ground_literal>>> preferences;
+extern general_formula* constraint_formula;
 
 #endif

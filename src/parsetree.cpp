@@ -17,8 +17,9 @@ void general_formula::negate(){
 	else if (this->type == NOTATOM) this->type = ATOM;
 	else if (this->type == WHEN) assert(false); // conditional effect cannot be negated 
 	else if (this->type == VALUE) assert(false); // conditional effect cannot be negated 
-	else if (this->type == COST_CHANGE) assert(false); // conditional effect cannot be negated 
-	else if (this->type == COST) assert(false); // conditional effect cannot be negated 
+	else if (this->type == COST_CHANGE) assert(false); // costs cannot be negated 
+	else if (this->type == COST) assert(false); // costs cannot be negated 
+	else if (this->type == LEQ) assert(false); // costs cannot be negated 
 
 	for(auto sub : this->subformulae) sub->negate();
 }
@@ -35,6 +36,10 @@ bool general_formula::isEmpty(){
 	if (this->type == VALUE) return false;
 	if (this->type == COST) return false;
 	if (this->type == COST_CHANGE) return false;
+	
+	if (this->type == PREFERENCE) return false;
+	if (this->type == ATEND) return false;
+	if (this->type == LEQ) return false;
 
 
 	for(auto sub : this->subformulae) if (!sub->isEmpty()) return false;
@@ -109,6 +114,9 @@ set<string> general_formula::occuringUnQuantifiedVariables(){
 	if (this->type == COST) assert(false);
 	if (this->type == OFSORT) assert(false);
 	if (this->type == NOTOFSORT) assert(false);
+	if (this->type == PREFERENCE) assert(false);
+	if (this->type == ATEND) assert(false);
+	if (this->type == LEQ) assert(false);
 
 	assert(false);
 	return ret;
@@ -172,6 +180,39 @@ bool general_formula::isDisjunctive(){
 }
 
 int global_exists_variable_counter = 0;
+
+
+vector<general_formula*> general_formula::expandQualifiedCondGD(additional_variables & additionalVars){
+	vector<general_formula*> ret;
+
+	if (this->type == EMPTY || (this->subformulae.size() == 0 &&
+				(this->type == AND || this->type == OR || this->type == FORALL || this->type == EXISTS))){
+		return ret;
+	}
+
+	// generate a big conjunction for forall and expand it
+	if (this->type == FORALL){
+		auto [var_replace,avs] = forallVariableReplacement();
+
+		for (auto r : var_replace)
+			for (auto subExpand : this->subformulae[0]->copyReplace(r)->expandQualifiedCondGD(additionalVars))
+				ret.push_back(subExpand);
+		
+		additionalVars.insert(avs.begin(), avs.end());
+		return ret;
+	}
+
+	if (this->type == AND){
+		for (auto sub : this->subformulae)
+			for (auto subExpand : sub->expandQualifiedCondGD(additionalVars))
+				ret.push_back(subExpand);
+		return ret;
+	}
+
+
+	ret.push_back(this);
+	return ret;
+}
 
 // hard expansion of formulae. This can grow up to exponentially, but is currently the only thing we can do about disjunctions.
 // this will also handle forall and exists quantors by expansion
@@ -267,6 +308,19 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 		literal l;
 		l.positive = this->type == ATOM;
 		l.isConstantCostExpression = true;
+		l.costValue = this->value;
+		ls.push_back(l);
+
+		additional_variables vars;
+		vector<literal> empty;
+		ret.push_back(make_pair(make_pair(ls,empty),vars));	
+	}
+
+	if (this->type == LEQ){
+		vector<variant<literal,conditional_effect>> ls;
+		literal l;
+		l.positive = this->type == ATOM;
+		l.isCostCompareExpression = true;
 		l.costValue = this->value;
 		ls.push_back(l);
 
@@ -381,6 +435,7 @@ literal general_formula::atomLiteral(){
 	l.positive = this->type == ATOM;
 	l.isConstantCostExpression = false;
 	l.isCostChangeExpression = false;
+	l.isCostCompareExpression = false;
 	l.predicate = this->predicate;
 	l.arguments = this->arguments.vars;
 
