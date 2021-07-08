@@ -510,7 +510,7 @@ gd_universal : '(' KEY_FORALL '(' typed_or_untyped_var_list  ')' gd ')' {$$ = ne
 gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = LEQ; $$->arg1 = $3; $$->arg2 = $4;}
 
 
-gd_f_comp : '(' KEY_LEQ var_or_const INT ')' {$$ = new general_formula(); $$->type = LEQ; $$->arg1 = $3; $$->value = $4;}
+gd_f_comp : '(' KEY_LEQ var_or_const INT ')' {$$ = new general_formula(); $$->type = LEQ; $$->predicate = $3; $$->value = $4;}
 
 var_or_const-list :   var_or_const-list NAME {
 						$$ = $1;

@@ -117,6 +117,7 @@ void flatten_goal(){
 					
 						if (get<literal>(l).isCostCompareExpression){
 							cost_bound = get<literal>(l).costValue;
+							metric_target = get<literal>(l).predicate;
 						} else {
 							// this is a true state-based goal so write it as such
 							ground_literal gl;

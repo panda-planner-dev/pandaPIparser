@@ -319,6 +319,7 @@ vector<pair<pair<vector<variant<literal,conditional_effect>>,vector<literal> >, 
 	if (this->type == LEQ){
 		vector<variant<literal,conditional_effect>> ls;
 		literal l;
+		l.predicate = this->predicate; 
 		l.positive = this->type == ATOM;
 		l.isCostCompareExpression = true;
 		l.costValue = this->value;

@@ -16,7 +16,6 @@ const string dummy_function_type = "__none";
 const string numeric_funtion_type = "number";
 const string method_precondition_action_name = "__method_precondition_";
 
-
 struct literal{
 	bool positive;
 	bool isConstantCostExpression;
