@@ -48,6 +48,26 @@ bool general_formula::isEmpty(){
 }
 
 
+bool general_formula::hasCostFormula(){
+	if (this->type == EMPTY) return false;
+
+	if (this->type == ATOM) return false;
+	if (this->type == NOTATOM) return false;
+	if (this->type == EQUAL) return false;
+	if (this->type == NOTEQUAL) return false;
+	
+	if (this->type == VALUE) return true;
+	if (this->type == COST) return true;
+	if (this->type == COST_CHANGE) return true;
+	
+	if (this->type == LEQ) return true;
+
+	for(auto sub : this->subformulae) if (sub->hasCostFormula()) return true;
+
+	return false;
+}
+
+
 bool general_formula::hasEquals(){
 	if (this->type == EQUAL) return true;
 	if (this->type == NOTEQUAL) return true;

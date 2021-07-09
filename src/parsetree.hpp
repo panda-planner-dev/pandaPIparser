@@ -71,6 +71,7 @@ class general_formula{
 		vector<general_formula*> expandQualifiedCondGD(additional_variables & additionalVars);
 		
 		bool isDisjunctive();
+		bool hasCostFormula();
 		additional_variables variables_for_constants();
 		
 		literal equalsLiteral();
