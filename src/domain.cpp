@@ -534,7 +534,7 @@ void flatten_tasks(bool compileConditionalEffects,
 
 	bool artificialUnitCosts = false;
 
-	if (metric_target == dummy_function_type && !constraint_formula->hasCostFormula()){
+	if (metric_target == dummy_function_type && constraint_formula != NULL && !constraint_formula->hasCostFormula()){
 		metric_target = "method_precondition_cost";
 		artificialUnitCosts = true;
 	}

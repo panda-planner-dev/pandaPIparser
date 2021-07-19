@@ -557,8 +557,13 @@ neg_atomic_formula : '(' KEY_NOT atomic_formula ')' {$$ = $3; $$->negate();}
 // these rules are just here to be able to parse action consts in the future
 p_effect : '(' assign_op f_head f_exp ')' {$$ = new general_formula(); $$->type=COST_CHANGE; $$->subformulae.push_back($3); $$->subformulae.push_back($4); }
 assign_op : KEY_INCREASE
-f_head : NAME { $$ = new general_formula(); $$->type = COST; $$->predicate = $1; }
-f_head : '(' NAME var_or_const-list ')' { $$ = new general_formula(); $$->type = COST; $$->predicate = $2; $$->arguments = *($3); }
+f_head : NAME { $$ = new general_formula(); $$->type = COST; $$->predicate = $1; 
+	if (metric_target == dummy_function_type) metric_target = $1;	   
+}
+f_head : '(' NAME var_or_const-list ')' { $$ = new general_formula(); $$->type = COST; $$->predicate = $2; $$->arguments = *($3); 
+	if (metric_target == dummy_function_type) metric_target = $2;	   
+	   
+}
 f_exp : INT { $$ = new general_formula(); $$->type = VALUE; $$->value = $1; }
 f_exp : f_head { $$ = $1; }
 
