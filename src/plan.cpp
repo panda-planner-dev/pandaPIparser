@@ -249,6 +249,71 @@ int get_next_free_id(parsed_plan & plan){
 	return max_id + 1;
 }
 
+
+parsed_plan expand_compressed_action(parsed_plan plan, int expanded_task){
+	instantiated_plan_step expanded_ps = plan.tasks[expanded_task];
+	string task_name = expanded_ps.name;
+
+	vector<string> blocks; blocks.push_back("");
+	for (size_t i = 1; i < task_name.size()-1; i++){
+		if (task_name[i] == '#'){
+			blocks.push_back("");
+			continue;
+		}
+		blocks[blocks.size()-1] = blocks[blocks.size()-1] + task_name[i];
+	}
+
+	vector<int> replacement;
+	int currentArgPos = 0;
+	for (size_t task = 1; task < blocks.size(); task += 2){
+		instantiated_plan_step ps;
+		ps.declaredPrimitive = true;
+		ps.name = blocks[task];
+		for (int arg = 0; arg < stoi(blocks[task+1]); arg++)
+			ps.arguments.push_back(expanded_ps.arguments[currentArgPos + arg]);
+
+		currentArgPos += stoi(blocks[task+1]);
+
+		int id = get_next_free_id(plan);
+		plan.tasks[id] = ps;
+		replacement.push_back(id);
+	}
+
+	plan.tasks.erase(expanded_task);
+
+	// find the place where it occurs
+	for (auto & method : plan.subtasksForTask){
+		if (count(method.second.begin(),method.second.end(),expanded_task)){
+			vector<int> newSubtasks;
+			for (int i : method.second)
+				if (i != expanded_task)
+					newSubtasks.push_back(i);
+				else
+					for(int j : replacement)
+						newSubtasks.push_back(j);
+			method.second = newSubtasks;
+		}
+	}
+
+	// modify primitive plan
+	vector<int> newPlan;
+	plan.pos_in_primitive_plan.clear();
+	for (int i : plan.primitive_plan)
+		if (i != expanded_task){
+			plan.pos_in_primitive_plan[i] = newPlan.size();
+			newPlan.push_back(i);
+		} else {
+			for(int j : replacement){
+				plan.pos_in_primitive_plan[j] = newPlan.size();
+				newPlan.push_back(j);
+			}
+		}
+
+	plan.primitive_plan = newPlan;
+
+	return plan;
+}
+
 parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 	// get elements of this method
 	string method_name = plan.appliedMethod[expanded_task];
@@ -387,6 +452,9 @@ parsed_plan convert_plan(parsed_plan plan){
 			return convert_plan(compress_artificial_method(plan,method.first));
 	}
 	for (auto task : plan.tasks){
+		if (task.second.name[0] == '%')
+			return convert_plan(expand_compressed_action(plan,task.first));
+		
 		if (task.second.name[0] == '_' && task.second.name[1] == '!')
 			return convert_plan(compress_artificial_method(plan,task.first));
 	}
