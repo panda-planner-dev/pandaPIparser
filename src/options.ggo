@@ -31,7 +31,7 @@ option "goal-action" g "compile the state goal into an action" flag off
 
 option "remove-method-preconditions" m "remove all methods preconditions from the model (this alters the semantics of the model)" flag off
 
-
+option "verification-encoding" E "encode the verification problem for the given plan" optional string
 
 
 section "Output" sectiondesc="Default output is pandaPI's internal lifted representation. For formats that have both a domain and a problem file for output, you need to provide both as command line arguments instead of output.htn." 

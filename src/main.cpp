@@ -23,6 +23,7 @@
 #include "typeof.hpp"
 #include "util.hpp"
 #include "verify.hpp"
+#include "verification_encoding.hpp"
 #include "properties.hpp"
 
 #include "cmdline.h"
@@ -31,6 +32,7 @@ using namespace std;
 
 // declare parser function manually
 void run_parser_on_file(FILE* f, char* filename);
+
 
 // parsed domain data structures
 bool has_typeof_predicate = false;
@@ -63,6 +65,9 @@ int main(int argc, char** argv) {
 	bool linearConditionalEffectExpansion = false;
 	bool encodeDisjunctivePreconditionsInMethods = false;
 	bool compileGoalIntoAction = false;
+    
+	bool doVerifyEncoding = false;
+	string verificationFile = "";
 	
 	bool shopOutput = false;
 	bool hpdlOutput = false;
@@ -121,6 +126,11 @@ int main(int argc, char** argv) {
 	if (args_info.verify_no_order_given) {
 		verifyPlan = true;
 		useOrderInPlanVerification = false;
+	}
+
+	if (args_info.verification_encoding_given){
+		doVerifyEncoding = true;
+		verificationFile = args_info.verification_encoding_arg;
 	}
 
 	if (args_info.panda_converter_given) convertPlan = true;
@@ -287,6 +297,10 @@ int main(int argc, char** argv) {
 		parsed_method_to_data_structures(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 	}
 
+    if (doVerifyEncoding) {
+   		encode_plan_verification(verificationFile);
+	}
+
 	if (shopOutput || hpdlOutput){
 		// produce streams for output
 		ostream * dout = &cout;
@@ -358,3 +372,4 @@ int main(int argc, char** argv) {
 		simple_hddl_output(*dout);
 	}
 }
+
