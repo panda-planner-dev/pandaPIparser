@@ -581,10 +581,14 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			if (m.ps.size()){
 				dout << "    :subtasks (and" << endl;
 				for (plan_step ps : m.ps){
-					dout << "      (x" << sanitise(ps.id) << " (";
+					dout << "      ";
+					// name tasks only if necessary, else this will confuse the verifier
+					if (m.ordering.size()) dout << "(x" << sanitise(ps.id) << " ";
+					dout << "(";
 					dout << sanitise(ps.task);
 					for (string v : ps.args) dout << " " << sanitise(v);
-					dout << "))" << endl;
+					if (m.ordering.size()) dout << ")";
+					dout << ")" << endl;
 				}
 				dout << "    )" << endl;
 			}
@@ -649,9 +653,13 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			} else {
 				dout << "    :subtasks (and" << endl;
 				for (sub_task * task : m.tn->tasks){
-					dout << "      (" << task->id << " (" << sanitise(task->task);
+					dout << "      ";
+					// name tasks only if necessary, else this will confuse the verifier
+					if (m.tn->ordering.size()) dout << "(" << task->id << " ";
+					dout << "(" << sanitise(task->task);
 					print_var_and_const(dout,*task->arguments);
-					dout << "))" << endl;
+					if (m.tn->ordering.size()) dout << ")";
+					dout << ")" << endl;
 				}
 				dout << "    )" << endl;
 				if (m.tn->ordering.size()){
