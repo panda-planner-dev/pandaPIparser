@@ -632,8 +632,32 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			dout << ")" << endl;
 			
 
-			if (!m.prec->isEmpty())
-				print_formula_for(dout,m.prec,":precondition");
+			if (!m.prec->isEmpty() || !m.tn->constraint->isEmpty()){
+				vector<general_formula*> top_level;
+				if (!m.prec->isEmpty()){
+					if (m.prec->type == AND)
+						for (general_formula * s : m.prec->subformulae)
+							top_level.push_back(s);
+					else
+						top_level.push_back(m.prec);
+				}
+				
+				if (!m.tn->constraint->isEmpty()){
+					if (m.tn->constraint->type == AND)
+						for (general_formula * s : m.tn->constraint->subformulae)
+							top_level.push_back(s);
+					else
+						top_level.push_back(m.tn->constraint);
+				}
+				general_formula * gf;
+				if (top_level.size() == 1) gf = top_level[0];
+				else {
+					gf = new general_formula();
+					gf->type = AND;
+					gf->subformulae = top_level;
+				}
+				print_formula_for(dout,gf,":precondition");
+			}
 
 			if (!m.eff->isEmpty())
 				print_formula_for(dout,m.eff,":effect");
@@ -671,8 +695,6 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 				}
 			} 
 			
-			if (!m.tn->constraint->isEmpty())
-				print_formula_for(dout,m.tn->constraint,":constraints");
 			
 			dout << "  )" << endl << endl;
 		}
