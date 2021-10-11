@@ -80,7 +80,10 @@ int main(int argc, char** argv) {
 	bool showProperties = false;
 	bool removeMethodPreconditions = false;
 	int verbosity = 0;
-	
+
+	int pruneToSingleGoal = -1;
+	bool noOSPOutput = false;
+
 	gengetopt_args_info args_info;
 	if (cmdline_parser(argc, argv, &args_info) != 0) return 1;
 
@@ -106,6 +109,8 @@ int main(int argc, char** argv) {
 	if (args_info.hddl_given) pureHddlOutput = true;
 	if (args_info.processed_hddl_given) hddlOutput = true;
 	if (args_info.internal_hddl_given) hddlOutput = internalHDDLOutput = true;
+	if (args_info.single_goal_given) pruneToSingleGoal = args_info.single_goal_arg;
+	if (args_info.no_osp_given) noOSPOutput = true;
 
 	if (args_info.verify_given){
 		verifyPlan = true;
@@ -286,6 +291,8 @@ int main(int argc, char** argv) {
 		flatten_tasks(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 		// .. and the goal
 		flatten_goal();
+		if (pruneToSingleGoal != -1)
+			makeOnePreferenceAGoal(pruneToSingleGoal);
 		// create appropriate methods and expand method preconditions
 		parsed_method_to_data_structures(compileConditionalEffects, linearConditionalEffectExpansion, encodeDisjunctivePreconditionsInMethods);
 	}
@@ -360,6 +367,6 @@ int main(int argc, char** argv) {
 			}
 			dout = df;
 		}
-		simple_hddl_output(*dout);
+		simple_hddl_output(*dout,noOSPOutput);
 	}
 }

@@ -221,3 +221,16 @@ void compute_cwa(){
 		}
 	}
 }
+
+
+
+void makeOnePreferenceAGoal(int number){
+	if (number < 0 || number >= preferences.size()) {
+		std::cerr << "Can't prune to preference #" << number << " as there are only " << preferences.size() << std::endl;
+		exit(1);
+	}
+
+
+	for (auto gl : preferences[number].second)
+		goal.push_back(gl);
+}

@@ -17,6 +17,7 @@ bool operator< (const ground_literal& lhs, const ground_literal& rhs);
 
 void flatten_goal();
 void compute_cwa();
+void makeOnePreferenceAGoal(int number);
 
 extern vector<ground_literal> init;
 extern vector<pair<ground_literal,int>> init_functions;

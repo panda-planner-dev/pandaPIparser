@@ -127,7 +127,7 @@ void write_metric_expression(ostream & dout, arithmetic_formula * f){
 }
 
 
-void simple_hddl_output(ostream & dout){
+void simple_hddl_output(ostream & dout, bool noOSPOutput){
 	// prep indices
 	map<string,int> constants;
 	vector<string> constants_out;
@@ -461,6 +461,7 @@ void simple_hddl_output(ostream & dout){
 	if (instance_is_classical) dout << "-1" << endl;
 	else dout << task_id["__top"] << endl;
 
+	if (noOSPOutput) return;
 
 	dout << "#cost bound" << endl;
 	dout << cost_bound << endl;
