@@ -3,7 +3,7 @@
 
 #include "parsetree.hpp"
 
-void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed);
+void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed, bool dontWriteConstantsIntoDomain);
 
 
 tuple<vector<string>,

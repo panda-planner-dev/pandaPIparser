@@ -44,6 +44,7 @@ groupoption "hppdl" R "output in HPPDL format (Ron Alford's format)" group="outp
 groupoption "hddl" h "output in HDDL format as is, i.e. without any transformations applied (even if they are activated)." group="output"
 groupoption "processed-hddl" P "output in processed HDDL, i.e. with transformations applied." group="output"
 groupoption "internal-hddl" i "output in processed HDDL, i.e. with transformations applied. This output will not try to conform with HDDL standards w.r.t. to action/task/method/predicate/object names, i.e. they may start with underscores or contain other illegal characters like ';' or '|'. This output is intended for debuggig." group="output"
+option "no-domain-constants" - "don't write constants into the domain" flag off
 
 section "Verifier" sectiondesc="These options only pertain to the plan verifier integrated into pandaPIparser. For plan verification, you need to call the verifier with three arguments: domain.hddl problem.hddl plan.txt"
 option "verify" v "activates the verifier" argoptional int values="0","1","2"  default="0"

@@ -310,7 +310,7 @@ void print_formula_for(ostream & out, general_formula * f, string topic){
 }
 
 
-void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed){
+void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed, bool dontWriteConstantsIntoDomain){
 
 	auto sanitise = [&](string s){
 		if (internalHDDLOutput || usedParsed) {
@@ -332,6 +332,7 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			else if (c == ',') result += "COM_";
 			else if (c == '+') result += "PLUS_";
 			else if (c == '-') result += "MINUS_";
+			else if (c == '!') result += "EXCLAMATION_";
 			else result += c;
 		}
 		return result;
@@ -427,7 +428,8 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 
 	
 	// determine which constants need to be declared in the domain
-	set<string> constants_in_domain = compute_constants_in_domain();
+	set<string> constants_in_domain;
+	//if (!internalHDDLOutput) constants_in_domain = compute_constants_in_domain();
 
 	if (constants_in_domain.size()) dout << "  (:constants" << endl;
 	pout << "  (:objects" << endl;
@@ -807,9 +809,8 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 						else {
 							dout << "(" << sanitise(c.predicate);
 							for (string v : c.arguments) dout << " " << sanitise(v);
-							dout << ")";
+							dout << "))";
 						}
-						dout << ")" << endl;
 					}
 				}
 		

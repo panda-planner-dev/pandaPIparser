@@ -126,6 +126,7 @@ additional_variables general_formula::variables_for_constants(){
 
 string sort_for_const(string c){
 	string s = "sort_for_" + c;
+	cout << "TUUP " << s << endl;
 	sorts[s].insert(c);
 	return s;
 }

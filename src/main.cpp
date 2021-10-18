@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
 	bool pureHddlOutput = false;
 	bool hddlOutput = false;
 	bool internalHDDLOutput = false;
+	bool dontWriteConstantsIntoDomain = false;
 	bool lenientVerify = false;
 	bool verboseOutput = false;
 	bool verifyPlan = false;
@@ -109,6 +110,7 @@ int main(int argc, char** argv) {
 	if (args_info.hddl_given) pureHddlOutput = true;
 	if (args_info.processed_hddl_given) hddlOutput = true;
 	if (args_info.internal_hddl_given) hddlOutput = internalHDDLOutput = true;
+	if (args_info.no_domain_constants_given) dontWriteConstantsIntoDomain = true;
 
 	if (args_info.verify_given){
 		verifyPlan = true;
@@ -262,7 +264,7 @@ int main(int argc, char** argv) {
 			pout = pf;
 		}
 		if (pureHddlOutput)
-			hddl_output(*dout,*pout, false, true);
+			hddl_output(*dout,*pout, false, true, true);
 		else if (htn2stripsOutput)
 			htn2strips_output(*dout,*pout);
 		return 0;
@@ -358,7 +360,7 @@ int main(int argc, char** argv) {
 			}
 			pout = pf;
 		}
-		hddl_output(*dout,*pout, internalHDDLOutput, false);
+		hddl_output(*dout,*pout, internalHDDLOutput, false, dontWriteConstantsIntoDomain);
 	} else {
 		ostream * dout = &cout;
 		if (doutfile != -1){
