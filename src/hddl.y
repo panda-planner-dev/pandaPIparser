@@ -507,7 +507,7 @@ gd_negation : '(' KEY_NOT gd ')' {$$ = $3; $$->negate();}
 gd_implication : '(' KEY_IMPLY gd gd ')' {$$ = new general_formula(); $$->type=OR; $3->negate(); $$->subformulae.push_back($3); $$->subformulae.push_back($4);}
 gd_existential : '(' KEY_EXISTS '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = EXISTS; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
 gd_universal : '(' KEY_FORALL '(' typed_or_untyped_var_list  ')' gd ')' {$$ = new general_formula(); $$->type = FORALL; $$->subformulae.push_back($6); $$->qvariables = *($4);} 
-gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = LEQ; $$->arg1 = $3; $$->arg2 = $4;}
+gd_equality_constraint : '(' '=' var_or_const var_or_const ')' {$$ = new general_formula(); $$->type = EQUAL; $$->arg1 = $3; $$->arg2 = $4;}
 
 
 gd_f_comp : '(' KEY_LEQ var_or_const INT ')' {$$ = new general_formula(); $$->type = LEQ; $$->predicate = $3; $$->value = $4;}

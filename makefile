@@ -16,8 +16,8 @@ else # guessing what will work on Windows
      LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
 endif
 
-#COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
-#LINKERFLAG=-O0 -ggdb
+COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
+LINKERFLAG=-O0 -ggdb
 
 .PHONY = all clean
 
