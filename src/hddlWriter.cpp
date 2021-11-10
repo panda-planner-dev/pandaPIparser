@@ -777,9 +777,8 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 						else {
 							dout << "(" << sanitise(c.predicate);
 							for (string v : c.arguments) dout << " " << sanitise(v);
-							dout << ")";
+							dout << "))";
 						}
-						dout << ")" << endl;
 					}
 				}
 		
