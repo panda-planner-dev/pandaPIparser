@@ -116,8 +116,21 @@ void flatten_goal(){
 							assert(false); // goal may not contain conditional effects
 					
 						if (get<literal>(l).isCostCompareExpression){
+							if (metric_target != get<literal>(l).predicate){
+								for (task & t : primitive_tasks){
+									if (t.costExpression.size() == 0){ // method preconditions will already have a cost expression
+										literal l;
+										l.isConstantCostExpression = true;
+										l.costValue = 1;
+										t.costExpression.push_back(l);
+									}
+								}
+							}
+
+							if (metric_target != "method_precondition_cost"){
+								metric_target = get<literal>(l).predicate;
+							}
 							cost_bound = get<literal>(l).costValue;
-							metric_target = get<literal>(l).predicate;
 						} else {
 							// this is a true state-based goal so write it as such
 							ground_literal gl;
