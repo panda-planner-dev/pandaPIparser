@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 			pout = pf;
 		}
 		if (pureHddlOutput)
-			hddl_output(*dout,*pout, false, true, true);
+			hddl_output(*dout,*pout, false, true, true, removeMethodPreconditions);
 		else if (htn2stripsOutput)
 			htn2strips_output(*dout,*pout);
 		return 0;
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
 			}
 			pout = pf;
 		}
-		hddl_output(*dout,*pout, internalHDDLOutput, false, dontWriteConstantsIntoDomain);
+		hddl_output(*dout,*pout, internalHDDLOutput, false, dontWriteConstantsIntoDomain, false);
 	} else {
 		ostream * dout = &cout;
 		if (doutfile != -1){

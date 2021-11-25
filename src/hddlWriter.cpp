@@ -310,7 +310,7 @@ void print_formula_for(ostream & out, general_formula * f, string topic){
 }
 
 
-void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed, bool dontWriteConstantsIntoDomain){
+void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool usedParsed, bool dontWriteConstantsIntoDomain, bool removeMethodPreconditions){
 
 	auto sanitise = [&](string s){
 		if (internalHDDLOutput || usedParsed) {
@@ -634,9 +634,9 @@ void hddl_output(ostream & dout, ostream & pout, bool internalHDDLOutput, bool u
 			dout << ")" << endl;
 			
 
-			if (!m.prec->isEmpty() || !m.tn->constraint->isEmpty()){
+			if ((!m.prec->isEmpty() && !removeMethodPreconditions) || !m.tn->constraint->isEmpty()){
 				vector<general_formula*> top_level;
-				if (!m.prec->isEmpty()){
+				if (!m.prec->isEmpty() && !removeMethodPreconditions){
 					if (m.prec->type == AND)
 						for (general_formula * s : m.prec->subformulae)
 							top_level.push_back(s);
