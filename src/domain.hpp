@@ -15,6 +15,7 @@ const string dummy_ofsort_literal = "__ofsort";
 const string dummy_function_type = "__none";
 const string numeric_funtion_type = "number";
 const string method_precondition_action_name = "__method_precondition_";
+const string immediate_method_precondition_action_name = "__immediate_method_precondition_";
 
 
 struct literal{

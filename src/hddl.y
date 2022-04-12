@@ -218,7 +218,10 @@ domain_symbol : NAME
 // Requirement Statement
 // @PDDL
 require_def : '(' KEY_REQUIREMENTS require_defs ')'
-require_defs : require_defs REQUIRE_NAME {string r($2); if (r == ":typeof-predicate") has_typeof_predicate = true; } | 
+require_defs : require_defs REQUIRE_NAME {string r($2);
+			 	if (r == ":typeof-predicate") has_typeof_predicate = true;
+			 	if (r == ":method-preconditions-are-immediately-before") method_preconditions_are_immediately_before = true;
+				} | 
 
 
 

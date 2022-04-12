@@ -38,7 +38,12 @@ void split_independent_parameters(){
 		for(method m : old){
 			// find variables that occur only in one of the plan steps
 			map<string,set<pair<string,int>>> variables_ps_id;
+			set<string> argumentsOfImmovables;
 			for(plan_step ps : m.ps) {
+				if (ps.task.rfind(immediate_method_precondition_action_name, 0) == 0) {
+					for(string v : ps.args) argumentsOfImmovables.insert(v);
+				}
+
 				if (!artificialTasks.count(ps.task))
 					for(string v : ps.args) variables_ps_id[v].insert({ps.id,-1});
 				else {
@@ -77,7 +82,9 @@ void split_independent_parameters(){
 					cout << "\t\t" << ps << " @ " << prec << endl;
 			}	
 #endif	
-		
+	
+			for (string v : argumentsOfImmovables) variables_ps_id.erase(v);
+
 			map<string,string> variableSorts;
 			for(auto v : m.vars) variableSorts[v.first] = v.second;
 			// don't consider variables that have at most one instantiation

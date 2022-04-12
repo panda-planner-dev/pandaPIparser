@@ -645,7 +645,10 @@ void parsed_method_to_data_structures(bool compileConditionalEffects,
 
 
 		parsed_task mPrec_task;
-		mPrec_task.name = method_precondition_action_name + m.name;
+		if (!method_preconditions_are_immediately_before)
+			mPrec_task.name = method_precondition_action_name + m.name;
+		else
+			mPrec_task.name = immediate_method_precondition_action_name + m.name;
 		mPrec_task.prec = pm.prec;
 		mPrec_task.arguments = new var_declaration();
 

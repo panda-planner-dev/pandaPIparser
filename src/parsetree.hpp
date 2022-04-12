@@ -112,6 +112,7 @@ struct parsed_method{
 
 // global places to put data structures
 extern bool has_typeof_predicate;
+extern bool method_preconditions_are_immediately_before;
 extern vector<sort_definition> sort_definitions;
 extern vector<predicate_definition> predicate_definitions;
 extern vector<parsed_task> parsed_primitive;

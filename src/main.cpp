@@ -36,6 +36,7 @@ void run_parser_on_file(FILE* f, char* filename);
 
 // parsed domain data structures
 bool has_typeof_predicate = false;
+bool method_preconditions_are_immediately_before = false; 
 vector<sort_definition> sort_definitions;
 vector<predicate_definition> predicate_definitions;
 vector<parsed_task> parsed_primitive;
