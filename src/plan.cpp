@@ -250,7 +250,16 @@ int get_next_free_id(parsed_plan & plan){
 }
 
 
-parsed_plan expand_compressed_action(parsed_plan plan, int expanded_task){
+void update_index(parsed_plan & plan){
+	plan.task_contained_in.clear();
+	// find the rule where expanded is contained
+	for (auto sub : plan.subtasksForTask)
+		for (int subtask : sub.second)
+			plan.task_contained_in[subtask] = sub.first;
+}
+
+
+parsed_plan expand_compressed_action(parsed_plan & plan, int expanded_task){
 	instantiated_plan_step expanded_ps = plan.tasks[expanded_task];
 	string task_name = expanded_ps.name;
 
@@ -314,7 +323,7 @@ parsed_plan expand_compressed_action(parsed_plan plan, int expanded_task){
 	return plan;
 }
 
-parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
+parsed_plan expand_compressed_method(parsed_plan & plan, int expanded_task){
 	// get elements of this method
 	string method_name = plan.appliedMethod[expanded_task];
 	vector<int> method_subtasks = plan.subtasksForTask[expanded_task];
@@ -381,7 +390,68 @@ parsed_plan expand_compressed_method(parsed_plan plan, int expanded_task){
 	return plan;
 }
 
-parsed_plan compress_artificial_method(parsed_plan plan, int expanded_task){
+
+void compress_artificial_primitives(parsed_plan & plan, set<int> prims){
+	// remove the primitive task from the plan
+	int decrement = 0;
+	vector<int> newPrimPlan;
+	for(size_t i = 0; i < plan.primitive_plan.size(); i++){
+		if (prims.count(plan.primitive_plan[i])){
+			plan.pos_in_primitive_plan.erase(plan.primitive_plan[i]);
+			decrement++;
+		} else {
+			// removed a tasks before this one
+			plan.pos_in_primitive_plan[plan.primitive_plan[i]] -= decrement;
+			if (plan.pos_in_primitive_plan[plan.primitive_plan[i]]!= newPrimPlan.size()){
+				cout << color(COLOR_RED,"Bug! ...") << endl;
+				exit(1);
+			}
+			newPrimPlan.push_back(plan.primitive_plan[i]);
+		}
+	}
+
+
+	if (decrement != prims.size()){
+		cout << color(COLOR_RED,"Not all primitives were in the primitive plan ..." + to_string(decrement) + " < " + to_string(prims.size())) << endl;
+		exit(1);
+	}
+	// erase the tasks from the plan
+	plan.primitive_plan = newPrimPlan; 
+
+
+	for (int expanded_task : prims){
+		// find the rule where expanded is contained
+		int contained_in_task = -1; // -1 will mean it is contained in root
+		if (plan.task_contained_in.count(expanded_task))
+			contained_in_task = plan.task_contained_in[expanded_task];
+
+
+
+		vector<int> current_ids;
+		if (contained_in_task == -1) current_ids = plan.root_tasks;
+		else current_ids = plan.subtasksForTask[contained_in_task];
+
+		// put the ids of the task we have to expand back to the place where it stems from
+		vector<int> new_ids;
+		for (int id : current_ids){
+			if (id == expanded_task){
+			} else
+				new_ids.push_back(id);
+		}
+
+		if (contained_in_task == -1) plan.root_tasks = new_ids;
+		else plan.subtasksForTask[contained_in_task] = new_ids;
+
+		plan.tasks.erase(expanded_task);
+		plan.appliedMethod.erase(expanded_task);
+		plan.subtasksForTask.erase(expanded_task);
+
+	}
+
+}
+
+
+parsed_plan compress_artificial_method(parsed_plan & plan, int expanded_task){
 	vector<int> subtasks_of_expanded;
    	if (plan.tasks[expanded_task].declaredPrimitive){
 		// remove the primitive task from the plan
@@ -402,21 +472,23 @@ parsed_plan compress_artificial_method(parsed_plan plan, int expanded_task){
 
 		// erase the task from the plan
 		plan.primitive_plan.erase(plan.primitive_plan.begin() + pos_of_prim);
-
 	} else {
 		subtasks_of_expanded = plan.subtasksForTask[expanded_task];
 	}
 
 	// find the rule where expanded is contained
 	int contained_in_task = -1; // -1 will mean it is contained in root
-	for (auto sub : plan.subtasksForTask){
-		for (int subtask : sub.second)
-			if (expanded_task == subtask){
-				contained_in_task = sub.first;
-				break;
-			}
-		if (contained_in_task != -1) break;
-	}
+	if (plan.task_contained_in.count(expanded_task))
+		contained_in_task = plan.task_contained_in[expanded_task];
+
+	//for (auto sub : plan.subtasksForTask){
+	//	for (int subtask : sub.second)
+	//		if (expanded_task == subtask){
+	//			contained_in_task = sub.first;
+	//			break;
+	//		}
+	//	if (contained_in_task != -1) break;
+	//}
 
 	vector<int> current_ids;
 	if (contained_in_task == -1) current_ids = plan.root_tasks;
@@ -442,38 +514,92 @@ parsed_plan compress_artificial_method(parsed_plan plan, int expanded_task){
 	return plan;
 }
 
-parsed_plan convert_plan(parsed_plan plan){
+void convert_plan(parsed_plan & plan){
 	// look for things that are not ok ..
 
-
 	// start with expansion compiled things (i.e. where we introduced *new* tasks and methods)
+	vector<int> methods_to_compress;
 	for (auto method : plan.appliedMethod){
-		if (method.second[0] == '_' && method.second[1] == '!')
-			return convert_plan(compress_artificial_method(plan,method.first));
+		if (method.second[0] == '_' && method.second[1] == '!'){
+			methods_to_compress.push_back(method.first);
+		}
 	}
-	for (auto task : plan.tasks){
-		if (task.second.name[0] == '%')
-			return convert_plan(expand_compressed_action(plan,task.first));
-		
-		if (task.second.name[0] == '_' && task.second.name[1] == '!')
-			return convert_plan(compress_artificial_method(plan,task.first));
+	if (methods_to_compress.size()) {
+		update_index(plan);
+		for (int m : methods_to_compress)
+			compress_artificial_method(plan,m);
+		convert_plan(plan);
+		return;
 	}
 
+	vector<int> expand;
+
+	for (auto task : plan.tasks){
+		if (task.second.name[0] == '%'){
+			expand.push_back(task.first);
+		}
+		
+		if (task.second.name[0] == '_' && task.second.name[1] == '!'){
+			methods_to_compress.push_back(task.first);
+		}
+	}
+	if (methods_to_compress.size() + expand.size()){
+		update_index(plan);
+		for (int m : methods_to_compress)
+			compress_artificial_method(plan,m);
+		for (int m : expand)
+			expand_compressed_action(plan,m);
+
+		convert_plan(plan);
+		return;
+	}
 
 	// first expand all compressed methods
 	for (auto method : plan.appliedMethod){
-		if (method.second[0] == '<')
-			return convert_plan(expand_compressed_method(plan,method.first));
+		if (method.second[0] == '<'){
+			expand.push_back(method.first);
+		}
+	}
+	
+	if (expand.size()){ 
+		for (int m : expand)
+			expand_compressed_method(plan,m);
+		convert_plan(plan);
 	}
 
+	
 	// only then remove compiled entries. This removal my make expansion rules in methods names impossible
 	for (auto method : plan.appliedMethod){
-		if (method.second[0] == '_')
-			return convert_plan(compress_artificial_method(plan,method.first));
+		if (method.second[0] == '_'){
+			methods_to_compress.push_back(method.first);
+		}
 	}
+	
+	if (methods_to_compress.size()) {
+		update_index(plan);
+		for (int m : methods_to_compress)
+			compress_artificial_method(plan,m);
+		convert_plan(plan);
+		return;
+	}
+	
+	set<int> compress_primitives;
 	for (auto task : plan.tasks){
-		if (task.second.name[0] == '_')
-			return convert_plan(compress_artificial_method(plan,task.first));
+		if (task.second.name[0] == '_'){
+			if (plan.tasks[task.first].declaredPrimitive)
+				compress_primitives.insert(task.first);
+			else
+				methods_to_compress.push_back(task.first);
+			//compress_artificial_method(plan,task.first);
+		}
+	}
+	if (methods_to_compress.size() + compress_primitives.size()){
+		compress_artificial_primitives(plan, compress_primitives);
+		update_index(plan);
+		for (int m : methods_to_compress)
+			compress_artificial_method(plan,m);
+		convert_plan(plan);
+		return;
 	}
 
 
@@ -484,9 +610,6 @@ parsed_plan convert_plan(parsed_plan plan){
 		// remove everything after the |  -- this is stuff that was added by compilers
 		task.second.name.erase(task.second.name.begin() + it,task.second.name.end());
 	}
-
-	// if not, return
-	return plan;
 }
 
 
@@ -494,8 +617,9 @@ parsed_plan convert_plan(parsed_plan plan){
 void convert_plan(istream & plan, ostream & pout){
 	parsed_plan initial_plan = parse_plan(plan, 0);
 
-	parsed_plan converted_plan = convert_plan(initial_plan);
-
+	// in-place conversion	
+	convert_plan(initial_plan);
+	parsed_plan converted_plan = initial_plan;
 
 	// write the plan to the output
 	pout << "==>" << endl;

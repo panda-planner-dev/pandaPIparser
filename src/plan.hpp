@@ -22,6 +22,8 @@ struct parsed_plan{
 	std::map<int,std::string> appliedMethod;
 	std::map<int,std::vector<int>> subtasksForTask;
 	std::vector<int> root_tasks;
+
+	std::map<int,int> task_contained_in;
 };
 
 parsed_plan parse_plan(istream & plan, int debugMode);
