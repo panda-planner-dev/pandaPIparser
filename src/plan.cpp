@@ -10,6 +10,37 @@
 using namespace std;
 
 
+void print_plan(parsed_plan converted_plan, ostream & pout){
+	// write the plan to the output
+	pout << "==>" << endl;
+	for (int action_id : converted_plan.primitive_plan){
+		instantiated_plan_step ps = converted_plan.tasks[action_id];
+		pout << action_id << " " << ps.name;
+		for (string arg : ps.arguments) pout << " " << arg;
+		pout << endl;
+			
+	}
+	
+	pout << "root";
+	for (int root : converted_plan.root_tasks) pout << " " << root;
+	pout << endl;
+
+
+	for (auto task : converted_plan.tasks){
+		if (task.second.declaredPrimitive) continue;
+
+		instantiated_plan_step ps = task.second;
+		pout << task.first << " " << ps.name;
+		for (string arg : ps.arguments) pout << " " << arg;
+		
+		pout << " -> " << converted_plan.appliedMethod[task.first];
+		for (int subtask : converted_plan.subtasksForTask[task.first]) if (subtask >= 0) pout << " " << subtask;
+		pout << endl;
+	}
+
+}
+
+
 vector<string> parse_list_of_strings(istringstream & ss, int debugMode){
 	vector<string> strings;
 	while (true){
@@ -505,7 +536,11 @@ parsed_plan compress_artificial_method(parsed_plan & plan, int expanded_task){
 	}
 
 	if (contained_in_task == -1) plan.root_tasks = new_ids;
-	else plan.subtasksForTask[contained_in_task] = new_ids;
+	else {
+		plan.subtasksForTask[contained_in_task] = new_ids;
+		for (int subtask : new_ids)
+			plan.task_contained_in[subtask] = contained_in_task;
+	}
 
 	plan.tasks.erase(expanded_task);
 	plan.appliedMethod.erase(expanded_task);
@@ -515,6 +550,8 @@ parsed_plan compress_artificial_method(parsed_plan & plan, int expanded_task){
 }
 
 void convert_plan(parsed_plan & plan){
+	//cout << endl << endl << "PLAN =========================================================" << endl;
+	//print_plan(plan, cout);	
 	// look for things that are not ok ..
 
 	// start with expansion compiled things (i.e. where we introduced *new* tasks and methods)
@@ -565,9 +602,11 @@ void convert_plan(parsed_plan & plan){
 		for (int m : expand)
 			expand_compressed_method(plan,m);
 		convert_plan(plan);
+		return;
 	}
 
-	
+
+	//cout << "Compiled entries" << endl;	
 	// only then remove compiled entries. This removal my make expansion rules in methods names impossible
 	for (auto method : plan.appliedMethod){
 		if (method.second[0] == '_'){
@@ -576,12 +615,14 @@ void convert_plan(parsed_plan & plan){
 	}
 	
 	if (methods_to_compress.size()) {
-		update_index(plan);
-		for (int m : methods_to_compress)
+		update_index(plan); // index needs to be updated
+		for (int m : methods_to_compress){
 			compress_artificial_method(plan,m);
+		}
 		convert_plan(plan);
 		return;
 	}
+	//update_index(plan);
 	
 	set<int> compress_primitives;
 	for (auto task : plan.tasks){
@@ -621,33 +662,7 @@ void convert_plan(istream & plan, ostream & pout){
 	convert_plan(initial_plan);
 	parsed_plan converted_plan = initial_plan;
 
-	// write the plan to the output
-	pout << "==>" << endl;
-	for (int action_id : converted_plan.primitive_plan){
-		instantiated_plan_step ps = converted_plan.tasks[action_id];
-		pout << action_id << " " << ps.name;
-		for (string arg : ps.arguments) pout << " " << arg;
-		pout << endl;
-			
-	}
-	
-	pout << "root";
-	for (int root : converted_plan.root_tasks) pout << " " << root;
-	pout << endl;
-
-
-	for (auto task : converted_plan.tasks){
-		if (task.second.declaredPrimitive) continue;
-
-		instantiated_plan_step ps = task.second;
-		pout << task.first << " " << ps.name;
-		for (string arg : ps.arguments) pout << " " << arg;
-		
-		pout << " -> " << converted_plan.appliedMethod[task.first];
-		for (int subtask : converted_plan.subtasksForTask[task.first]) if (subtask >= 0) pout << " " << subtask;
-		pout << endl;
-	}
-	
+	print_plan(converted_plan, pout);	
 }
 
 
