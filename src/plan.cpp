@@ -536,11 +536,9 @@ parsed_plan compress_artificial_method(parsed_plan & plan, int expanded_task){
 	}
 
 	if (contained_in_task == -1) plan.root_tasks = new_ids;
-	else {
-		plan.subtasksForTask[contained_in_task] = new_ids;
-		for (int subtask : new_ids)
-			plan.task_contained_in[subtask] = contained_in_task;
-	}
+	else plan.subtasksForTask[contained_in_task] = new_ids;
+	for (int subtask : new_ids)
+		plan.task_contained_in[subtask] = contained_in_task;
 
 	plan.tasks.erase(expanded_task);
 	plan.appliedMethod.erase(expanded_task);
@@ -615,9 +613,12 @@ void convert_plan(parsed_plan & plan){
 	}
 	
 	if (methods_to_compress.size()) {
+		//cout << "compress normal expanded methods" << endl;
 		update_index(plan); // index needs to be updated
 		for (int m : methods_to_compress){
+			//cout << endl << endl << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl << "Compress " << m << endl;
 			compress_artificial_method(plan,m);
+			//print_plan(plan, cout);	
 		}
 		convert_plan(plan);
 		return;
