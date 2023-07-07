@@ -1436,6 +1436,20 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
 			continue;
 		}
 
+		if (domain_task.arguments->vars.size() < ps.arguments.size()){
+			cout << color(COLOR_YELLOW,"Task with id="+to_string(entry.first)+" has too many arguments. "+ to_string(ps.arguments.size()) + " are given in the plan, but the domain required only " + to_string(domain_task.arguments->vars.size()) + " parameters.") << endl;
+			
+			vector<string> newArgs;
+			for (int iii = 0; iii < domain_task.arguments->vars.size(); iii++){
+			        newArgs.push_back(ps.arguments[iii]);
+			}
+			
+			ps.arguments = newArgs;
+		}
+
+
+
+
 		if (domain_task.arguments->vars.size() != ps.arguments.size()){
 			cout << color(COLOR_RED,"Task with id="+to_string(entry.first)+" has wrong number of arguments. "+ to_string(ps.arguments.size()) + " are given in the plan, but the domain required " + to_string(domain_task.arguments->vars.size()) + " parameters.") << endl;
 			wrongTaskDeclarations = true;
