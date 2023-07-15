@@ -66,7 +66,7 @@ Parameter-wise `--hpdl` works exactly as `--shop`
 
 
 ## Contact
-If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:gregor.behnke@uni-ulm.de).
+If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:g.behnke@uva.nl).
 
 
 ## Reference
