@@ -599,11 +599,11 @@ void run_parser_on_file(FILE* f, char* filename){
 }
 
 void yyerror(const char *s) {
-  cout << "\x1b[31mParse error\x1b[0m in file " << current_parser_file_name << " in line \x1b[1m" << yylloc.first_line << "\x1b[0m" << endl;
+  cerr << "\x1b[31mParse error\x1b[0m in file " << current_parser_file_name << " in line \x1b[1m" << yylloc.first_line << "\x1b[0m" << endl;
   if (strlen(s) >= 14 && (strncmp("syntax error, ",s,14) == 0)){
     s += 14;
   }
-  cout << s << endl;
+  cerr << s << endl;
   // might as well halt now:
   exit(-1);
 }

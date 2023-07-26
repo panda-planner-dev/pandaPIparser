@@ -13,7 +13,7 @@ map<string, int> sort_visi;
 
 void expansion_dfs(string sort){
 	if (sort_visi[sort] == 1) {
-		cout << "Sort hierarchy contains a cycle ... " << endl;
+		cerr << "Sort hierarchy contains a cycle ... " << endl;
 		exit(3);
 	}
 	

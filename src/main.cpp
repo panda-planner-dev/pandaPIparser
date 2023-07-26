@@ -140,39 +140,39 @@ int main(int argc, char** argv) {
 	if (args_info.properties_given) showProperties = true;
 
 	
-	cout << "pandaPIparser is configured as follows" << endl;
-	cout << "  Colors in output: " << boolalpha << !no_colors_in_output << endl;
+	cerr << "pandaPIparser is configured as follows" << endl;
+	cerr << "  Colors in output: " << boolalpha << !no_colors_in_output << endl;
 	if (showProperties){
-		cout << "  Mode: show instance properties" << endl;
+		cerr << "  Mode: show instance properties" << endl;
 	} else if (convertPlan){
-		cout << "  Mode: convert pandaPI plan" << endl;
+		cerr << "  Mode: convert pandaPI plan" << endl;
 	} else if (verifyPlan){
-		cout << "  Mode: plan verification" << endl;
-		cout << "  Verbosity: " << verbosity << endl;
-		cout << "  Lenient mode: " << boolalpha << lenientVerify << endl;
-		cout << "  Ignore given order: " << !useOrderInPlanVerification << endl;
+		cerr << "  Mode: plan verification" << endl;
+		cerr << "  Verbosity: " << verbosity << endl;
+		cerr << "  Lenient mode: " << boolalpha << lenientVerify << endl;
+		cerr << "  Ignore given order: " << !useOrderInPlanVerification << endl;
 	} else {
-		cout << "  Mode: parsing mode" << endl;
-		cout << "  Parameter splitting: " << boolalpha << splitParameters << endl;
-		cout << "  Conditional effects: ";
+		cerr << "  Mode: parsing mode" << endl;
+		cerr << "  Parameter splitting: " << boolalpha << splitParameters << endl;
+		cerr << "  Conditional effects: ";
 		if (compileConditionalEffects){
-			if (linearConditionalEffectExpansion) cout << "linear encoding";
-			else cout << "exponential encoding";
-		} else cout << "keep";
-		cout << endl;	
-		cout << "  Disjunctive preconditions as HTN: " << boolalpha << encodeDisjunctivePreconditionsInMethods << endl;
-		cout << "  Replace goal with action: " << boolalpha << compileGoalIntoAction << endl;
+			if (linearConditionalEffectExpansion) cerr << "linear encoding";
+			else cerr << "exponential encoding";
+		} else cerr << "keep";
+		cerr << endl;	
+		cerr << "  Disjunctive preconditions as HTN: " << boolalpha << encodeDisjunctivePreconditionsInMethods << endl;
+		cerr << "  Replace goal with action: " << boolalpha << compileGoalIntoAction << endl;
 	
-		cout << "  Output: ";
-		if (shopOutput) cout << "SHOP2";
-		else if (shop_1_compatability_mode) cout << "SHOP1";
-		else if (hpdlOutput) cout << "HPDL";
-		else if (htn2stripsOutput) cout << "HPPDL";
-		else if (pureHddlOutput) cout << "HDDL (no transformations)";
-		else if (hddlOutput && internalHDDLOutput) cout << "HDDL (internal)";
-		else if (hddlOutput && !internalHDDLOutput) cout << "HDDL (with transformations)";
-		else cout << "pandaPI format";
-		cout << endl;
+		cerr << "  Output: ";
+		if (shopOutput) cerr << "SHOP2";
+		else if (shop_1_compatability_mode) cerr << "SHOP1";
+		else if (hpdlOutput) cerr << "HPDL";
+		else if (htn2stripsOutput) cerr << "HPPDL";
+		else if (pureHddlOutput) cerr << "HDDL (no transformations)";
+		else if (hddlOutput && internalHDDLOutput) cerr << "HDDL (internal)";
+		else if (hddlOutput && !internalHDDLOutput) cerr << "HDDL (with transformations)";
+		else cerr << "pandaPI format";
+		cerr << endl;
 	}
 
 
