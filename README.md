@@ -23,6 +23,7 @@ The parser can currently produce two different output formats:
 
 Note that the translation into (J)SHOP2 is necessarily incomplete as (J)SHOP2 cannot express arbitrary partial orders in its ordering constraints. For example a method with the five subtasks (a,b,c,d,e) and the ordering constraints a < c, a < d, b < d, and b < e cannot be formulated in (J)SHOP2.
 
+**Note**: The pandaPIparser is currently case sensitive. I.e. it interprets HDDL in a case sensitive version. The plan verifier can be switched to lenient mode in which it will interpret a given plan in a case-insensitive way.
 
 ## Compilation
 To compile pandaPIparser you need g++, make, flex, and bison. No libraries are required. You need a recent version of bison (versions 3.7.2 and 3.5.1 are known to work) and flex at least in version 2.6. Your C++ compiler needs to support C++17.
@@ -42,9 +43,18 @@ BISON=/opt/homebrew/opt/bison/bin/bison FLEX=/opt/homebrew/opt/flex/bin/flex mak
 
 ## Usage
 The parser is called with at least two arguments: the domain and the problem file. Both must be written in HDDL.
+
+### Usage within PANDA
+The translation from HDDL to PANDA's internal file format is the default behaviour of pandaPIparser.
 By default, the parser will output the given instance in pandaPI's internal format on standard our.
 If you pass a third file name, pandaPIparser will instead output the internal representation of the instance to that file.
+As an example you can call
 
+```
+./pandaPIParser transport.hddl pfile01.hddl transport-pfile01.htn
+```
+
+This will generate a file `transport-pfile01.htn` that contains a lifted, but machine readable version of the domain and problem that is read by the pandaPIgrounder.
 
 ### Usage for Compilation to (J)SHOP2
 pandaPIparser also offers to option to write the output to (J)SHOP2's input format. In order to do so add `-shop` as one of the command line arguments (the position does not matter).
@@ -74,7 +84,7 @@ Parameter-wise `--hpdl` works exactly as `--shop`
 
 
 ## Contact
-If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:gregor.behnke@uni-ulm.de).
+If you have any issues with pandaPIparser -- or have any question relating to its use, please contact [Gregor Behnke](mailto:g.behnke@uva.nl).
 
 
 ## Reference
