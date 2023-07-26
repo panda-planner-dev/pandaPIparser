@@ -1,5 +1,4 @@
 CXX=g++
-
 CWARN=-Wno-unused-parameter
 CERROR=
 
@@ -8,16 +7,22 @@ COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 -DNDEBUG $(CWARN) $(CE
 ifneq ($OS(OS), Windows_NT)
      UNAME_S := $(shell uname -s)
      ifeq ($(UNAME_S),Darwin)
-	     LINKERFLAG=-O3 -lm -flto -DNDEBUG
+		BISON ?= /opt/homebrew/opt/bison/bin/bison
+		FLEX ?= /opt/homebrew/opt/flex/bin/flex
+	    LINKERFLAG=-O3 -lm -flto -DNDEBUG
      else
-	     LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
+		BISON ?= bison
+		FLEX ?= flex
+		LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
      endif
 else # guessing what will work on Windows
-     LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
+	BISON ?= bison
+	FLEX ?= flex
+	LINKERFLAG=-O3 -lm -flto -static -static-libgcc -DNDEBUG
 endif
 
-#COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
-#LINKERFLAG=-O0 -ggdb
+COMPILEFLAGS=-O0 -ggdb -pipe -Wall -Wextra -pedantic -std=c++17 $(CWARN) $(CERROR)
+LINKERFLAG=-O0 -ggdb
 
 .PHONY = all clean
 
@@ -31,11 +36,11 @@ all: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o 
 	${CXX} ${COMPILEFLAGS} -o $@ -c $<
 
 src/hddl-token.cpp: src/hddl.cpp src/hddl-token.l
-	flex --yylineno -o src/hddl-token.cpp src/hddl-token.l
+	$(FLEX) --yylineno -o src/hddl-token.cpp src/hddl-token.l
 
 
 src/hddl.cpp: src/hddl.y
-	bison -v -d -o src/hddl.cpp src/hddl.y
+	$(BISON) -v -d -o src/hddl.cpp src/hddl.y
 
 src/hddl.hpp: src/hddl.cpp
 
