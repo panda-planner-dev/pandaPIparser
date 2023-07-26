@@ -39,6 +39,9 @@ BISON=/opt/homebrew/opt/bison/bin/bison FLEX=/opt/homebrew/opt/flex/bin/flex mak
 
 *Note* If you are using MacOSX, we compile the parser without the flags `-static` and `-static-libgcc` as static compilation does not work under MacOSX. This may slow down the parser, but it should not be significant.
 
+### Debug Build
+
+If you require a debug build (which will cause the parser to output a lot of debugging information to `stdout`), you can call the target `make debug`. Be aware that you might have to do a full re-build for this to work properly, i.e., a `make -Bj debug`.
 
 
 ## Usage
