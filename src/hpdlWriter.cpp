@@ -447,11 +447,11 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 			// determine which variables are actually constants
 			map<string,string> varsForConst;
 			add_var_for_const_to_map(method.newVarForAT,varsForConst);
+			add_var_for_const_to_map(method.prec->variables_for_constants(),varsForConst);
 			for (sub_task* st : method.tn->tasks)
 				add_var_for_const_to_map(st->arguments->newVar,varsForConst);
 			
 			// the method might contain variables that have the same name as variables of the AT, we first have to rename them
-
 			// ----------------------------------------
 			set<string> varSubstituted;
 			// ----------------------------------------
