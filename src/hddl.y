@@ -14,6 +14,7 @@
 	// Declare stuff from Flex that Bison needs to know about:
 	extern int yylex();
 	extern int yyparse();
+	extern void yylex_destroy();
 	extern FILE *yyin;
 	char* current_parser_file_name;
 	
@@ -588,6 +589,7 @@ void run_parser_on_file(FILE* f, char* filename){
 	current_parser_file_name = filename;
 	yyin = f;
 	yyparse();
+	yylex_destroy();
 
 
 	if (sortObjectNeeded){
