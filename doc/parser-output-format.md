@@ -59,7 +59,7 @@ The task section consists of
     *Note:*
     The argument variables of this action are numbered 0 to V-1.
     The first variables, i.e., 0 to OV-1, are those that originally appeared in the input domain. The additional variables OV to V-1 are variables that have been added by the parser.
-    2. One line containing V many integers from 0 to S-1. The i^th^ of these numbers s^i^ indicates that the variable i is of the sort s^i^.
+    2. One line containing V many integers from 0 to S-1. The i^th^ of these numbers $s_i$ indicates that the variable i is of the sort $s_i$.
     3. One line containing the number of cost statements for this action.
     4. One line for each cost statement. This line contains either
         1. The string ``const`` followed by a space and an integer indicating a cost, or
@@ -102,7 +102,7 @@ The method section consists of
         1. A string (without spaces) indicating ther name of the method
         2. A number ``t`` with $A \leq t < A+C$ indicating the task that this method decomposes
         3. A number ``v`` indicating the number of variables for this method. The variables are numbered 0 to $v-1$.
-    2. One line containing V many integers from 0 to S-1. The i^th^ of these numbers s^i^ indicates that the variable i is of the sort s^i^.
+    2. One line containing V many integers from 0 to S-1. The i^th^ of these numbers $s_i$ indicates that the variable i is of the sort $s_i$.
     3. One line containing as many integers as the abstract task ``t`` has parameters, each referring to a variable of this method, indicating which variables are those the arguments of the task to be decomposed.
     4. One line with a single non-negative integer ``s`` indicating the number of sub tasks.  
     5. Then for each subtask one line describing the subtask containing
