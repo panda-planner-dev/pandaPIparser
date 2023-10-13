@@ -37,7 +37,8 @@ The logic section consists of
 5. P many lines. Each predicate has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
     1. One string (not containing a space), the predicate's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
+    2. The number of arguments and
+    3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
 6. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
 7. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
