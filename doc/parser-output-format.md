@@ -32,7 +32,8 @@ The logic section consists of
 2. C many lines, each containing a string (not containing a space), listing the constants. The i^th^ such line will be the constant numbered i (0-indexed).
 3. S many lines. Each such line declares a sort and provides the full list of constants that are members of this sort. Note that one constant might occur in multiple sorts. Each contains
     1. One string (not containing a space), the sort's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than C, each indicating a constant.
+    2. The number of constants of this sort, followed by a space and
+    3. A space-separated list of non-negative integers all smaller than C, each indicating a constant.
 4. One line containing a space-separated non-negative integer ``P`` -- the number of predicates.
 5. P many lines. Each predicate has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
