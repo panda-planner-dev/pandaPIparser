@@ -39,11 +39,14 @@ The logic section consists of
     1. One string (not containing a space), the predicate's name, followed by a space and
     2. The number of arguments and
     3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
-6. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
-7. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
+6. One line containing a number of predicate mutexes, ``M``
+7. ``M`` many lines, each containing a space-separated pair of predicate indices (non-negative integers `< P`) **Note:** this is my conjecture -- I haven't seen any line that has more than a pair, but have not checked thoroughly.
+8. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
+9. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
     1. One string (not containing a space), the function's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
+    2. A line with a single non-negative integer indicating the number of arguments.
+    3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
 
 
 ### The Task Section
