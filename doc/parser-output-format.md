@@ -32,17 +32,22 @@ The logic section consists of
 2. C many lines, each containing a string (not containing a space), listing the constants. The i^th^ such line will be the constant numbered i (0-indexed).
 3. S many lines. Each such line declares a sort and provides the full list of constants that are members of this sort. Note that one constant might occur in multiple sorts. Each contains
     1. One string (not containing a space), the sort's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than C, each indicating a constant.
+    2. The number of constants of this sort, followed by a space and
+    3. A space-separated list of non-negative integers all smaller than C, each indicating a constant.
 4. One line containing a space-separated non-negative integer ``P`` -- the number of predicates.
 5. P many lines. Each predicate has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
     1. One string (not containing a space), the predicate's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
-6. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
-7. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
+    2. The number of arguments and
+    3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
+6. One line containing a number of predicate mutexes, ``M``
+7. ``M`` many lines, each containing a space-separated pair of predicate indices (non-negative integers `< P`). The two prdicates ``a`` and ``b`` must have exactly the same number of arguments and their types must be exactly identical. Then for every ground instances ``a o1 ... on``, the two facts ``a o1 ... on`` and ``b o1 ... on`` are mutex. This is used to mark the complementary predicates that result from compiling negative preconditions away.
+8. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
+9. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
     1. One string (not containing a space), the function's name, followed by a space and
-    2. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
+    2. A line with a single non-negative integer indicating the number of arguments.
+    3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
 
 
 ### The Task Section
@@ -56,9 +61,8 @@ The task section consists of
         2. A non-negative number ``OV`` indicating the number of argument variables this action had in the input domain
         3. A non-negative number ``V`` indicating the total number of argument variables of this action. It has to be $OV \leq V$
 
-    *Note:*
-    The argument variables of this action are numbered 0 to V-1.
-    The first variables, i.e., 0 to OV-1, are those that originally appeared in the input domain. The additional variables OV to V-1 are variables that have been added by the parser.
+       *Note:* The argument variables of this action are numbered 0 to V-1.
+       The first variables, i.e., 0 to OV-1, are those that originally appeared in the input domain. The additional variables OV to V-1 are variables that have been added by the parser.
     2. One line containing V many integers from 0 to S-1. The i^th^ of these numbers $s_i$ indicates that the variable i is of the sort $s_i$.
     3. One line containing the number of cost statements for this action.
     4. One line for each cost statement. This line contains either
@@ -73,7 +77,7 @@ The task section consists of
     9. One line containing the number of conditional adding effects.
     10. One line for each conditional adding effect, containing
         1. A number ``c`` indicating the number of conditions.
-        2. Then follow ``c`` many descriptions of preconditions, in the same format as general precondoitions all in the same line (attention: you need to extract the number of arguments per predicate to parse this list correctly).
+        2. Then follow ``c`` many descriptions of preconditions, in the same format as general preconditions all in the same line (attention: you need to extract the number of arguments per predicate to parse this list correctly).
             3. Then follows one description of an adding effect, in the same format as a precondition.
     11. One line containing the number of unconditional deleting effects.
     12. One line for each deleting effect, described in the same way as preconditions are.
