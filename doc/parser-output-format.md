@@ -41,7 +41,7 @@ The logic section consists of
     2. The number of arguments and
     3. A space-separated list of non-negative integers all smaller than S, each indicating a sort.
 6. One line containing a number of predicate mutexes, ``M``
-7. ``M`` many lines, each containing a space-separated pair of predicate indices (non-negative integers `< P`) **Note:** this is my conjecture -- I haven't seen any line that has more than a pair, but have not checked thoroughly.
+7. ``M`` many lines, each containing a space-separated pair of predicate indices (non-negative integers `< P`). The two prdicates ``a`` and ``b`` must have exactly the same number of arguments and their types must be exactly identical. Then for every ground instances ``a o1 ... on``, the two facts ``a o1 ... on`` and ``b o1 ... on`` are mutex. This is used to mark the complementary predicates that result from compiling negative preconditions away.
 8. One line containing a space-separated non-negative integer ``F`` -- the number of functions.
 9. F many lines. Each function has a name and a list of arguments. For each argument, the sort of that argument is given.
   Each line comprises
