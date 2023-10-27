@@ -56,7 +56,7 @@ debug: setdebug all
 
 
 clean:
-	rm src/hddl-token.cpp
-	rm src/hddl.cpp
-	rm src/hddl.hpp
-	rm src/*o
+	rm -f src/hddl-token.cpp
+	rm -f src/hddl.cpp
+	rm -f src/hddl.hpp
+	rm -f src/*.o
