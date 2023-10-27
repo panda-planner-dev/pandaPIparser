@@ -239,6 +239,7 @@ void simple_hddl_output(ostream & dout){
 	dout << "#number_primitive_tasks_and_number_abstract_tasks" << endl;
 	dout << primitive_tasks.size() << " " << abstract_tasks.size() << endl;
 
+	vector<size_t> outputTaskNumberOfArguments;
 	for (auto tt : task_out){
 		task t = tt.first;
 		dout << "#begin_task_name_number_of_original_variables_and_number_of_variables" << endl;
@@ -249,6 +250,7 @@ void simple_hddl_output(ostream & dout){
 		for (auto v : t.vars) assert(sort_id.count(v.second)), dout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
 		dout << endl;
 		dout << "#end_variables" << endl;
+		outputTaskNumberOfArguments.push_back(t.vars.size());
 
 		if (tt.second){
 			dout << "#number_of_cost_statements" << endl;
@@ -275,6 +277,10 @@ void simple_hddl_output(ostream & dout){
 			dout << t.prec.size() << endl;
 			for (literal l : t.prec){
 				string p = (l.positive ? "+" : "-") + l.predicate;
+				if (predicates.count(p) == 0){
+					cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+					exit(-1);
+				}
 				dout << predicates[p];
 				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
 					cerr << "Task " << t.name << " precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
@@ -308,6 +314,10 @@ void simple_hddl_output(ostream & dout){
 			for (literal l : t.eff){
 				if (!neg_pred.count(l.predicate) && !l.positive) continue;
 				string p = (l.positive ? "+" : "-") + l.predicate;
+				if (predicates.count(p) == 0){
+					cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+					exit(-1);
+				}
 				dout << predicates[p];
 				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
 					cerr << "Task " << t.name << " adding effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
@@ -328,6 +338,10 @@ void simple_hddl_output(ostream & dout){
 				dout << ceff.condition.size();
 				for (literal l : ceff.condition){
 					string p = (l.positive ? "+" : "-") + l.predicate;
+					if (predicates.count(p) == 0){
+						cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+						exit(-1);
+					}
 					dout << "  "  << predicates[p]; // two spaces for better human readability
 					if (l.arguments.size() != outputPredicateArity[predicates[p]]){
 						cerr << "Task " << t.name << " conditional precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
@@ -340,6 +354,10 @@ void simple_hddl_output(ostream & dout){
 
 				// effect
 				string p = (ceff.effect.positive ? "+" : "-") + ceff.effect.predicate;
+				if (predicates.count(p) == 0){
+					cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+					exit(-1);
+				}
 				dout << "  "  << predicates[p]; // two spaces for better human readability
 				if (ceff.effect.arguments.size() != outputPredicateArity[predicates[p]]){
 					cerr << "Task " << t.name << " conditional adding effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << ceff.effect.arguments.size() << " are given." << endl;
@@ -358,6 +376,10 @@ void simple_hddl_output(ostream & dout){
 			for (literal l : t.eff){
 				if (!neg_pred.count(l.predicate) && l.positive) continue;
 				string p = (l.positive ? "-" : "+") + l.predicate;
+				if (predicates.count(p) == 0){
+					cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+					exit(-1);
+				}
 				dout << predicates[p];
 				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
 					cerr << "Task " << t.name << " deleting effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
@@ -378,6 +400,10 @@ void simple_hddl_output(ostream & dout){
 				dout << ceff.condition.size();
 				for (literal l : ceff.condition){
 					string p = (l.positive ? "+" : "-") + l.predicate;
+					if (predicates.count(p) == 0){
+						cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+						exit(-1);
+					}
 					dout << "  "  << predicates[p]; // two spaces for better human readability
 					if (l.arguments.size() != outputPredicateArity[predicates[p]]){
 						cerr << "Task " << t.name << " conditional precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
@@ -390,6 +416,10 @@ void simple_hddl_output(ostream & dout){
 
 				// effect
 				string p = (ceff.effect.positive ? "-" : "+") + ceff.effect.predicate;
+				if (predicates.count(p) == 0){
+					cerr << "Task " << t.name << " predicate " << p << " does not exist." << endl;
+					exit(-1);
+				}
 				dout << "  "  << predicates[p]; // two spaces for better human readability
 				if (ceff.effect.arguments.size() != outputPredicateArity[predicates[p]]){
 					cerr << "Task " << t.name << " conditional deleting effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << ceff.effect.arguments.size() << " are given." << endl;
@@ -420,12 +450,22 @@ void simple_hddl_output(ostream & dout){
 
 	for (method m : methods){
 		dout << "#begin_method_name_abstract_task_number_of_variables" << endl;
+		if (task_id.count(m.at) == 0){
+			cerr << "Method " << m.name << " task " << m.at << " does not exist." << endl;
+			exit(-1);
+		}
 		dout << m.name << " " << task_id[m.at] << " " << m.vars.size() << endl;
 		dout << "#variable_sorts" << endl;
 		map<string,int> v_id;
 		for (auto v : m.vars) assert(sort_id.count(v.second)), dout << sort_id[v.second] << " ", v_id[v.first] = v_id.size();
 		dout << endl;
 		dout << "#parameter_of_abstract_task" << endl;
+		if (m.atargs.size() != outputTaskNumberOfArguments[task_id[m.at]]){
+			cerr << "Method " << m.name << " abstract task " << m.at << " has " << outputTaskNumberOfArguments[task_id[m.at]] << " arguments, but " << m.atargs.size() << " are given." << endl;
+			cerr << "This is likely a modelling error." << endl;
+			cerr << "Can't write a valid domain. Exiting ..." << endl;
+			exit(-1);
+		}
 		for (string v : m.atargs) dout << v_id[v] << " ";
 		dout << endl;
 		dout << "#number_of_subtasks" << endl;
@@ -434,7 +474,17 @@ void simple_hddl_output(ostream & dout){
 		map<string,int> ps_id;
 		for (plan_step ps : m.ps){
 			ps_id[ps.id] = ps_id.size();
+			if (task_id.count(ps.task) == 0){
+				cerr << "Method " << m.name << " task " << ps.task << " does not exist." << endl;
+				exit(-1);
+			}
 			dout << task_id[ps.task];
+			if (ps.args.size() != outputTaskNumberOfArguments[task_id[ps.task]]){
+				cerr << "Method " << m.name << " subtask task " << ps.task << " has " << outputTaskNumberOfArguments[task_id[ps.task]] << " arguments, but " << ps.args.size() << " are given." << endl;
+				cerr << "This is likely a modelling error." << endl;
+				cerr << "Can't write a valid domain. Exiting ..." << endl;
+				exit(-1);
+			}
 			for (string v : ps.args) dout << " " << v_id[v];
 			dout << endl;
 		}
@@ -456,7 +506,10 @@ void simple_hddl_output(ostream & dout){
 	dout << init.size() << " " << goal.size() << endl;
 	for (auto gl : init){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
-		assert(predicates.count(pn) != 0);
+		if (predicates.count(pn) == 0){
+			cerr << "Init predicate " << pn << " does not exist." << endl;
+			exit(-1);
+		}
 		dout << predicates[pn];
 		if (gl.args.size() != outputPredicateArity[predicates[pn]]){
 			cerr << "Init on " << pn << ": predicate has " << outputPredicateArity[predicates[pn]] << " arguments, but " << gl.args.size() << " are given." << endl;
@@ -470,7 +523,10 @@ void simple_hddl_output(ostream & dout){
 	dout << "#end_init" << endl;
 	for (auto gl : goal){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
-		assert(predicates.count(pn) != 0);
+		if (predicates.count(pn) == 0){
+			cerr << "Goal predicate " << pn << " does not exist." << endl;
+			exit(-1);
+		}
 		dout << predicates[pn];
 		if (gl.args.size() != outputPredicateArity[predicates[pn]]){
 			cerr << "Goal on " << pn << ": predicate has " << outputPredicateArity[predicates[pn]] << " arguments, but " << gl.args.size() << " are given." << endl;
