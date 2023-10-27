@@ -127,13 +127,22 @@ void simple_hddl_output(ostream & dout){
 	map<string,int> predicates;
 	vector<pair<string,predicate_definition>> predicate_out;
 	vector<pair<string,string>> mutexPredicates;
+	vector<size_t> outputPredicateArity;
 	for (auto p : predicate_definitions){
+		if (predicates.count("+" + p.name)){
+			cerr << "Duplicate definition of predicate " << p.name << "." << endl;
+			cerr << "I am ignoring the second definition -- this might cause problems later on!" << endl;
+			continue;
+		}
+
 		predicates["+" + p.name] = predicates.size();
 		predicate_out.push_back(make_pair("+" + p.name, p));
+		outputPredicateArity.push_back(p.argument_sorts.size());
 
 		if (neg_pred.count(p.name)){
 			predicates["-" + p.name] = predicates.size();
 			predicate_out.push_back(make_pair("-" + p.name, p));
+			outputPredicateArity.push_back(p.argument_sorts.size());
 
 			// + and - predicates are known mutexes ...
 			mutexPredicates.push_back(make_pair("+" + p.name, "-" + p.name));
@@ -267,6 +276,12 @@ void simple_hddl_output(ostream & dout){
 			for (literal l : t.prec){
 				string p = (l.positive ? "+" : "-") + l.predicate;
 				dout << predicates[p];
+				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
+					cerr << "Task " << t.name << " precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
+					cerr << "This is likely a modelling error." << endl;
+					cerr << "Can't write a valid domain. Exiting ..." << endl;
+					exit(-1);
+				}
 				for (string v : l.arguments) dout << " " << v_id[v];
 				dout << endl;
 			}
@@ -294,6 +309,12 @@ void simple_hddl_output(ostream & dout){
 				if (!neg_pred.count(l.predicate) && !l.positive) continue;
 				string p = (l.positive ? "+" : "-") + l.predicate;
 				dout << predicates[p];
+				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
+					cerr << "Task " << t.name << " adding effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
+					cerr << "This is likely a modelling error." << endl;
+					cerr << "Can't write a valid domain. Exiting ..." << endl;
+					exit(-1);
+				}
 				for (string v : l.arguments) dout << " " << v_id[v];
 				dout << endl;
 			}
@@ -308,12 +329,24 @@ void simple_hddl_output(ostream & dout){
 				for (literal l : ceff.condition){
 					string p = (l.positive ? "+" : "-") + l.predicate;
 					dout << "  "  << predicates[p]; // two spaces for better human readability
+					if (l.arguments.size() != outputPredicateArity[predicates[p]]){
+						cerr << "Task " << t.name << " conditional precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
+						cerr << "This is likely a modelling error." << endl;
+						cerr << "Can't write a valid domain. Exiting ..." << endl;
+						exit(-1);
+					}
 					for (string v : l.arguments) dout << " " << v_id[v];
 				}
 
 				// effect
 				string p = (ceff.effect.positive ? "+" : "-") + ceff.effect.predicate;
 				dout << "  "  << predicates[p]; // two spaces for better human readability
+				if (ceff.effect.arguments.size() != outputPredicateArity[predicates[p]]){
+					cerr << "Task " << t.name << " conditional adding effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << ceff.effect.arguments.size() << " are given." << endl;
+					cerr << "This is likely a modelling error." << endl;
+					cerr << "Can't write a valid domain. Exiting ..." << endl;
+					exit(-1);
+				}
 				for (string v : ceff.effect.arguments) dout << " " << v_id[v];
 
 				dout << endl;
@@ -326,6 +359,12 @@ void simple_hddl_output(ostream & dout){
 				if (!neg_pred.count(l.predicate) && l.positive) continue;
 				string p = (l.positive ? "-" : "+") + l.predicate;
 				dout << predicates[p];
+				if (l.arguments.size() != outputPredicateArity[predicates[p]]){
+					cerr << "Task " << t.name << " deleting effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
+					cerr << "This is likely a modelling error." << endl;
+					cerr << "Can't write a valid domain. Exiting ..." << endl;
+					exit(-1);
+				}
 				for (string v : l.arguments) dout << " " << v_id[v];
 				dout << endl;
 			}
@@ -340,12 +379,24 @@ void simple_hddl_output(ostream & dout){
 				for (literal l : ceff.condition){
 					string p = (l.positive ? "+" : "-") + l.predicate;
 					dout << "  "  << predicates[p]; // two spaces for better human readability
+					if (l.arguments.size() != outputPredicateArity[predicates[p]]){
+						cerr << "Task " << t.name << " conditional precondition on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << l.arguments.size() << " are given." << endl;
+						cerr << "This is likely a modelling error." << endl;
+						cerr << "Can't write a valid domain. Exiting ..." << endl;
+						exit(-1);
+					}
 					for (string v : l.arguments) dout << " " << v_id[v];
 				}
 
 				// effect
 				string p = (ceff.effect.positive ? "-" : "+") + ceff.effect.predicate;
 				dout << "  "  << predicates[p]; // two spaces for better human readability
+				if (ceff.effect.arguments.size() != outputPredicateArity[predicates[p]]){
+					cerr << "Task " << t.name << " conditional deleting effect on " << p << ": predicate has " << outputPredicateArity[predicates[p]] << " arguments, but " << ceff.effect.arguments.size() << " are given." << endl;
+					cerr << "This is likely a modelling error." << endl;
+					cerr << "Can't write a valid domain. Exiting ..." << endl;
+					exit(-1);
+				}
 				for (string v : ceff.effect.arguments) dout << " " << v_id[v];
 
 				dout << endl;
@@ -407,6 +458,12 @@ void simple_hddl_output(ostream & dout){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
 		assert(predicates.count(pn) != 0);
 		dout << predicates[pn];
+		if (gl.args.size() != outputPredicateArity[predicates[pn]]){
+			cerr << "Init on " << pn << ": predicate has " << outputPredicateArity[predicates[pn]] << " arguments, but " << gl.args.size() << " are given." << endl;
+			cerr << "This is likely a modelling error." << endl;
+			cerr << "Can't write a valid domain. Exiting ..." << endl;
+			exit(-1);
+		}
 		for (string c : gl.args) dout << " " << constants[c];
 		dout << endl;
 	}
@@ -415,6 +472,12 @@ void simple_hddl_output(ostream & dout){
 		string pn = (gl.positive ? "+" : "-") + gl.predicate;
 		assert(predicates.count(pn) != 0);
 		dout << predicates[pn];
+		if (gl.args.size() != outputPredicateArity[predicates[pn]]){
+			cerr << "Goal on " << pn << ": predicate has " << outputPredicateArity[predicates[pn]] << " arguments, but " << gl.args.size() << " are given." << endl;
+			cerr << "This is likely a modelling error." << endl;
+			cerr << "Can't write a valid domain. Exiting ..." << endl;
+			exit(-1);
+		}
 		for (string c : gl.args) dout << " " << constants[c];
 		dout << endl;
 	}
