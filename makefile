@@ -2,7 +2,6 @@ CXX=g++
 CWARN=-Wno-unused-parameter
 CERROR=
 
-
 COMPILEFLAGS=-O3 -pipe -Wall -Wextra -pedantic -std=c++17 -DNDEBUG $(CWARN) $(CERROR)
 ifneq ($OS(OS), Windows_NT)
      UNAME_S := $(shell uname -s)
@@ -24,7 +23,9 @@ endif
 
 .PHONY = all clean debug setdebug
 
-all: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/hddlWriter.o src/htn2stripsWriter.o src/orderingDecomposition.o src/plan.o src/verify.o src/properties.o src/verification_encoding.o src/cmdline.o
+all: pandaPIparser
+
+pandaPIparser: src/hddl-token.o src/hddl.o src/main.o src/sortexpansion.o src/parsetree.o src/util.o src/domain.o src/output.o src/parametersplitting.o src/cwa.o src/typeof.o src/shopWriter.o src/hpdlWriter.o src/hddlWriter.o src/htn2stripsWriter.o src/orderingDecomposition.o src/plan.o src/verify.o src/properties.o src/verification_encoding.o src/cmdline.o
 	${CXX} ${LINKERFLAG} $^ -o pandaPIparser 
 
 %.o: %.cpp %.hpp src/hddl.hpp
@@ -60,3 +61,6 @@ clean:
 	rm -f src/hddl.cpp
 	rm -f src/hddl.hpp
 	rm -f src/*.o
+
+install: pandaPIparser
+	install pandaPIparser ${DESTDIR}/bin
