@@ -283,6 +283,10 @@ int main(int argc, char** argv) {
 	// do not preprocess the instance at all if we are validating a solution
 	if (verifyPlan){
 		ifstream * plan  = new ifstream(inputFiles[doutfile]);
+                if (! plan->good() ) {
+                  cerr << "Unable to open " << inputFiles[doutfile] << endl;
+                  return 1;
+                }
 		bool result = verify_plan(*plan, useOrderInPlanVerification, lenientVerify, verbosity);
 		cout << "Plan verification result: ";
 		if (result) cout << color(COLOR_GREEN,"true",MODE_BOLD);
