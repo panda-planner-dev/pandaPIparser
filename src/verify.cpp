@@ -1299,6 +1299,9 @@ bool verify_plan(istream & plan, bool useOrderInformation, bool lenientMode, int
     if (result == 0) {
         if (rl.rlim_cur < kStackSize) {
             rl.rlim_cur = kStackSize;
+            if (rl.rlim_cur > rl.rlim_max ) {
+              rl.rlim_cur = rl.rlim_max;
+            }
             result = setrlimit(RLIMIT_STACK, &rl);
             if (result != 0) {
                 cerr << "Could not set the stack size. setrlimit returned: " << result << endl;
