@@ -19,6 +19,7 @@ string sanitise(string in){
 	if (!shop_1_compatability_mode) return in;
 	
 	replace(in.begin(),in.end(),'_','-');
+	replace(in.begin(),in.end(),'|','-');
 	// replace leading minus by training
 	if (in[0] == '-') return "x" + in;
 	return in;
