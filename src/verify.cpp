@@ -503,9 +503,9 @@ vector<pair<map<string,int>,map<string,string>>> generateAssignmentsDFS(parsed_m
 				// checking where this variable occurs. It cannot be part of the methods subtasks, so it can only occur in method preconditions and effects 
 				bool mconstraintscontains = doesFormulaContainVariable(m.tn->constraint,varDecl.first,debugMode,curpos);
 				bool meffcontains = doesFormulaContainVariable(m.eff,varDecl.first,debugMode,curpos);
+				bool mprecontains = doesFormulaContainVariable(m.prec,varDecl.first,debugMode,curpos);
 				if (debugMode){
 					// only needed for debugging
-					bool mprecontains = doesFormulaContainVariable(m.prec,varDecl.first,debugMode,curpos);
 					print_n_spaces(1 + 2*curpos);
 					cout << color(COLOR_YELLOW,"Contained in method precondition: ") << mprecontains << endl;
 					print_n_spaces(1 + 2*curpos);
