@@ -16,7 +16,7 @@ bool shop_1_compatability_mode = false;
 string sanitise(string in){
 	if (in == "call") in = "_call";
 	
-	if (!shop_1_compatability_mode) return in;
+	//if (!shop_1_compatability_mode) return in;
 	
 	replace(in.begin(),in.end(),'_','-');
 	replace(in.begin(),in.end(),'|','-');
@@ -177,9 +177,9 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		}
 		dout << endl << "      ";
 		// method precondition in the input
+		set<string> tasksToWrite;
 		for (plan_step & ps : m.ps){
-			if (ps.task.rfind(method_precondition_action_name, 0)) continue;
-			if (ps.task.rfind(immediate_method_precondition_action_name, 0)) continue;
+			if (ps.task.rfind(method_precondition_action_name, 0) == string::npos && ps.task.rfind(immediate_method_precondition_action_name, 0) == string::npos) continue;
 			found = false;
 			for (task & p : primitive_tasks)
 				if (p.name == ps.task){
@@ -188,7 +188,8 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 					write_literal_list_SHOP(dout,p.prec);
 					break;
 				}
-			assert(found);
+			if (!found) tasksToWrite.insert(ps.task);
+			//assert(found);
 		}
 
 		dout << endl << "    )" << endl;
@@ -198,8 +199,8 @@ void write_instance_as_SHOP(ostream & dout, ostream & pout){
 		vector<string> ids;
 		map<string,plan_step> idmap;
 		for (plan_step & ps : m.ps){
-			if (ps.task.rfind(method_precondition_action_name, 0) == 0) continue;
-			if (ps.task.rfind(immediate_method_precondition_action_name, 0) == 0) continue;
+			if (tasksToWrite.count(ps.task) == 0 && ps.task.rfind(method_precondition_action_name, 0) == 0) continue;
+			if (tasksToWrite.count(ps.task) == 0 && ps.task.rfind(immediate_method_precondition_action_name, 0) == 0) continue;
 			ids.push_back(ps.id);
 			idmap[ps.id] = ps;
 		}
