@@ -242,7 +242,7 @@ void write_instance_as_HPDL(ostream & dout, ostream & pout){
 	dout << "    :negative-preconditions" << endl;
 	dout << "    :conditional-effects" << endl;
 	dout << "    :universal-preconditions" << endl;
-	dout << "    :disjuntive-preconditions" << endl;
+	dout << "    :disjunctive-preconditions" << endl;
 	dout << "    :equality" << endl;
 	dout << "    :existential-preconditions" << endl;
 	dout << "  )" << endl;
