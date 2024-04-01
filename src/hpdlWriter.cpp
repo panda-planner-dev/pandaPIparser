@@ -14,6 +14,9 @@ string get_hpdl_sort_name(string original_sort_name){
 	// all sorts have lower case names
 	transform(original_sort_name.begin(), original_sort_name.end(), original_sort_name.begin(), ::tolower);	
 
+	if (sort_definitions.size() == 1 && sort_definitions[0].declared_sorts.size() == 1 && sort_definitions[0].declared_sorts[0] == "object")
+		return original_sort_name;	
+
 	// "object" denotes in HPDL the root sort of the type hierarchy. HDDL does not have a dedicated root, so we change the same of any sort "object"
 	if (original_sort_name == "object")
 		return "object__compiled";
