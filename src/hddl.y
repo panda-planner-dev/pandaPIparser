@@ -21,6 +21,7 @@
 	void yyerror(const char *s);
 
 	bool sortObjectNeeded = false;
+	bool sortObjectCreated = false;
 %}
 
 %locations
@@ -592,7 +593,8 @@ void run_parser_on_file(FILE* f, char* filename){
 	yylex_destroy();
 
 
-	if (sortObjectNeeded){
+	if (sortObjectNeeded && !sortObjectCreated){
+		sortObjectCreated = true;
 		sort_definition s;
 		s.has_parent_sort = false;
 		s.declared_sorts.push_back("object");
