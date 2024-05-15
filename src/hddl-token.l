@@ -38,6 +38,7 @@ problem			{return KEY_PROBLEM;}
 :objects		{return KEY_OBJECTS;}
 :bound			{return KEY_BOUND;}
 :utility		{return KEY_UTILITY;}
+:include		{return KEY_INCLUDE;}
       
 :subtasks			{return KEY_TASKS;}
 :tasks				{return KEY_TASKS;}

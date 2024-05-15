@@ -31,7 +31,7 @@
 using namespace std;
 
 // declare parser function manually
-void run_parser_on_file(FILE* f, char* filename);
+void run_parser_on_file(FILE* f, const char* filename);
 
 
 // parsed domain data structures

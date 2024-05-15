@@ -16,12 +16,13 @@
 	extern int yyparse();
 	extern void yylex_destroy();
 	extern FILE *yyin;
-	char* current_parser_file_name;
+	const char* current_parser_file_name;
 	
 	void yyerror(const char *s);
 
 	bool sortObjectNeeded = false;
 	bool sortObjectCreated = false;
+	vector<const char*> fileIncludes;
 %}
 
 %locations
@@ -52,7 +53,7 @@
 
 %token KEY_TYPES KEY_DEFINE KEY_DOMAIN KEY_PROBLEM KEY_REQUIREMENTS KEY_PREDICATES KEY_FUNCTIONS
 %token KEY_TASK KEY_CONSTANTS KEY_ACTION KEY_PARAMETERS KEY_PRECONDITION KEY_EFFECT KEY_METHOD
-%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC KEY_UTILITY KEY_BOUND
+%token KEY_GOAL KEY_INIT KEY_OBJECTS KEY_HTN KEY_TIHTN KEY_MIMIZE KEY_METRIC KEY_UTILITY KEY_INCLUDE KEY_BOUND
 %token KEY_AND KEY_OR KEY_NOT KEY_IMPLY KEY_FORALL KEY_EXISTS KEY_WHEN KEY_INCREASE KEY_TYPEOF
 %token KEY_CAUSAL_LINKS KEY_CONSTRAINTS KEY_ORDER KEY_ORDER_TASKS KEY_TASKS 
 %token <sval> NAME REQUIRE_NAME VAR_NAME 
@@ -114,6 +115,10 @@
 %%
 document: domain | problem
 
+include_def: '(' KEY_INCLUDE NAME ')' {
+		   	string fn($3); fn = fn + ".hddl";
+			fileIncludes.push_back(strdup(fn.c_str())); }
+
 
 domain: '(' KEY_DEFINE '(' KEY_DOMAIN domain_symbol ')'
         domain_defs 
@@ -125,6 +130,7 @@ domain_defs:	domain_defs require_def |
 				domain_defs functions_def |
 				domain_defs task_def |
 				domain_defs method_def |
+				domain_defs include_def |
 
 problem: '(' KEY_DEFINE '(' KEY_PROBLEM NAME ')'
               '(' KEY_DOMAIN NAME ')'
@@ -140,6 +146,7 @@ problem_defs: problem_defs require_def |
 			  problem_defs p_metric |
 			  problem_defs p_utility |
 			  problem_defs p_cost_bound |
+			  problem_defs include_def |
 
 p_object_declaration : '(' KEY_OBJECTS constant_declaration_list ')';
 p_init : '(' KEY_INIT init_el ')';
@@ -586,10 +593,15 @@ typed_var_list : typed_var_list typed_vars {
 
 
 %%
-void run_parser_on_file(FILE* f, char* filename){
+void run_parser_on_file(FILE* f, const char* filename){
+	cout << "Parsing " << filename << endl;
 	current_parser_file_name = filename;
 	yyin = f;
 	yyparse();
+	
+	vector<const char*> myIncludeFiles = fileIncludes;
+	fileIncludes.clear();
+	
 	yylex_destroy();
 
 
