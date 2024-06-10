@@ -604,6 +604,8 @@ void run_parser_on_file(FILE* f, const char* filename){
 	
 	yylex_destroy();
 
+	for (const char* file : myIncludeFiles)
+		run_parser_on_file(fopen(file, "r"),file);
 
 	if (sortObjectNeeded && !sortObjectCreated){
 		sortObjectCreated = true;
