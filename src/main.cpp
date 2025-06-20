@@ -25,6 +25,7 @@
 #include "verify.hpp"
 #include "verification_encoding.hpp"
 #include "properties.hpp"
+#include "englishTranscriptionWriter.hpp" // Added for English transcription output
 
 #include "cmdline.h"
 
@@ -76,6 +77,7 @@ int main(int argc, char** argv) {
 	bool pureHddlOutput = false;
 	bool hddlOutput = false;
 	bool internalHDDLOutput = false;
+	bool englishTranscriptionOutput = false; // Added for English transcription output
 	bool dontWriteConstantsIntoDomain = false;
 	bool lenientVerify = false;
 	bool verboseOutput = false;
@@ -111,6 +113,7 @@ int main(int argc, char** argv) {
 	if (args_info.hddl_given) pureHddlOutput = true;
 	if (args_info.processed_hddl_given) hddlOutput = true;
 	if (args_info.internal_hddl_given) hddlOutput = internalHDDLOutput = true;
+	if (args_info.english_transcription_given) englishTranscriptionOutput = true; // Added for English transcription output
 	if (args_info.no_domain_constants_given) dontWriteConstantsIntoDomain = true;
 
 	if (args_info.verify_given){
@@ -168,6 +171,7 @@ int main(int argc, char** argv) {
 		else if (shop_1_compatability_mode) cerr << "SHOP1";
 		else if (hpdlOutput) cerr << "HPDL";
 		else if (htn2stripsOutput) cerr << "HPPDL";
+		else if (englishTranscriptionOutput) cerr << "English Transcription"; // Added for English transcription output
 		else if (pureHddlOutput) cerr << "HDDL (no transformations)";
 		else if (hddlOutput && internalHDDLOutput) cerr << "HDDL (internal)";
 		else if (hddlOutput && !internalHDDLOutput) cerr << "HDDL (with transformations)";
@@ -308,7 +312,7 @@ int main(int argc, char** argv) {
    		encode_plan_verification(verificationFile);
 	}
 
-	if (shopOutput || hpdlOutput){
+	if (shopOutput || hpdlOutput || englishTranscriptionOutput){ // Added englishTranscriptionOutput here
 		// produce streams for output
 		ostream * dout = &cout;
 		ostream * pout = &cout;
@@ -330,6 +334,10 @@ int main(int argc, char** argv) {
 		}
 		if (shopOutput)	write_instance_as_SHOP(*dout,*pout);
 		if (hpdlOutput)	write_instance_as_HPDL(*dout,*pout);
+		if (englishTranscriptionOutput) {
+            write_instance_as_english_transcription(*dout, *pout); // Activated call
+            // Placeholder lines removed
+        }
 		return 0;
 	}
 

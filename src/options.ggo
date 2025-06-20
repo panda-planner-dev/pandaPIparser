@@ -40,6 +40,7 @@ groupoption "shop" S "output in SHOP2 format" group="output"
 groupoption "shop1" 1 "output in SHOP1 format" group="output"
 groupoption "hpdl" H "output in HPDL format (for SIADEX)" group="output"
 groupoption "hppdl" R "output in HPPDL format (Ron Alford's format)" group="output"
+groupoption "english-transcription" T "output English transcriptions of tasks and methods" group="output"
 
 groupoption "hddl" h "output in HDDL format as is, i.e. without any transformations applied (even if they are activated)." group="output"
 groupoption "processed-hddl" P "output in processed HDDL, i.e. with transformations applied." group="output"
@@ -47,7 +48,7 @@ groupoption "internal-hddl" i "output in processed HDDL, i.e. with transformatio
 option "no-domain-constants" - "don't write constants into the domain" flag off
 
 section "Verifier" sectiondesc="These options only pertain to the plan verifier integrated into pandaPIparser. For plan verification, you need to call the verifier with three arguments: domain.hddl problem.hddl plan.txt"
-option "verify" v "activates the verifier" argoptional int values="0","1","2"  default="0"
+option "verify" v "activates the verifier" optional int values="0","1","2"
 option "vverify" V "activates the verifier with verbose output (i.e. verbosity level 1)" flag off
 option "vvverify" W "activates the verifier with very verbose output (i.e. verbosity level 2)" flag off
 option "lenient" l "switches the verifier to lenient mode. It will ignore difference is case and allow for all non letter characters in action, task, and method names to be replaced by underscores" flag off
