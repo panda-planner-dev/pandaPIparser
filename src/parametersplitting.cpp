@@ -137,14 +137,19 @@ void split_independent_parameters(){
 	
 			//gather all variables that occur only in this group (might be more just this one)
 			set<pair<string,int>> subgroup = variables_ps_id[largestSplittable];
-			set<string> subgroupPSIDs;
-			for (auto [id,_x] : subgroup) subgroupPSIDs.insert(id);
+			set<string> subgroupPSIDs, orderedPSIDs;
+			for (auto [id,prec] : subgroup) {
+				subgroupPSIDs.insert(id);
+				if (prec == -1) orderedPSIDs.insert(id);
+			}
 
 			// which variables can we add
+			// only those whose ordered occurrences are in the group checked above. E.g. a non-static
+			// literal of the method precondition must not be moved behind tasks ordered before the group.
 			set<string> variables_in_sub_group;
 			for (auto [v,occ] : variables_ps_id){
 				bool ok = true;
-				for (auto p : occ) ok &= subgroupPSIDs.count(p.first);
+				for (auto p : occ) ok &= subgroupPSIDs.count(p.first) && (p.second != -1 || orderedPSIDs.count(p.first));
 				if (ok) {
 					variables_in_sub_group.insert(v);
 					subgroup.insert(occ.begin(), occ.end());
